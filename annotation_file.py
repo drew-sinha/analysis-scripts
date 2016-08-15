@@ -47,7 +47,7 @@ class AnnotationFile:
             return {a_tag:raw_data[a_tag][restricted_list] for a_tag in raw_data.keys()}
         
         
-    def data_as_timestamps(self, metadata_list, expt_name='',restricted_list=None):
+    def data_as_timestamps(self, metadata_list, expt_name='',restricted_list=None,as_timepoints=False):
         '''
             metadata_list: (character delimiter: experiment metadata file paths)
             expt_name: Optional string identifying this experiment
@@ -63,10 +63,14 @@ class AnnotationFile:
         
         for a_tag in out_data.keys():
             if a_tag not in ['Notes', 'Worm']:
-                    out_data[a_tag] = \
-                        np.array(
-                        [metadata_info[time_idx[0]]['timestamps'][int(time_idx[1:])]-metadata_info[time_idx[0]]['timestamps'][0] if time_idx != '' else -1 for time_idx in out_data[a_tag]])
-        
+                    if not as_timepoints:
+                        out_data[a_tag] = \
+                            np.array(
+                            [metadata_info[time_idx[0]]['timestamps'][int(time_idx[1:])]-metadata_info[time_idx[0]]['timestamps'][0] if time_idx != '' else -1 for time_idx in out_data[a_tag]])
+                    else:
+                        out_data[a_tag] = \
+                            np.array([metadata_info[time_idx[0]]['timepoints'][int(time_idx[1:])] if time_idx != '' else '-1' for time_idx in out_data[a_tag]])
+                    
         if expt_name is not '':
             out_data['Worm_FullName'] = np.array([expt_name+' '+worm_name[1:] for worm_name in out_data['Worm']])
         
@@ -76,7 +80,7 @@ class AnnotationFile:
             return {a_tag:out_data[a_tag][restricted_list] for a_tag in out_data.keys()}
 
 
-    def data_as_timestamps_simple(self, metadata_file,expt_name='', restricted_list=None):
+    def data_as_timestamps_simple(self, metadata_file,expt_name='', restricted_list=None, as_timepoints=False):
         '''
             Returns each set of data in the 'data' field as times relative to the start of the experiment (IN SECONDS)
             
@@ -92,10 +96,15 @@ class AnnotationFile:
         
         # For each column in tsv,
         for a_tag in out_data.keys():
-            out_data[a_tag][out_data[a_tag]=='']='-1'   # Empty field gets '-1'
+            #out_data[a_tag][out_data[a_tag]=='']='-1'   # Empty field gets '-1'
             if a_tag != 'Notes' and a_tag != 'Worm':    # If not the non-time fields
-                out_data[a_tag]=np.array([metadata_info['timestamps'][int(time_idx)]-metadata_info['timestamps'][0] for time_idx in out_data[a_tag]])
-                out_data[a_tag][self.data[a_tag]=='']=-1
+                if not as_timepoints:
+                    out_data[a_tag]=np.array([metadata_info['timestamps'][int(time_idx)]-metadata_info['timestamps'][0] for time_idx in out_data[a_tag]])
+                    out_data[a_tag][self.data[a_tag]=='']=-1
+                else:
+                    out_data[a_tag]=np.array([metadata_info['timepoints'][int(time_idx)] for time_idx in out_data[a_tag]])
+                    out_data[a_tag][self.data[a_tag]=='']='-1'
+                    
         
         if expt_name is not '':
             out_data['Worm_FullName'] = np.array([expt_name+' '+worm_name[1:] for worm_name in out_data['Worm']])
