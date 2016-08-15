@@ -58,7 +58,7 @@ class AnnotationFile:
                         [metadata_info[time_idx[0]]['timestamps'][int(time_idx[1:])]-metadata_info[time_idx[0]]['timestamps'][0] if time_idx != '' else -1 for time_idx in out_data[a_tag]])
         
         if expt_name is not '':
-            out_data['Worm_FullName'] = np.array([expt_name+worm_name for worm_name in out_data['Worm']])
+            out_data['Worm_FullName'] = np.array([expt_name+' '+worm_name[1:] for worm_name in out_data['Worm']])
         
         if restricted_list is None:
             return out_data
@@ -88,7 +88,7 @@ class AnnotationFile:
                 out_data[a_tag][self.data[a_tag]=='']=-1
         
         if expt_name is not '':
-            out_data['Worm_FullName'] = np.array([expt_name+worm_name[1:] for worm_name in out_data['Worm']])
+            out_data['Worm_FullName'] = np.array([expt_name+' '+worm_name[1:] for worm_name in out_data['Worm']])
 
         if restricted_list is None:
             return out_data
@@ -174,6 +174,6 @@ def compile_expt_timestamped_data(expt_dirs, md_dict=None):
             if not any(timestamped_data):
                 [timestamped_data.setdefault(expt_key,np.array([])) for expt_key in ann_file_data.keys()]
             timestamped_data = {expt_key:np.append(timestamped_data[expt_key],ann_file_data[expt_key]) if expt_key in ann_file_data.keys() else np.append(timestamped_data[expt_key],[-1]*np.count_nonzero(ann_file.get_goodworms())) for expt_key in timestamped_data.keys()}
-            print(timestamped_data)
+            #print(timestamped_data)
     
     return timestamped_data
