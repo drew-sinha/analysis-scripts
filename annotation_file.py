@@ -96,7 +96,7 @@ class AnnotationFile:
         
         # For each column in tsv,
         for a_tag in out_data.keys():
-            #out_data[a_tag][out_data[a_tag]=='']='-1'   # Empty field gets '-1'
+            out_data[a_tag][out_data[a_tag]=='']='-1'   # Empty field gets '-1'
             if a_tag != 'Notes' and a_tag != 'Worm':    # If not the non-time fields
                 if not as_timepoints:
                     out_data[a_tag]=np.array([metadata_info['timestamps'][int(time_idx)]-metadata_info['timestamps'][0] for time_idx in out_data[a_tag]])
@@ -151,7 +151,7 @@ class AnnotationFile:
             for worm_data in zip(*(self.data_as_timestamps(metadata_file).values())):
                 output_writer.writerow(worm_data)
 
-def compile_expt_timestamped_data(expt_dirs, md_dict=None):
+def compile_expt_timestamped_data(expt_dirs, md_dict=None,as_timepoints=False):
     timestamped_data = {}
     if md_dict is None:
         for expt_dir in expt_dirs: 
@@ -163,7 +163,7 @@ def compile_expt_timestamped_data(expt_dirs, md_dict=None):
                 expt_name = expt_dir[find_char(expt_dir,os.path.sep)[-1]:]
             else:
                 expt_name = expt_dir[find_char(expt_dir,os.path.sep)[-2]:-1]
-            ann_file_data = ann_file.data_as_timestamps_simple(expt_dir+os.path.sep+'experiment_metadata.json',restricted_list=ann_file.get_goodworms(),expt_name=expt_name)
+            ann_file_data = ann_file.data_as_timestamps_simple(expt_dir+os.path.sep+'experiment_metadata.json',restricted_list=ann_file.get_goodworms(),expt_name=expt_name,as_timepoints=as_timepoints)
             #print(timestamped_data)
             #print(ann_file.data['Notes'][ann_file.get_goodworms()])
             if not any(timestamped_data):
@@ -179,7 +179,7 @@ def compile_expt_timestamped_data(expt_dirs, md_dict=None):
             if list(md_map.keys())[0] is '':
                 ann_file = AnnotationFile(
                     [expt_dir+os.path.sep+my_file for my_file in sorted(os.listdir(expt_dir)) if '.tsv' in my_file and 'lock' not in my_file][0])
-                ann_file_data = ann_file.data_as_timestamps_simple(expt_dir+os.path.sep+'experiment_metadata.json',restricted_list=ann_file.get_goodworms(),expt_name=expt_name)
+                ann_file_data = ann_file.data_as_timestamps_simple(expt_dir+os.path.sep+'experiment_metadata.json',restricted_list=ann_file.get_goodworms(),expt_name=expt_name,as_timepoints=as_timepoints)
             else:
                 ann_file = AnnotationFile(
                     [expt_dir+os.path.sep+my_file for my_file in sorted(os.listdir(expt_dir)) if '.tsv' in my_file and 'lock' not in my_file][0],
@@ -188,7 +188,7 @@ def compile_expt_timestamped_data(expt_dirs, md_dict=None):
                 #if list(md_map.values())[0] is '':
                     #ann_file_data = ann_file.data_as_timestamps({list(md_map.keys())[0]:expt_dir+os.path.sep+'experiment_metadata.json'},restricted_list=ann_file.get_goodworms())
                 #else:
-                ann_file_data = ann_file.data_as_timestamps(md_map,restricted_list=ann_file.get_goodworms(),expt_name=expt_name)
+                ann_file_data = ann_file.data_as_timestamps(md_map,restricted_list=ann_file.get_goodworms(),expt_name=expt_name, as_timepoints=as_timepoints)
 
             if not any(timestamped_data):
                 [timestamped_data.setdefault(expt_key,np.array([])) for expt_key in ann_file_data.keys()]
