@@ -1,0 +1,6 @@
+# Ignore all hidden files
+.*
+!/.gitignore
+
+# Directory and everything inside with infinite depth
+wzhang/**
