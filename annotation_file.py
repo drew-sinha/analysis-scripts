@@ -37,6 +37,16 @@ class AnnotationFile:
                     else:
                         self.data[a_tag] = np.append(self.data[a_tag],worm_tag_val)
         
+    def raw_data(self, expt_name='',restricted_list=None):
+        raw_data = self.data.copy()
+        if expt_name is not '':
+            raw_data['Worm_FullName'] = np.array([expt_name+' '+worm_name[1:] for worm_name in raw_data['Worm']])
+        if restricted_list is None:
+            return raw_data
+        else:
+            return {a_tag:raw_data[a_tag][restricted_list] for a_tag in raw_data.keys()}
+        
+        
     def data_as_timestamps(self, metadata_list, expt_name='',restricted_list=None):
         '''
             metadata_list: (character delimiter: experiment metadata file paths)
@@ -177,3 +187,19 @@ def compile_expt_timestamped_data(expt_dirs, md_dict=None):
             #print(timestamped_data)
     
     return timestamped_data
+
+def compile_expt_raw_data(expt_dirs):
+    raw_data = {}
+    for expt_dir in expt_dirs:
+        ann_file = AnnotationFile(
+            [expt_dir+os.path.sep+my_file for my_file in sorted(os.listdir(expt_dir)) if '.tsv' in my_file][0])
+        if expt_dir[-1] is not os.path.sep:
+            expt_name = expt_dir[find_char(expt_dir,os.path.sep)[-1]:]
+        else:
+            expt_name = expt_dir[find_char(expt_dir,os.path.sep)[-2]:-1]
+        # Get data
+        ann_file_data = ann_file.raw_data(expt_name=expt_name,restricted_list=ann_file.get_goodworms())
+        if not any(raw_data):
+            [raw_data.setdefault(expt_key,np.array([])) for expt_key in ann_file_data.keys()]
+        raw_data = {expt_key:np.append(raw_data[expt_key],ann_file_data[expt_key]) if expt_key in ann_file_data.keys() else np.append(raw_data[expt_key],[-1]*np.count_nonzero(ann_file.get_goodworms())) for expt_key in raw_data.keys()}
+    return raw_data
