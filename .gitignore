@@ -2,5 +2,8 @@
 .*
 !/.gitignore
 
+# Ignore pyc files
+*.pyc
+
 # Directory and everything inside with infinite depth
 wzhang/**
