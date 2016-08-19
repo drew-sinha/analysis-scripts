@@ -43,7 +43,7 @@ md_list = [
     {'W':'/mnt/iscopearray/Zhang_William/2016.02.29 spe-9 Run 12B/experiment_metadata.json','D':'/mnt/bulkhelium/Sinha_Drew/20160229_spe9Acquisition_DevVarB/experiment_metadata.json'},    #8
     {'':''},    #9
     {'W':'/mnt/iscopearray/Zhang_William/2016.03.04 spe-9 Run 13B/experiment_metadata.json', 'D':'/mnt/bulkhelium/Sinha_Drew/20160304_spe9Acquisition_DevVarB/experiment_metadata.json'},    #10
-    {'W':'/mnt/iscopearray/Zhang_William/2016.03.04 spe-9 Run 13B/experiment_metadata.json', 'D':'/mnt/bulkhelium/Sinha_Drew/20160304_spe9Acquisition_DevVarC/experiment_metadata.json'},    #11
+    {'W':'/mnt/iscopearray/Zhang_William/2016.03.04 spe-9 Run 13C/experiment_metadata.json', 'D':'/mnt/bulkhelium/Sinha_Drew/20160304_spe9Acquisition_DevVarC/experiment_metadata.json'},    #11
     {'':''},    #12
     {'':''},    #13
     {'':''},    #14
