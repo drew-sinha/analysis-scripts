@@ -9,6 +9,11 @@ import json
 #from collections import OrderedDict
 import os
 
+'''
+TODO
+o Fix indexing in data_as_timestamps with restricted lists; currently doesn't support boolean indexing
+'''
+
 def find_char(string,ch):
     '''
         Pulls out positions for a particular character in a string
