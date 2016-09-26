@@ -134,11 +134,17 @@ def clean_plot(my_plot,make_labels=False,suppress_ticklabels=False):
     if not suppress_ticklabels:
         full_xticks = my_plot.get_xticks().copy()
         full_xticklabels = my_plot.get_xticklabels().copy()
-        my_plot.set_xticks([full_xticks[0], full_xticks[-1]])
+        if full_xticks[0]*full_xticks[-1] < 0:
+            my_plot.set_xticks([full_xticks[0], 0, full_xticks[-1]])
+        else:
+            my_plot.set_xticks([full_xticks[0], full_xticks[-1]])
         
         full_yticks = my_plot.get_yticks().copy()
         full_yticklabels = my_plot.get_yticklabels().copy()
-        my_plot.set_yticks([full_yticks[0], full_yticks[-1]])
+        if full_yticks[0]*full_yticks[-1] < 0:
+            my_plot.set_yticks([full_yticks[0], 0, full_yticks[-1]])
+        else:
+            my_plot.set_yticks([full_yticks[0], full_yticks[-1]])
     else:
         my_plot.set_xticks([])
         my_plot.set_yticks([])
