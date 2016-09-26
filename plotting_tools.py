@@ -126,3 +126,24 @@ def plot_lifespan(ann_fps, expt_mds, annotation_prefix_list = [], bad_worm_kws=[
     ax_h[1].set_xlabel('Time to death (d)')
     ax_h[1].set_ylabel('Frequency')
     ax_h[1].set_title('Mean+/-STD: {:.2f}+/-{:.2f}d\nMedian:{}d'.format(np.mean(lifespan),np.std(lifespan),np.median(lifespan)))
+
+
+def clean_plot(my_plot,make_labels=False,suppress_ticklabels=False):
+    my_plot.tick_params(axis='both',which='both', top='off', bottom='off', left='off', right='off')
+    
+    if not suppress_ticklabels:
+        full_xticks = my_plot.get_xticks().copy()
+        full_xticklabels = my_plot.get_xticklabels().copy()
+        my_plot.set_xticks([full_xticks[0], full_xticks[-1]])
+        
+        full_yticks = my_plot.get_yticks().copy()
+        full_yticklabels = my_plot.get_yticklabels().copy()
+        my_plot.set_yticks([full_yticks[0], full_yticks[-1]])
+    else:
+        my_plot.set_xticks([])
+        my_plot.set_yticks([])
+    
+    if not make_labels:
+        my_plot.set_xlabel('')
+        my_plot.set_ylabel('')
+        my_plot.set_title('')
