@@ -153,3 +153,15 @@ def clean_plot(my_plot,make_labels=False,suppress_ticklabels=False):
         my_plot.set_xlabel('')
         my_plot.set_ylabel('')
         my_plot.set_title('')
+
+# Take a list and unfold it all the way
+def flatten_list(my_list):
+    import collections
+    flat_list = []
+    
+    for my_item in my_list:
+        if (not isinstance(my_item, collections.Iterable)) or (type(my_item) is str):
+            flat_list.append(my_item)
+        else:
+            flat_list.extend(flatten_list(my_item))
+    return flat_list
