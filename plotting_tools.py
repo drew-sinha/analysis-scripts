@@ -129,6 +129,9 @@ def plot_lifespan(ann_fps, expt_mds, annotation_prefix_list = [], bad_worm_kws=[
 
 
 def clean_plot(my_plot,make_labels=False,suppress_ticklabels=False):
+    my_plot.spines['right'].set_visible(False)
+    my_plot.spines['top'].set_visible(False)
+    
     my_plot.tick_params(axis='both',which='both', top='off', bottom='off', left='off', right='off')
     
     if not suppress_ticklabels:
