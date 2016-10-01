@@ -134,21 +134,22 @@ def clean_plot(my_plot,make_labels=False,suppress_ticklabels=False):
     
     my_plot.tick_params(axis='both',which='both', top='off', bottom='off', left='off', right='off')
     
-    if not suppress_ticklabels:
-        full_xticks = my_plot.get_xticks().copy()
-        full_xticklabels = my_plot.get_xticklabels().copy()
-        if full_xticks[0]*full_xticks[-1] < 0:
-            my_plot.set_xticks([full_xticks[0], 0, full_xticks[-1]])
-        else:
-            my_plot.set_xticks([full_xticks[0], full_xticks[-1]])
-        
-        full_yticks = my_plot.get_yticks().copy()
-        full_yticklabels = my_plot.get_yticklabels().copy()
-        if full_yticks[0]*full_yticks[-1] < 0:
-            my_plot.set_yticks([full_yticks[0], 0, full_yticks[-1]])
-        else:
-            my_plot.set_yticks([full_yticks[0], full_yticks[-1]])
+    #if not suppress_ticklabels:
+    full_xticks = my_plot.get_xticks().copy()
+    full_xticklabels = my_plot.get_xticklabels().copy()
+    if full_xticks[0]*full_xticks[-1] < 0:
+        my_plot.set_xticks([full_xticks[0], 0, full_xticks[-1]])
     else:
+        my_plot.set_xticks([full_xticks[0], full_xticks[-1]])
+    
+    full_yticks = my_plot.get_yticks().copy()
+    full_yticklabels = my_plot.get_yticklabels().copy()
+    if full_yticks[0]*full_yticks[-1] < 0:
+        my_plot.set_yticks([full_yticks[0], 0, full_yticks[-1]])
+    else:
+        my_plot.set_yticks([full_yticks[0], full_yticks[-1]])
+    #else:
+    if suppress_ticklabels:
         my_plot.set_xticks([])
         my_plot.set_yticks([])
     
@@ -158,13 +159,13 @@ def clean_plot(my_plot,make_labels=False,suppress_ticklabels=False):
         my_plot.set_title('')
 
 # Take a list and unfold it all the way
-def flatten_list(my_list):
+def flatten_list(my_list, to_level=-1, this_level=0):
     import collections
     flat_list = []
     
     for my_item in my_list:
-        if (not isinstance(my_item, collections.Iterable)) or (type(my_item) is str):
+        if (not isinstance(my_item, collections.Iterable)) or (type(my_item) is str) or ((to_level is not -1) and (this_level is to_level)):
             flat_list.append(my_item)
         else:
-            flat_list.extend(flatten_list(my_item))
+            flat_list.extend(flatten_list(my_item,to_level,this_level+1))
     return flat_list
