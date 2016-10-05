@@ -10,15 +10,18 @@ plt.ion()
 plt.show()
 plt.close('all')
 
-do_reg = False
-do_cohorts = False
+do_reg = True
+do_cohorts = True
 do_scaling = True
-make_labels= False
+make_labels= True
 #out_dir = '/media/Data/Work/ZPLab/Analysis/MutantHealth/age-1_cohorts+regression_20160818/'
 #out_dir = '/media/Data/Work/ZPLab/Analysis/MutantHealth/age-1specifichealth_cohorts+regression_20160823/'
-out_dir = '/media/Data/Work/ZPLab/Analysis/MutantHealth/spe-9+age-1perage-1SVM_cohorts+reg_20160824/'
-out_dir=''
-if make_labels and out_dir is not '': out_dir = out_dir+os.path.sep+'labeled'+os.path.sep
+#out_dir = '/media/Data/Work/ZPLab/Analysis/MutantHealth/spe-9+age-1perage-1SVM_cohorts+reg_20160824/'
+out_dir = '/media/Data/Work/ZPLab/Analysis/MutantHealth/spe-9+age-1percombinedSVM_20160920/'
+#out_dir=''
+if make_labels and out_dir is not '': 
+    out_dir = out_dir+os.path.sep+'labeled'+os.path.sep
+    if not os.path.isdir(out_dir): os.path.mkdir(out_dir)
 
 #health_measures = {
     #'autofluorescence': ['intensity_80'],       
@@ -49,7 +52,7 @@ health_measure_values = [
 health_measures = collections.OrderedDict([(k,v) for k,v in zip(health_measure_keys, health_measure_values)])
 all_physiology = flatten_list([health_vals for k,health_vals in health_measures.items()])
 
-
+# 20160926 - Moved to plotting_tools
 def clean_plot(my_plot,make_labels=False,suppress_ticklabels=False):
     my_plot.tick_params(axis='both',which='both', top='off', bottom='off', left='off', right='off')
     
@@ -86,10 +89,12 @@ def clean_plot(my_plot,make_labels=False,suppress_ticklabels=False):
 #strains = ['spe-9','age-1']
 #strains = ['age-1','age-1specific']
 #strains = ['spe-9perage-1SVM','age-1specific']
-strains = ['spe-9', 'age-1specific']
+#strains = ['spe-9', 'age-1specific']
+strains = ['spe-9percombinedSVM', 'age-1percombinedSVM']
 strain_dfs = []
 for strain in strains:
-    with open('/mnt/bulkdata/wzhang/human_dir/'+strain+'_health/df_'+strain+'.pickle','rb') as my_file:
+    #with open('/mnt/bulkdata/wzhang/human_dir/'+strain+'_health/df_'+strain+'.pickle','rb') as my_file:
+    with open('/media/Data/Work/ZPLab/Analysis/MutantHealth/worm_health_data/'+strain+'_health/df_'+strain+'.pickle','rb') as my_file:
         strain_dfs.append(pickle.load(my_file)['adult_df'])
     print(strain+": n = {}".format(len(strain_dfs[-1].worms)))
     print(strain+": CV={:.2f}".format(
@@ -176,6 +181,7 @@ if do_reg:
     print('done with regression')
 
 ##############
+# 20160928 - Moved to graphingFigures.cannedFigures.py
 def cohort_traces(my_subfigure, a_variable, adult_df, the_title = None, the_xlabel = None, the_ylabel = None, x_normed = False, y_normed = False, skip_conversion = False, zero_to_one = False, only_worms = None, make_labels=True, bin_width_days=2,bin_mode='day', line_style='-', cohorts_to_use=[], stop_with_death=True):
     '''
     Make cohort traces for a_variable.
@@ -390,6 +396,7 @@ if do_scaling:
     import scipy.interpolate
     import scipy.optimize
     
+    # 20160928 Moved to analyzeHealth.selectData.py
     def get_cohort_data(adult_df, cohort_assignments,variable_to_get='health', stop_with_death=True, skip_conversion=False):
         '''
             cohort_assignments - Output from adult_cohort_bins (lists of indices for worms in adult_df corresponding to each cohort)
@@ -413,31 +420,58 @@ if do_scaling:
             cohort_ages.append(adult_df.ages[:cohort_data[-1].shape[0]])
         return (cohort_data, cohort_ages)
     
+    #def find_scalefactor(t1,f1,t2,f2):
+        #'''
+            #max(t1)<max(t2)
+        #'''
+        #int_f2 = scipy.interpolate.interp1d(t2,f2)
+        
+         ##Make error function and optimize on it
+        #my_err_fun = lambda interp_fun_tocompare, time_ref, fun_ref, time_scale_factor, range_scale_factor: np.sum((range_scale_factor*interp_fun_tocompare(time_scale_factor*time_ref)-fun_ref)**2)
+        #result = scipy.optimize.minimize(lambda scale_factors: my_err_fun(int_f2,t1,f1, scale_factors[0],scale_factors[1]),
+            #[0.9*t2.max()/t1.max(),f1.max()/f2.max()],
+            #method='L-BFGS-B',
+            #bounds=[(0,t2.max()/t1.max()), (0,None)])
+        #return result
     def find_scalefactor(t1,f1,t2,f2):
-        '''
-            max(t1)<max(t2)
-        '''
-        int_f2 = scipy.interpolate.interp1d(t2,f2)
+        def err_fun(t1,f1,t2,f2,time_scale,range_scale):
+            int_f1 = scipy.interpolate.interp1d(t1,f1)
+            int_f2 = scipy.interpolate.interp1d(time_scale*t2,range_scale*f2)
+            
+            num_timepts = min(len(t1),len(t2))
+            rescaled_t1 = np.linspace(t1.min(),t1.max(),num_timepts)
+            rescaled_t2 = time_scale*np.linspace(t2.min(),t2.max(),num_timepts)
+            
+            return np.sum((int_f2(rescaled_t2)-int_f1(rescaled_t1))**2)
         
         # Make error function and optimize on it
-        my_err_fun = lambda interp_fun_tocompare, time_ref, fun_ref, scale_factor: np.sum((interp_fun_tocompare(scale_factor*time_ref)-fun_ref)**2)
-        result = scipy.optimize.minimize_scalar(lambda scale: my_err_fun(int_f2,t1,f1, scale),method='bounded',
-            bounds=(0,t2.max()/t1.max()))
+        result = scipy.optimize.minimize(lambda scale_factors: err_fun(t1,f1,t2,f2, scale_factors[0],scale_factors[1]),
+            [0.9*t1.max()/t2.max(),f1.max()/f2.max()],
+            method='L-BFGS-B',
+            bounds=[(0,None), (0,None)])
         return result
         
-    def rescale_data(t_ref,f_ref, t_tofit, f_tofit, normalize_time=True):
+    def rescale_data(t_ref,f_ref, t_tofit, f_tofit, normalize_fit=True):
         # Pass back equally-spaced data for a reference and new functon associated with its corresponding range
         scale_results = find_scalefactor(t_ref,f_ref,t_tofit,f_tofit)
-        if scale_results.status is not 0:
-            print('(rescale_data) Warning solver didn\'t figure out what it needed to')
-        int_fref = scipy.interpolate.interp1d(t_ref,f_ref)
-        int_ffit = scipy.interpolate.interp1d(t_tofit/scale_results.x,f_tofit)   # Scale factor stored in 'x'
-        
-        domain = np.linspace(t_ref.min(), t_ref.max())
-        if not normalize_time:
-            return (domain, int_fref(domain), int_ffit(domain))
-        else:
-            return (domain/domain.max(), int_fref(domain), int_ffit(domain))
+        print(scale_results.x)
+        #domain = np.linspace(t_ref.min(), t_ref.max())
+        #if not normalize_fit:
+            #return (domain, int_fref(domain), int_ffit(domain))
+        #else:
+            #return (domain/domain.max(), int_fref(domain)/int_fref(domain).max(), int_ffit(domain)/int_ffit(domain).max())
+            
+        if normalize_fit:
+            num_timepts = min(len(t_ref),len(t_tofit))
+            t_ref_resampled = np.linspace(t_ref.min(),t_ref.max(),num_timepts)
+            t_tofit_resampled = np.linspace(t_tofit.min(),t_tofit.max(),num_timepts)*scale_results.x[0]
+            int_fref = scipy.interpolate.interp1d(t_ref,f_ref/f_ref.max())
+            int_ffit = scipy.interpolate.interp1d(t_tofit*scale_results.x[0],f_tofit*scale_results.x[1]/f_ref.max())   # Scale factor stored in 'x'
+            
+            return(np.linspace(0,1,num_timepts),
+                int_fref(t_ref_resampled),
+                int_ffit(t_tofit_resampled))
+                
         
     # Get cohort assignments from adult_cohort_bins
     animal_bins = np.array([100])
@@ -448,15 +482,15 @@ if do_scaling:
         np.array(my_cohort_data_abs[1][1][0]), 
         np.array(my_cohort_data_abs[1][0][0]))
     print(res_scaling_abs)
-    my_cohort_data_zscored = [get_cohort_data(strain_df, cohort_assignments, stop_with_death=False,skip_conversion=True) for strain_df, cohort_assignments in zip(strain_dfs, [bin_data[0] for bin_data in adult_cohort_bin_data])]
-    res_scaling_zscored = rescale_data(np.array(my_cohort_data_zscored[0][1][0]), 
-        np.array(my_cohort_data_zscored[0][0][0]),
-        np.array(my_cohort_data_zscored[1][1][0]), 
-        np.array(my_cohort_data_zscored[1][0][0]))
-    print(res_scaling_zscored)
+    #my_cohort_data_zscored = [get_cohort_data(strain_df, cohort_assignments, stop_with_death=False,skip_conversion=True) for strain_df, cohort_assignments in zip(strain_dfs, [bin_data[0] for bin_data in adult_cohort_bin_data])]
+    #res_scaling_zscored = rescale_data(np.array(my_cohort_data_zscored[0][1][0]), 
+        #np.array(my_cohort_data_zscored[0][0][0]),
+        #np.array(my_cohort_data_zscored[1][1][0]), 
+        #np.array(my_cohort_data_zscored[1][0][0]))
+    #print(res_scaling_zscored)
     
     # Plot original data
-    #fig_h,ax_h=plt.subplots(2,1)
+    #fig_h,ax_h=plt.subplots(1,1)
     #ax_h.plot(np.array(my_cohort_data[0][1][0]), 
         #np.array(my_cohort_data[0][0][0]),
         #np.array(my_cohort_data[1][1][0]), 
@@ -467,16 +501,15 @@ if do_scaling:
     plot_data = [(ax_h[0].plot(res_scaling_abs[0], scaled_data))[0] for scaled_data in res_scaling_abs[1:]]
     if make_labels: ax_h[0].legend(plot_data, [strain for strain in strains])
     ax_h[0].set_xlabel('Normalized adult life (rel. to max. lifespan)')
-    ax_h[0].set_ylabel('Prognosis (d)')
-    plot_data = [(ax_h[1].plot(res_scaling_zscored[0], scaled_data))[0] for scaled_data in res_scaling_zscored[1:]]
-    if make_labels: ax_h[1].legend(plot_data, [strain for strain in strains])
-    ax_h[1].set_xlabel('Normalized adult life (rel. to max. lifespan)')
-    ax_h[1].set_ylabel('Prognosis (z-scored)')
+    ax_h[0].set_ylabel('Normalized Prognosis')
+    #plot_data = [(ax_h[1].plot(res_scaling_zscored[0], scaled_data))[0] for scaled_data in res_scaling_zscored[1:]]
+    #if make_labels: ax_h[1].legend(plot_data, [strain for strain in strains])
+    #ax_h[1].set_xlabel('Normalized adult life (rel. to max. lifespan)')
+    #ax_h[1].set_ylabel('Prognosis (z-scored)')
         
     # TODO 
     # Significance testing....
     # Redo with the variants of SVMs. Do combined SVM?
-    # Work on rescaling range in addition to time as well?
     if len(out_dir)>0: 
         [clean_plot(my_ax,make_labels) for my_ax in ax_h]
         fig_h.savefig(out_dir+os.path.sep+'health_rescaledtime.svg')
