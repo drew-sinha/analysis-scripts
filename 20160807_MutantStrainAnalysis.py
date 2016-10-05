@@ -27,12 +27,13 @@ reload_data = True
 make_labels = False
 
 # Loads dfs
-strains = ['spe-9','age-1']
+strains = ['spe-9','age-1specific']
 #strain_health = collections.OrderedDict()
 if reload_data:
     strain_dfs = []
     for strain in strains:
-        with open('/mnt/bulkdata/wzhang/human_dir/'+strain+'_health/df_'+strain+'.pickle','rb') as my_file:
+#        with open('/mnt/bulkdata/wzhang/human_dir/'+strain+'_health/df_'+strain+'.pickle','rb') as my_file:
+        with open('/media/Data/Work/ZPLab/Analysis/MutantHealth/worm_health_data/'+strain+'_health/df_'+strain+'.pickle','rb') as my_file:
             strain_dfs.append(pickle.load(my_file)['adult_df'])
         print(strain+": n = {}".format(len(strain_dfs[-1].worms)))
 
