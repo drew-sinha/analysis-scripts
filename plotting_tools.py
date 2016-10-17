@@ -158,6 +158,17 @@ def clean_plot(my_plot,make_labels=False,suppress_ticklabels=False):
         my_plot.set_ylabel('')
         my_plot.set_title('')
 
+def force_same_plot_attributes(my_axes, *args):
+    for attr in args:
+        if attr=='xlim':
+            min_x = min([ax.get_xlim()[0] for ax in my_axes])
+            max_x = max([ax.get_xlim()[1] for ax in my_axes])
+            [ax.set_xlim([min_x,max_x]) for ax in my_axes]
+        elif attr=='ylim':
+            min_y = min([ax.get_ylim()[0] for ax in my_axes])
+            max_y = max([ax.get_ylim()[1] for ax in my_axes])
+            [ax.set_ylim([min_y,max_y]) for ax in my_axes]
+
 # Take a list and unfold it all the way
 def flatten_list(my_list, to_level=-1, this_level=0):
     import collections
