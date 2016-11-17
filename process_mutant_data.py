@@ -241,7 +241,7 @@ def derive_bestscaling(t_ref,f_ref, t_tofit, f_tofit):
         int_fref(t_ref_resampled),
         int_ffit(t_tofit_resampled))
         
-def plot_strain_rescaling(strain_dfs, out_dir='', make_labels=True, do_bootstrap = True, percent_range = [0,100]):
+def plot_strain_rescaling(strain_dfs,strains,out_dir='', make_labels=True, do_bootstrap = True, percent_range = [0,100]):
     '''
         percent_range - range of lifespans to specify which worms to grab from the df
     '''
@@ -251,7 +251,8 @@ def plot_strain_rescaling(strain_dfs, out_dir='', make_labels=True, do_bootstrap
     if percent_range[0] != 0:
         animal_bins = np.append([percent_range[0]],animal_bins)
     # This should be [#,#?,100]
-        
+            
+    # Experimental fitting
     adult_cohort_bin_data = [analyzeHealth.selectData.adult_cohort_bins(strain_df, bin_width_days=animal_bins,bin_mode='percentile') for strain_df in strain_dfs]
     compiled_cohort_data = [analyzeHealth.selectData.get_cohort_data(strain_df, cohort_assignments, stop_with_death=False) for strain_df, cohort_assignments in zip(strain_dfs, [bin_data[0] for bin_data in adult_cohort_bin_data])] #[strain, ..., bin]
     res_scaling = [derive_bestscaling(np.array(compiled_cohort_data[0][1][0]), 
@@ -261,31 +262,32 @@ def plot_strain_rescaling(strain_dfs, out_dir='', make_labels=True, do_bootstrap
     
     if do_bootstrap:
         num_iterations = 1000
-        num_timepts = []
-        #resampled_data = []
-        compiled_rep_data = []
-        constrain_timepts = True    # Force all replicates to have the same number of timepts
-
+        #constrain_timepts = True
+        
         worms_to_resample = [[np.array(strain_df.worms)[np.random.randint(low=0,high=len(strain_df.worms),size=len(strain_df.worms))] for i in range(num_iterations)] for strain_df in strain_dfs]
-        compiled_rep_bins = [[analyzeHealth.selectData.adult_cohort_bins(strain_df, my_worms = worm_set, bin_width_days=animal_bins,bin_mode='percentile') \
-            for worm_set in strain_worm_replicates] \
-            for strain_df,strain_worm_replicates in zip(strain_dfs, worms_to_resample)]
-        compiled_rep_data = [[analyzeHealth.selectData.get_cohort_data(strain_df, cohort_assignments=replicate_bin_assignments,my_worms=worm_set, stop_with_death=False) \
-            for worm_set, replicate_bin_assignments in zip(strain_worm_replicates, [bin_data[0] for bin_data in strain_rep_bins])] \
-            for strain_df,strain_worm_replicates,strain_rep_bins in zip(strain_dfs,worms_to_resample, compiled_rep_bins)]   # Strain[replicates[...]]
-        res_scaling_bootstrap = [[derive_bestscaling(WT_rep[1][0],WT_rep[0][0], mutant_rep[1][0], mutant_rep[0][0]) \
-                for WT_rep, mutant_rep in zip(compiled_rep_data[0],strain_rep_data)] \
-                for strain_rep_data in compiled_rep_data[1:]]
-    
-    fig_data = []
-    for strain_num, strain_cohort_data in enumerate(compiled_cohort_data[1:]):
-        fig_h, ax_h = plt.subplots(1,1)
-        plot_data = [(ax_h.plot(res_scaling[0], scaled_data,linewidth=2))[0] for scaled_data in res_scaling[1:]]
-        if do_bootstrap: 
-            [ax_h.fill_between(np.linspace(0,1,strain_timepts[0]),*np.percentile(np.array(strain_curves),[2.5,97.5],axis=0),color=(strain_color+1)/2) \
-                for (strain_curves,strain_timepts, strain_color) in zip(norm_curves, num_timepts,np.array([[0,0,1],[0,1,0]]))]
+        for strain_df,strain_worm_replicates in zip(strain_dfs,worms_to_resample):
+            rep_bins = [analyzeHealth.selectData.adult_cohort_bins(strain_df, my_worms = worm_set, bin_width_days=animal_bins,bin_mode='percentile') for worm_set in strain_worm_replicates]
+            rep_data = [analyzeHealth.selectData.get_cohort_data(strain_df, cohort_assignments=replicate_bin_assignments,my_worms=worm_set, stop_with_death=False) for worm_set, replicate_bin_assignments in zip(strain_worm_replicates, [bin_data[0] for bin_data in rep_bins])]
 
-        if make_labels: ax_h.legend(plot_data, [strain for strain in strains])
+            #num_timepts.append([len(compiled_cohort_data[0][1][0]) if constrain_timepts else min(len(rep_data[1][0]),len(compiled_cohort_data[0][1][0])) for rep_data in compiled_rep_data])
+            
+            # If there's scaling, the rescaled curve should lie in confidence intervals for both WT and a given mutant under proper normalization.
+            #resampled_data.append([scipy.interpolate.interp1d(rep_data[1][0],normalize_curve(rep_data[0][0]))(np.linspace(min(rep_data[1][0]),max(rep_data[1][0]),timepts)) 
+                #for (rep_data,timepts) in zip(compiled_rep_data,num_timepts)])
+            resampled_data.append([scipy.interpolate.interp1d(rep_data[1][0],normalize_curve(rep_data[0][0]))(np.linspace(min(rep_data[1][0]),max(rep_data[1][0]),len(compiled_cohort_data[0][1][0]))) 
+                for rep_data in compiled_rep_data])
+
+    fig_data = []
+    for strain_num,strain_scaling in enumerate(res_scaling):
+        fig_h, ax_h = plt.subplots(1,1)
+        plot_data = [(ax_h.plot(strain_scaling[0], scaled_data,linewidth=2))[0] for scaled_data in strain_scaling[1:]]
+        if do_bootstrap:
+            #[ax_h.fill_between(np.linspace(0,1,strain_timepts[0]),*np.percentile(np.array(strain_curves),[2.5,97.5],axis=0),color=(strain_color+1)/2) \
+                #for (strain_curves,strain_timepts, strain_color) in zip(norm_curves, num_timepts,np.array([[0,0,1],[0,1,0]]))]
+            [ax_h.fill_between(np.linspace(0,1,len(compiled_cohort_data[0][1][0])]),*np.percentile(np.array(strain_curves),[2.5,97.5],axis=0),color=(strain_color+1)/2) \
+                for (strain_curves, strain_color) in zip(resampled_data,np.array([[0,0,1],[0,1,0]]))]
+
+        if make_labels: ax_h.legend(plot_data, [strain[0],strain[strain_num]])
         ax_h.set_xlabel('Normalized Time in Adulthood (rel. to max lifespan)')
         ax_h.set_ylabel('Normalized Prognosis')
         fig_data.append([fig_h,ax_h])
