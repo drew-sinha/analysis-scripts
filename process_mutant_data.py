@@ -262,19 +262,15 @@ def plot_strain_rescaling(strain_dfs,strains,out_dir='', make_labels=True, do_bo
     
     if do_bootstrap:
         num_iterations = 1000
-        #constrain_timepts = True
         
+        resampled_traj = []
         worms_to_resample = [[np.array(strain_df.worms)[np.random.randint(low=0,high=len(strain_df.worms),size=len(strain_df.worms))] for i in range(num_iterations)] for strain_df in strain_dfs]
         for strain_df,strain_worm_replicates in zip(strain_dfs,worms_to_resample):
-            rep_bins = [analyzeHealth.selectData.adult_cohort_bins(strain_df, my_worms = worm_set, bin_width_days=animal_bins,bin_mode='percentile') for worm_set in strain_worm_replicates]
-            rep_data = [analyzeHealth.selectData.get_cohort_data(strain_df, cohort_assignments=replicate_bin_assignments,my_worms=worm_set, stop_with_death=False) for worm_set, replicate_bin_assignments in zip(strain_worm_replicates, [bin_data[0] for bin_data in rep_bins])]
+            compiled_rep_bins = [analyzeHealth.selectData.adult_cohort_bins(strain_df, my_worms = worm_set, bin_width_days=animal_bins,bin_mode='percentile') for worm_set in strain_worm_replicates]
+            compiled_rep_data = [analyzeHealth.selectData.get_cohort_data(strain_df, cohort_assignments=replicate_bin_assignments,my_worms=worm_set, stop_with_death=False) for worm_set, replicate_bin_assignments in zip(strain_worm_replicates, [bin_data[0] for bin_data in compiled_rep_bins])]
 
-            #num_timepts.append([len(compiled_cohort_data[0][1][0]) if constrain_timepts else min(len(rep_data[1][0]),len(compiled_cohort_data[0][1][0])) for rep_data in compiled_rep_data])
-            
             # If there's scaling, the rescaled curve should lie in confidence intervals for both WT and a given mutant under proper normalization.
-            #resampled_data.append([scipy.interpolate.interp1d(rep_data[1][0],normalize_curve(rep_data[0][0]))(np.linspace(min(rep_data[1][0]),max(rep_data[1][0]),timepts)) 
-                #for (rep_data,timepts) in zip(compiled_rep_data,num_timepts)])
-            resampled_data.append([scipy.interpolate.interp1d(rep_data[1][0],normalize_curve(rep_data[0][0]))(np.linspace(min(rep_data[1][0]),max(rep_data[1][0]),len(compiled_cohort_data[0][1][0]))) 
+            resampled_traj.append([scipy.interpolate.interp1d(rep_data[1][0],normalize_curve(rep_data[0][0]))(np.linspace(min(rep_data[1][0]),max(rep_data[1][0]),len(compiled_cohort_data[0][1][0]))) 
                 for rep_data in compiled_rep_data])
 
     fig_data = []
@@ -282,10 +278,8 @@ def plot_strain_rescaling(strain_dfs,strains,out_dir='', make_labels=True, do_bo
         fig_h, ax_h = plt.subplots(1,1)
         plot_data = [(ax_h.plot(strain_scaling[0], scaled_data,linewidth=2))[0] for scaled_data in strain_scaling[1:]]
         if do_bootstrap:
-            #[ax_h.fill_between(np.linspace(0,1,strain_timepts[0]),*np.percentile(np.array(strain_curves),[2.5,97.5],axis=0),color=(strain_color+1)/2) \
-                #for (strain_curves,strain_timepts, strain_color) in zip(norm_curves, num_timepts,np.array([[0,0,1],[0,1,0]]))]
-            [ax_h.fill_between(np.linspace(0,1,len(compiled_cohort_data[0][1][0])]),*np.percentile(np.array(strain_curves),[2.5,97.5],axis=0),color=(strain_color+1)/2) \
-                for (strain_curves, strain_color) in zip(resampled_data,np.array([[0,0,1],[0,1,0]]))]
+            [ax_h.fill_between(np.linspace(0,1,len(compiled_cohort_data[0][1][0])),*np.percentile(np.array(strain_curves),[2.5,97.5],axis=0),color=(strain_color+1)/2) \
+                for (strain_curves, strain_color) in zip(resampled_traj,np.array([[0,0,1],[0,1,0]]))]
 
         if make_labels: ax_h.legend(plot_data, [strain[0],strain[strain_num]])
         ax_h.set_xlabel('Normalized Time in Adulthood (rel. to max lifespan)')
@@ -470,8 +464,8 @@ if __name__ is "__main__":
     #strains = ['spe-9','age-1']
     #out_dir = '/media/Data/Work/ZPLab/Analysis/MutantHealth/processed_data/age-1_cohorts+regression_20160818/'
     #out_dir = ''
-    strains = ['spe-9percombinedweightedSVM','age-1percombinedweightedSVM']
-    #strains = ['spe-9','age-1specific']
+    #strains = ['spe-9percombinedweightedSVM','age-1percombinedweightedSVM']
+    strains = ['spe-9','age-1specific']
     out_dir = '/media/Data/Work/ZPLab/Analysis/MutantHealth/processed_data/spe-9+age-1percombinedweightedSVM_20161006/'
     out_dir=''
     if make_labels and out_dir is not '': 
@@ -479,7 +473,8 @@ if __name__ is "__main__":
         if not os.path.isdir(out_dir): os.mkdir(out_dir)
     
     strain_dfs = load_strain_data(strains)
-    plot_strain_rescaling(strain_dfs,out_dir=out_dir,make_labels=make_labels,do_bootstrap=True)
+    plot_strain_rescaling(strain_dfs,strains,out_dir=out_dir,make_labels=make_labels,do_bootstrap=True)
+    plot_strain_rescaling(strain_dfs,strains,out_dir=out_dir,make_labels=make_labels,do_bootstrap=True,percent_range=[80,100])
     bob
     
     plot_survival(strain_dfs,out_dir=out_dir,make_labels=make_labels)
