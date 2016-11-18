@@ -120,12 +120,6 @@ class AnnotationFile:
             return {a_tag:out_data[a_tag][restricted_list] for a_tag in out_data.keys()}
     
     def get_goodworms(self, bad_worm_kws=[], restrict_to_hatched=False, expt_path=None):
-        #if bad_worm_kws is []:
-            #bad_worm_kws = ['FERTIL', 'Nh', 'NO HATCH', 'DOUBLE WORM', 'OUT OF FOCUS', 'NO EGGS','NO WORM', 'RAN LOW ON FOOD', 'NEVER LAID EGGS'] # Note: first item should be FERTIL!
-        #viable_worm = (self.data['Hatch']!='') \
-            #& (self.data['Death']!='') \
-            #& np.array([not any([kw in note for kw in bad_worm_kws]) for note in self.data['Notes']])
-        
         if len(bad_worm_kws) is 0:   # Use DEAD as marker
             viable_worm = (self.data['Hatch']!='') \
                 & (self.data['Death']!='') \
@@ -144,10 +138,13 @@ class AnnotationFile:
         
         if restrict_to_hatched: goodworms = goodworms & (self.data['Hatch'] !=0)
         
-        #if return_worm_data:
-            #return (goodworms, {a_tag:self.data[a_tag][goodworms] for a_tag in data.keys()})
-        #else:
         return goodworms
+    
+    def get_skip_positions(self,bad_worm_kws=[]):
+        good_worms = self.get_goodworms(bad_worm_kws=bad_worm_kws)
+        dead_worms = np.array(['NOT DEAD' not in note for note in self.data['Notes']])
+        skip_idxs = np.where((not good_worms)|dead_worms)[0][0]
+        return [str(idx) for idx in skip_idxs]
     
     def save_timestamp_tsv(self, metadata_file,output_file):
         with open(output_file,'w') as output_fp:
