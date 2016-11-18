@@ -214,3 +214,14 @@ def compile_expt_raw_data(expt_dirs):
             [raw_data.setdefault(expt_key,np.array([])) for expt_key in ann_file_data.keys()]
         raw_data = {expt_key:np.append(raw_data[expt_key],ann_file_data[expt_key]) if expt_key in ann_file_data.keys() else np.append(raw_data[expt_key],[-1]*np.count_nonzero(ann_file.get_goodworms())) for expt_key in raw_data.keys()}
     return raw_data
+
+def make_annotation_file(data,output_file):
+    '''
+        data - OrderedDict dictionary object containing data (so that keys are written in the proper order
+        output_file - path for the output file
+    '''
+    with open(output_file,'w') as output_fp:
+        output_writer = csv.writer(output_fp,delimiter='\t')
+        output_writer.writerow([a_tag for a_tag in data.keys()])
+        for worm_data in zip(*data.values()):
+            output_writer.writerow(worm_data)
