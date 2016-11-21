@@ -14,14 +14,14 @@ do_reg = True
 do_cohorts = True
 do_scaling = True
 make_labels= True
-#out_dir = '/media/Data/Work/ZPLab/Analysis/MutantHealth/age-1_cohorts+regression_20160818/'
+out_dir = '/media/Data/Work/ZPLab/Analysis/MutantHealth/processed_data/age-1_cohorts+regression_20160818/'
 #out_dir = '/media/Data/Work/ZPLab/Analysis/MutantHealth/age-1specifichealth_cohorts+regression_20160823/'
 #out_dir = '/media/Data/Work/ZPLab/Analysis/MutantHealth/spe-9+age-1perage-1SVM_cohorts+reg_20160824/'
-out_dir = '/media/Data/Work/ZPLab/Analysis/MutantHealth/spe-9+age-1percombinedSVM_20160920/'
+#out_dir = '/media/Data/Work/ZPLab/Analysis/MutantHealth/processed_data/spe-9+age-1percombinedweightedSVM_20161006/'
 #out_dir=''
 if make_labels and out_dir is not '': 
     out_dir = out_dir+os.path.sep+'labeled'+os.path.sep
-    if not os.path.isdir(out_dir): os.path.mkdir(out_dir)
+    if not os.path.isdir(out_dir): os.mkdir(out_dir)
 
 #health_measures = {
     #'autofluorescence': ['intensity_80'],       
@@ -73,24 +73,11 @@ def clean_plot(my_plot,make_labels=False,suppress_ticklabels=False):
         my_plot.set_ylabel('')
         my_plot.set_title('')
 
-#def clean_subplot_figure(my_fig, make_labels=False):
-    #[clean_plot(my_plot,make_labels) for my_plot in my_fig.get_axes()]
-    #if make_labels:
-        #for row_num, ax_set in my_fig.get_axes():
-            #for col_num, my_plot in ax_set:
-                #if row_num is not len(ax_set)-1:
-                    #my_plot.set_xlabel('')
-                #if row_num is not 0:
-                    #my_plot.set_title('')
-                #if col_num is not 0:
-                    #my_plot.set_ylabel('')
-
-
-#strains = ['spe-9','age-1']
+strains = ['spe-9','age-1']
 #strains = ['age-1','age-1specific']
 #strains = ['spe-9perage-1SVM','age-1specific']
 #strains = ['spe-9', 'age-1specific']
-strains = ['spe-9percombinedSVM', 'age-1percombinedSVM']
+#strains = ['spe-9percombinedweightedSVM', 'age-1percombinedweightedSVM']
 strain_dfs = []
 for strain in strains:
     #with open('/mnt/bulkdata/wzhang/human_dir/'+strain+'_health/df_'+strain+'.pickle','rb') as my_file:
@@ -181,80 +168,6 @@ if do_reg:
     print('done with regression')
 
 ##############
-# 20160928 - Moved to graphingFigures.cannedFigures.py
-def cohort_traces(my_subfigure, a_variable, adult_df, the_title = None, the_xlabel = None, the_ylabel = None, x_normed = False, y_normed = False, skip_conversion = False, zero_to_one = False, only_worms = None, make_labels=True, bin_width_days=2,bin_mode='day', line_style='-', cohorts_to_use=[], stop_with_death=True):
-    '''
-    Make cohort traces for a_variable.
-    '''
-    # Make bins of lifespans.
-    (life_cohorts, bin_lifes, my_bins, my_colors) = analyzeHealth.selectData.adult_cohort_bins(adult_df, my_worms = adult_df.worms, bin_width_days = bin_width_days,bin_mode=bin_mode)
-    if len(cohorts_to_use) >0:
-        life_cohorts = [life_cohorts[c_idx] for c_idx in cohorts_to_use]
-        bin_lifes = [bin_lifes[c_idx] for c_idx in cohorts_to_use]
-        my_bins = [my_bins[c_idx] for c_idx in cohorts_to_use]
-        my_colors = [my_colors[c_idx] for c_idx in cohorts_to_use]
-    
-    #print(my_bins)
-    #print([len(cohort) for cohort in life_cohorts])
-
-    # Exclude worms.    
-    if only_worms != None:
-        life_cohorts = [[a_worm for a_worm in a_cohort if a_worm in only_worms] for a_cohort in life_cohorts]
-    else:
-        pass
-    my_cohorts = life_cohorts
-
-    # Plot the actual stuff.
-    if y_normed:
-        if type(a_variable) == type(''):
-            mean_start = np.mean(adult_df.mloc(adult_df.worms, [a_variable], ['0.0'])[:, 0, 0])
-            (mean_start, my_unit, fancy_name) = adult_df.display_variables(mean_start, a_variable)
-        else:
-            mean_start = np.mean(a_variable[:, 0, 0])
-    for i in range(0, len(my_cohorts)):
-        if len(my_cohorts[i]) > 0:
-            # Figure out the cohort data.
-            a_cohort = my_cohorts[i]
-            if type(a_variable) == type(''):
-                cohort_data = adult_df.mloc(adult_df.worms, [a_variable])[a_cohort, 0, :]
-                variable_name = a_variable
-            else:
-                cohort_data = a_variable[a_cohort, 0, :]
-                variable_name = 'health'
-            
-            cohort_data = cohort_data[~np.isnan(cohort_data).all(axis = 1)]
-            if stop_with_death: # Suppress data after the first individual in a cohort dies
-                cohort_data = np.mean(cohort_data, axis = 0)
-            else:
-                cohort_data = np.nanmean(cohort_data, axis=0)
-            if not skip_conversion:
-                (cohort_data, my_unit, fancy_name) = adult_df.display_variables(cohort_data, variable_name)
-            else:
-                (whatever, my_unit, fancy_name) = adult_df.display_variables(cohort_data, variable_name)
-            cohort_data = cohort_data[~np.isnan(cohort_data)]
-            if y_normed:
-                if zero_to_one:
-                    cohort_data = cohort_data - cohort_data[0]
-                    cohort_data = cohort_data/cohort_data[-1]
-                else:
-                    cohort_data = cohort_data - cohort_data[-1]
-                    cohort_data = cohort_data/cohort_data[0]
-
-            # Figure out the cohort ages.           
-            cohort_ages = adult_df.ages[:cohort_data.shape[0]]          
-            if x_normed:
-                cohort_ages = cohort_ages/np.max(cohort_ages)
-            my_subfigure.plot(cohort_ages, cohort_data, color = my_colors[i], linewidth = 2, linestyle=line_style)
-
-    # Label the subplot.
-    if the_title == None:
-        the_title = fancy_name + ' Over Time'
-    if make_labels: my_subfigure.set_title(the_title)
-    if make_labels: my_subfigure.set_xlabel(the_xlabel)
-    if the_ylabel == None:
-        the_ylabel = my_unit
-    if make_labels: my_subfigure.set_ylabel(the_ylabel) 
-    return my_subfigure
 
 def get_prototype_lines(my_plot, feature='linestyle'):
     '''
@@ -274,14 +187,6 @@ if do_cohorts:
     
     # Do global summary
     spe9_bins = np.array([100])
-    
-     #Individual Health bars - 2 columns
-    #health_vars = ['bulk_movement', 'intensity_80', 'life_texture', 'cumulative_eggs','adjusted_size']
-    #health_fig, ax_h = plt.subplots(len(health_vars),len(strains))
-    #for strain_health, strain_plots in zip(strain_dfs, ax_h.T):
-        #for var_plot, var in zip(strain_plots, health_vars):
-            #cohort_traces(var_plot,var, strain_health, make_labels=make_labels, bin_width_days=spe9_bins,bin_mode = 'percentile')
-            #clean_plot(var_plot)
     
     # Inidividual health vars - 1 column
     health_vars = ['bulk_movement', 'intensity_80', 'life_texture', 'cumulative_eggs','adjusted_size']
@@ -314,7 +219,7 @@ if do_cohorts:
         for var_plot, var in zip(ax_h.T, health_vars):
             cohort_traces(var_plot,var, strain_health, make_labels=make_labels, bin_width_days=spe9_bins,bin_mode = 'percentile', line_style=line_style)
     if len(out_dir)>0: 
-        [clean_plot(var_plot,make_labels) for var_plot in ax_h]
+        [clean_plot(var_plot,make_labels=make_labels,suppress_ticklabels=not make_labels) for var_plot in ax_h]
         health_fig.savefig(out_dir+os.path.sep+'health_vars_allcohorts.svg')
         health_fig.savefig(out_dir+os.path.sep+'health_vars_allcohorts.png')
     
@@ -323,7 +228,7 @@ if do_cohorts:
     for strain_health, line_style in zip(strain_dfs, ['-','--']):
         cohort_traces(ax_h,'health', strain_health, make_labels=make_labels, bin_width_days=spe9_bins, bin_mode='percentile', line_style = line_style)
     if len(out_dir)>0: 
-        clean_plot(var_plot,make_labels)
+        clean_plot(var_plot,make_labels=make_labels,suppress_ticklabels=not make_labels)
         health_fig.savefig(out_dir+os.path.sep+'health_overall_allcohorts.svg')
         health_fig.savefig(out_dir+os.path.sep+'health_overall_allcohorts.png')
         
@@ -350,6 +255,20 @@ if do_cohorts:
         clean_plot(ax_h, make_labels)
         health_fig.savefig(out_dir+os.path.sep+'health_overall_3cohorts.svg')
         health_fig.savefig(out_dir+os.path.sep+'health_overall_3cohorts.png')
+        
+    # Plot global health of mutant vs. spe-9 cohorts
+    spe9_bins = np.array([len(my_bin) for my_bin in analyzeHealth.selectData.adult_cohort_bins(strain_dfs[0], my_worms = strain_dfs[0].worms, bin_width_days = 2)[0]])
+    spe9_bins = 100*np.cumsum(spe9_bins)/sum(spe9_bins) # Make percentile bins
+    mt_bins = np.array([100])
+    health_fig, ax_h = plt.subplots(1,1)
+    cohort_traces(ax_h,'health', strain_dfs[0], make_labels=make_labels, bin_width_days=spe9_bins, bin_mode='percentile', line_style = '-')
+    for strain_health, line_style in zip(strain_dfs[1:], ['--']):
+        cohort_traces(ax_h,'health', strain_health, make_labels=make_labels, bin_width_days=mt_bins, bin_mode='percentile', line_style = line_style,stop_with_death=False)
+    if len(out_dir)>0:
+        clean_plot(ax_h)
+        health_fig.savefig(out_dir+os.path.sep+'health_vars_mutantvsWT.svg') 
+        health_fig.savefig(out_dir+os.path.sep+'health_vars_mutantvsWT.png') 
+
     
     # Make some figures while not suppressing data from after the first death in cohorts
     health_vars = ['bulk_movement', 'intensity_80', 'life_texture', 'cumulative_eggs','adjusted_size']
@@ -420,19 +339,6 @@ if do_scaling:
             cohort_ages.append(adult_df.ages[:cohort_data[-1].shape[0]])
         return (cohort_data, cohort_ages)
     
-    #def find_scalefactor(t1,f1,t2,f2):
-        #'''
-            #max(t1)<max(t2)
-        #'''
-        #int_f2 = scipy.interpolate.interp1d(t2,f2)
-        
-         ##Make error function and optimize on it
-        #my_err_fun = lambda interp_fun_tocompare, time_ref, fun_ref, time_scale_factor, range_scale_factor: np.sum((range_scale_factor*interp_fun_tocompare(time_scale_factor*time_ref)-fun_ref)**2)
-        #result = scipy.optimize.minimize(lambda scale_factors: my_err_fun(int_f2,t1,f1, scale_factors[0],scale_factors[1]),
-            #[0.9*t2.max()/t1.max(),f1.max()/f2.max()],
-            #method='L-BFGS-B',
-            #bounds=[(0,t2.max()/t1.max()), (0,None)])
-        #return result
     def find_scalefactor(t1,f1,t2,f2):
         def err_fun(t1,f1,t2,f2,time_scale,range_scale):
             int_f1 = scipy.interpolate.interp1d(t1,f1)
@@ -497,21 +403,16 @@ if do_scaling:
         #np.array(my_cohort_data[1][0][0]))
     
     # Plot data
-    fig_h, ax_h = plt.subplots(2,1)
+    fig_h, ax_h = plt.subplots(1,1)
     plot_data = [(ax_h[0].plot(res_scaling_abs[0], scaled_data))[0] for scaled_data in res_scaling_abs[1:]]
     if make_labels: ax_h[0].legend(plot_data, [strain for strain in strains])
     ax_h[0].set_xlabel('Normalized adult life (rel. to max. lifespan)')
     ax_h[0].set_ylabel('Normalized Prognosis')
-    #plot_data = [(ax_h[1].plot(res_scaling_zscored[0], scaled_data))[0] for scaled_data in res_scaling_zscored[1:]]
-    #if make_labels: ax_h[1].legend(plot_data, [strain for strain in strains])
-    #ax_h[1].set_xlabel('Normalized adult life (rel. to max. lifespan)')
-    #ax_h[1].set_ylabel('Prognosis (z-scored)')
         
     # TODO 
     # Significance testing....
-    # Redo with the variants of SVMs. Do combined SVM?
     if len(out_dir)>0: 
-        [clean_plot(my_ax,make_labels) for my_ax in ax_h]
+        [clean_plot(my_ax,make_labels,suppress_ticklabels=not make_labels) for my_ax in ax_h]
         fig_h.savefig(out_dir+os.path.sep+'health_rescaledtime.svg')
         fig_h.savefig(out_dir+os.path.sep+'health_rescaledtime.png')
     
