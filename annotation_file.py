@@ -4,10 +4,9 @@
 '''
 
 import numpy as np
-import csv
 import json
-#from collections import OrderedDict
-import os
+import pandas as pd
+import pathlib
 
 '''
 TODO
@@ -22,34 +21,34 @@ def find_char(string,ch):
 
 class AnnotationFile:
     
-    def __init__(self, file_name, annotation_prefix=''):
+   def __init__(self, input_data, annotation_prefix=''):
         '''
             Arguments:
                 file_name - file path to annotation file of interest
                 annotation_prefix - character to add to front of annotation; useful for annotations coming from multiple experiments
         '''
-        #self.data = OrderedDict()
-        self.data = {}
-        with open(file_name) as a_file:
-            a_file_reader = csv.reader(a_file,delimiter='\t')
-            a_tags = next(a_file_reader)
-            for a_tag in a_tags:
-                self.data[a_tag] = np.array([])
-            for worm_data in a_file_reader:
-                for a_tag,worm_tag_val in zip(a_tags,worm_data):
-                    if annotation_prefix != '' and worm_tag_val != '' and a_tag not in ['Notes','Worm'] and not worm_tag_val[0].isalpha():   # If frame annotation field not labeled by experiment
-                        self.data[a_tag] = np.append(self.data[a_tag],annotation_prefix+worm_tag_val)
-                    else:
-                        self.data[a_tag] = np.append(self.data[a_tag],worm_tag_val)
-        
-    def raw_data(self, expt_name='',restricted_list=None):
+        if type(input_data) is str or type(input_data) is pathlib.Path:
+            self.data = pd.read_csv(file_name)
+        else:   # Assume compatible with pandas DataFrame
+            self.data = pd.DataFrame(input_data)
+
+        if annotation_prefix != '':
+            for tag in self.data.keys():
+                if tag not in ['Notes','Worm']:
+                    for row_idx, val in zip(self.data[tag].index, self.data[tag]):
+                        if val != '' and not val[0].isalpha():
+                            self.data.set_value(row_idx,tag,annotation_prefix+val)
+    
+    
+    def raw_data(self, expt_name='',restricted_list=None):        
         raw_data = self.data.copy()
-        if expt_name is not '':
-            raw_data['Worm_FullName'] = np.array([expt_name+' '+worm_name[1:] for worm_name in raw_data['Worm']])
+        if expt_name != '':
+            raw_data.loc[:,'Worm_FullName'] = pd.Series(
+                np.array([expt_name+' '+worm_name[1:] for worm_name in raw_data['Worm']]))
         if restricted_list is None:
             return raw_data
         else:
-            return {a_tag:raw_data[a_tag][restricted_list] for a_tag in raw_data.keys()}
+            return raw_data.loc[restricted_list]
         
         
     def data_as_timestamps(self, metadata_list, expt_name='',restricted_list=None,as_timepoints=False):
@@ -74,7 +73,8 @@ class AnnotationFile:
                             [metadata_info[time_idx[0]]['timestamps'][int(time_idx[1:])]-metadata_info[time_idx[0]]['timestamps'][0] if time_idx != '' else -1 for time_idx in out_data[a_tag]])
                     else:
                         out_data[a_tag] = \
-                            np.array([metadata_info[time_idx[0]]['timepoints'][int(time_idx[1:])] if time_idx != '' else '-1' for time_idx in out_data[a_tag]])
+                            np.array(
+                            [metadata_info[time_idx[0]]['timepoints'][int(time_idx[1:])] if time_idx != '' else '-1' for time_idx in out_data[a_tag]])
                     
         if expt_name is not '':
             out_data['Worm_FullName'] = np.array([expt_name+' '+worm_name[1:] for worm_name in out_data['Worm']])
@@ -82,7 +82,7 @@ class AnnotationFile:
         if restricted_list is None:
             return out_data
         else:
-            return {a_tag:out_data[a_tag][restricted_list] for a_tag in out_data.keys()}
+            return out_data.loc[restricted_list]
 
 
     def data_as_timestamps_simple(self, metadata_file,expt_name='', restricted_list=None, as_timepoints=False):
@@ -117,7 +117,7 @@ class AnnotationFile:
         if restricted_list is None:
             return out_data
         else:
-            return {a_tag:out_data[a_tag][restricted_list] for a_tag in out_data.keys()}
+            return out_data[restricted_list]
     
     def get_goodworms(self, bad_worm_kws=[], restrict_to_hatched=False, expt_path=None):
         if len(bad_worm_kws) is 0:   # Use DEAD as marker
@@ -131,8 +131,9 @@ class AnnotationFile:
         
         goodworms = viable_worm #& worm_was_acquired
         if expt_path is not None:   # Need to screen for wells that weren't acquired (i.e. deleted)
-            first_worm_num = int(self.data['Worm'][0][-2:])   # Add in adjustment for the first index of the worms not being at 0
+            from process_data import Experiment
             
+            first_worm_num = int(self.data['Worm'][0][-2:])   # Add in adjustment for the first index of the worms not being at 0
             expt = Experiment(expt_path)
             worm_was_acquired = [str(worm_num+first_worm_num).zfill(len(expt.get_acquired_wells()[0])) in expt.get_acquired_wells() for worm_num in np.arange(len(self.data['Hatch']))]
         
@@ -144,33 +145,28 @@ class AnnotationFile:
         good_worms = self.get_goodworms(bad_worm_kws=bad_worm_kws)
         dead_worms = np.array(['NOT DEAD' not in note for note in self.data['Notes']])
         skip_idxs = np.where((not good_worms)|dead_worms)[0][0]
-        return [str(idx) for idx in skip_idxs]
+        return [str(idx).zfill(len(self.data['Worm'][0].index)) for idx in skip_idxs]
     
-    def save_timestamp_tsv(self, metadata_file,output_file):
-        with open(output_file,'w') as output_fp:
-            output_writer = csv.writer(output_fp,delimiter='\t')
-            output_writer.writerow([a_tag for a_tag in self.data.keys()])
-            for worm_data in zip(*(self.data_as_timestamps(metadata_file).values())):
-                output_writer.writerow(worm_data)
+    def save_timestamp_tsv(self, output_file, **metadata_args):
+        if type(output_file) is not pathlib.Path:
+            output_file = pathlib.Path(output_file)
+        
+        with output_file('w').open() as output_fp:
+            self.data_as_timestamps(metadata_args).to_csv(sep='\t')
 
+# TODO UPDATE THESE FUNCTIONS
 def compile_expt_timestamped_data(expt_dirs, md_dict=None,as_timepoints=False):
     timestamped_data = {}
     if md_dict is None:
         for expt_dir in expt_dirs: 
             ann_file = AnnotationFile(
                 [expt_dir+os.path.sep+my_file for my_file in sorted(os.listdir(expt_dir)) if '.tsv' in my_file][0])
-            #if not any(timestamped_data):
-                #[timestamped_data.setdefault(expt_key,np.array([])) for expt_key in ann_file.data.keys()]
             if expt_dir[-1] is not os.path.sep:
                 expt_name = expt_dir[find_char(expt_dir,os.path.sep)[-1]:]
             else:
                 expt_name = expt_dir[find_char(expt_dir,os.path.sep)[-2]:-1]
             ann_file_data = ann_file.data_as_timestamps_simple(expt_dir+os.path.sep+'experiment_metadata.json',restricted_list=ann_file.get_goodworms(),expt_name=expt_name,as_timepoints=as_timepoints)
-            #print(timestamped_data)
-            #print(ann_file.data['Notes'][ann_file.get_goodworms()])
-            if not any(timestamped_data):
-                [timestamped_data.setdefault(expt_key,np.array([])) for expt_key in ann_file_data.keys()]
-            timestamped_data = {expt_key:np.append(timestamped_data[expt_key],ann_file_data[expt_key]) if expt_key in ann_file_data.keys() else np.append(timestamped_data[expt_key],[-1]*np.count_nonzero(ann_file.get_goodworms())) for expt_key in timestamped_data.keys()}
+            timestamped_data.append(ann_file_data)
     else:
         for expt_dir, md_map in zip(expt_dirs, md_dict):
             if expt_dir[-1] is not os.path.sep:
@@ -185,22 +181,14 @@ def compile_expt_timestamped_data(expt_dirs, md_dict=None,as_timepoints=False):
             else:
                 ann_file = AnnotationFile(
                     [expt_dir+os.path.sep+my_file for my_file in sorted(os.listdir(expt_dir)) if '.tsv' in my_file and 'lock' not in my_file][0],
-                    #annotation_prefix=list(md_map.keys())[0])
                     annotation_prefix='D')
-                #if list(md_map.values())[0] is '':
-                    #ann_file_data = ann_file.data_as_timestamps({list(md_map.keys())[0]:expt_dir+os.path.sep+'experiment_metadata.json'},restricted_list=ann_file.get_goodworms())
-                #else:
                 ann_file_data = ann_file.data_as_timestamps(md_map,restricted_list=ann_file.get_goodworms(),expt_name=expt_name, as_timepoints=as_timepoints)
-
-            if not any(timestamped_data):
-                [timestamped_data.setdefault(expt_key,np.array([])) for expt_key in ann_file_data.keys()]
-            timestamped_data = {expt_key:np.append(timestamped_data[expt_key],ann_file_data[expt_key]) if expt_key in ann_file_data.keys() else np.append(timestamped_data[expt_key],[-1]*np.count_nonzero(ann_file.get_goodworms())) for expt_key in timestamped_data.keys()}
-            #print(timestamped_data)
-    
+            timestamped_data = timestamped_data.append(ann_file_data)
+    timestamped_data[np.isnan(timestamped_data)]=-1
     return timestamped_data
 
 def compile_expt_raw_data(expt_dirs):
-    raw_data = {}
+    raw_data = pd.DataFrame()
     for expt_dir in expt_dirs:
         ann_file = AnnotationFile(
             [expt_dir+os.path.sep+my_file for my_file in sorted(os.listdir(expt_dir)) if '.tsv' in my_file][0])
@@ -210,9 +198,8 @@ def compile_expt_raw_data(expt_dirs):
             expt_name = expt_dir[find_char(expt_dir,os.path.sep)[-2]:-1]
         # Get data
         ann_file_data = ann_file.raw_data(expt_name=expt_name,restricted_list=ann_file.get_goodworms())
-        if not any(raw_data):
-            [raw_data.setdefault(expt_key,np.array([])) for expt_key in ann_file_data.keys()]
-        raw_data = {expt_key:np.append(raw_data[expt_key],ann_file_data[expt_key]) if expt_key in ann_file_data.keys() else np.append(raw_data[expt_key],[-1]*np.count_nonzero(ann_file.get_goodworms())) for expt_key in raw_data.keys()}
+        raw_data = raw_data.append(ann_file_data)
+    raw_data[np.isnan(raw_data)]=-1 # Replace hanging entries for columns not contained in an experiment with -1
     return raw_data
 
 def make_annotation_file(data,output_file):
