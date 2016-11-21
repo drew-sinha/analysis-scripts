@@ -18,14 +18,14 @@ class AnnotationFile:
     def __init__(self, input_data, annotation_prefix=''):
         '''
             Arguments:
-                file_name - file path to annotation file of interest
-                annotation_prefix - character to add to front of annotation; useful for annotations coming from multiple experiments
+                input_data - str/pathlib.Path or pd.DataFrame compatible structure providing data to add to file
+                annotation_prefix - character to add to front of annotation; used for annotations coming from multiple experiments/metadata files
         '''
         if type(input_data) is str or type(input_data) is pathlib.Path:
             self.data = pd.read_table(input_data,dtype=str)
         else:   # Assume compatible with pandas DataFrame
             self.data = pd.DataFrame(input_data,dtype=str)
-        self.data.fillna('-1')
+        self.data.fillna('-1')  # NOTE! Data is internally stored as an object of str's!
         
         if annotation_prefix != '':
             for tag in self.data.keys():
@@ -36,6 +36,10 @@ class AnnotationFile:
         
         
     def raw_data(self, expt_name='',restricted_list=None):
+        '''
+            Pass back raw_data from this object while potentially adding a field for the worm's full designation
+        '''
+        
         raw_data = self.data.copy()
         if expt_name != '':
             raw_data.loc[:,'Worm_FullName'] = pd.Series(
@@ -48,9 +52,15 @@ class AnnotationFile:
         
     def data_as_timestamps(self, metadata_list, expt_name='',restricted_list=None,as_timepoints=False):
         '''
+            Pass back data in timed format using frame numbers from annotation file/data
+            
+            Arguments:
             metadata_list: (character delimiter: experiment metadata file paths)
             expt_name: Optional string identifying this experiment
+            restricted_list (numpy array suitable for indexing) - list for grabbing data from a specific set of worms
+            as_timepoints: Flag to pass back data as either hours post-expt start (False) or datetime string (True)
             
+            Returns:
             out_data: timestamps (-1 replaces any field that is left empty)
         '''
         out_data = self.data.copy()
@@ -86,7 +96,9 @@ class AnnotationFile:
             
             ARGUMENTS:
                 metadata_file (string) - Corresponding metadata file to use that relates each frame number from the annotation to an actual data/time
+                expt_name: Optional string identifying this experiment
                 restricted_list (numpy array suitable for indexing) - list for grabbing data from a specific set of worms
+                as_timepoints: Flag to pass back data as either hours post-expt start (False) or datetime string (True)
         '''
         
         out_data = self.data.copy()
@@ -115,6 +127,19 @@ class AnnotationFile:
             return out_data[restricted_list]
     
     def get_goodworms(self, bad_worm_kws=[], restrict_to_hatched=False, expt_path=None):
+        '''
+            Find all of the good worms based on annotation data
+            
+            Arguments:
+                bad_worm_kws - array of kws used to filter out bad worms
+                restrict_to_hatched - flag to filter out animals that were hatched at the first timepoint
+                expt_path - path to experiment used when one wants to use acquisition information from the experiment to filter out animals
+            
+            Returns:
+                goodworms - boolean array where True indicates a good worm
+        
+        '''
+        
         if len(bad_worm_kws) is 0:   # Use DEAD as marker
             viable_worm = (self.data['Hatch']!='') \
                 & (self.data['Death']!='') \
@@ -137,12 +162,19 @@ class AnnotationFile:
         return goodworms
     
     def get_skip_positions(self,bad_worm_kws=[]):
+        '''
+            Handy tool for getting skip positions from annotation_data
+            
+            Returns:
+                List of strings that can directly be placed into (experiment_metadata) json
+        '''
+        
         good_worms = self.get_goodworms(bad_worm_kws=bad_worm_kws)
         dead_worms = np.array(['NOT DEAD' not in note for note in self.data['Notes']])
         skip_idxs = np.where((not good_worms)|dead_worms)[0][0]
         return [str(idx).zfill(len(self.data['Worm'][0].index)) for idx in skip_idxs]
     
-    def save_timestamp_tsv(self, output_file):
+    def save_timestamp_tsv(self, output_file):        
         if type(output_file) is not pathlib.Path:
             output_file = pathlib.Path(output_file)
         
@@ -150,6 +182,10 @@ class AnnotationFile:
             self.data_as_timestamps(metadata_args).to_csv(sep='\t')
 
 def compile_expt_timestamped_data(expt_dirs, md_dict=None,as_timepoints=False):
+    '''
+        Builds super-table of timestamped data from multiple experiments
+    '''
+    
     timestamped_data = {}
     if md_dict is None:
         for expt_dir in expt_dirs: 
@@ -182,6 +218,10 @@ def compile_expt_timestamped_data(expt_dirs, md_dict=None,as_timepoints=False):
     return timestamped_data
 
 def compile_expt_raw_data(expt_dirs):
+    '''
+        Builds super-table of timestamped data from multiple experiments
+    '''
+    
     raw_data = pd.DataFrame()
     for expt_dir in expt_dirs:
         ann_file = AnnotationFile(
