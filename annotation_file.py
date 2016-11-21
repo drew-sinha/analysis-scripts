@@ -25,7 +25,7 @@ class AnnotationFile:
             self.data = pd.read_table(input_data,dtype=str)
         else:   # Assume compatible with pandas DataFrame
             self.data = pd.DataFrame(input_data,dtype=str)
-        self.data.fillna('-1')  # NOTE! Data is internally stored as an object of str's!
+        self.data.fillna('')  # NOTE! Data is internally stored as an object of str's!
         
         if annotation_prefix != '':
             for tag in self.data.keys():
