@@ -154,7 +154,6 @@ class AnnotationFile:
         with output_file('w').open() as output_fp:
             self.data_as_timestamps(metadata_args).to_csv(sep='\t')
 
-# TODO UPDATE THESE FUNCTIONS
 def compile_expt_timestamped_data(expt_dirs, md_dict=None,as_timepoints=False):
     timestamped_data = {}
     if md_dict is None:
