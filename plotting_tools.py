@@ -1,6 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import os
+import zplib.scalar_stats.kde
 
 import annotation_file
 
@@ -85,14 +86,22 @@ def quick_plot_lifespan(ann_fps, expt_mds, bad_worm_kws=[],debug_mode=False):
     ax_h[1].set_ylabel('Frequency')
     ax_h[1].set_title('Mean+/-STD: {:.2f}+/-{:.2f}d\nMedian:{}d'.format(np.mean(lifespan),np.std(lifespan),np.median(lifespan)))
     
-def plot_lifespan(ann_fps, expt_mds, annotation_prefix_list = [], bad_worm_kws=[],debug_mode=False):
+def plot_lifespan(ann_fps, expt_mds, annotation_prefix_list = [], bad_worm_kws=[],debug_mode=False,plot_mode='both',hist_mode='kde'):
+    def draw_hist(data, my_ax, hist_mode = 'kde'):
+        if hist_mode is 'kde':
+            interval_supp,interval_data,interval_obj = zplib.scalar_stats.kde.kd_distribution(data)
+            my_ax.plot(interval_supp,interval_data)
+        elif hist_mode is 'bar':
+            my_ax.hist(data)
+        return my_ax
+        
     if annotation_prefix_list == []:
         my_ann_files = [annotation_file.AnnotationFile(ann_fp) for ann_fp in ann_fps]
     else:
         my_ann_files = [annotation_file.AnnotationFile(ann_fp,annotation_prefix=prefix) for (ann_fp,prefix) in zip(ann_fps,annotation_prefix_list)]
     
     timestamped_data = {}
-    [timestamped_data.setdefault(expt_key,np.array([])) for expt_key in my_ann_files[0].get_data_keys()]
+    [timestamped_data.setdefault(expt_key,np.array([])) for expt_key in list(my_ann_files[0].data.keys())]
     for [expt_md_fp, ann_file] in zip(expt_mds, my_ann_files):
         if debug_mode: print(expt_md_fp)
         if type(expt_mds[0]) == str:    # Simple - one md file
@@ -116,16 +125,31 @@ def plot_lifespan(ann_fps, expt_mds, annotation_prefix_list = [], bad_worm_kws=[
     plt.ion()
     
     plt.gcf().clf()
-    fig_h, ax_h = plt.subplots(2,1,sharex=True)
-    ax_h[0].plot(np.append([0],sorted_ls),np.append([1],prop_alive))
-    ax_h[0].set_xlabel('Time since expt. start (d)')
-    ax_h[0].set_ylabel('Proportion alive')
-    ax_h[0].set_title('Survival curve - n = {}'.format(np.size(lifespan)))
+    if plot_mode is 'both':
+        fig_h, ax_h = plt.subplots(2,1,sharex=True)
+        ax_h[0].plot(np.append([0],sorted_ls),np.append([1],prop_alive))
+        ax_h[0].set_xlabel('Time since expt. start (d)')
+        ax_h[0].set_ylabel('Proportion alive')
+        ax_h[0].set_title('Survival curve - n = {}'.format(np.size(lifespan)))
+        
+        ax_h[1].hist(lifespan)
+        ax_h[1].set_xlabel('Time to death (d)')
+        ax_h[1].set_ylabel('Frequency')
+        ax_h[1].set_title('Mean+/-STD: {:.2f}+/-{:.2f}d\nMedian:{}d'.format(np.mean(lifespan),np.std(lifespan),np.median(lifespan)))
+    elif plot_mode is 'lifespan':
+        fig_h,ax_h = plt.subplots(1,1)
+        draw_hist(lifespan, ax_h)
+        ax_h.set_xlabel('Time to death (d)')
+        ax_h.set_ylabel('Frequency')
+        ax_h.set_title('Mean+/-STD: {:.2f}+/-{:.2f}d\nMedian:{}d'.format(np.mean(lifespan),np.std(lifespan),np.median(lifespan)))
+    else:
+        fig_h,ax_h = plt.subplots(1,1)
+        ax_h.plot(np.append([0],sorted_ls),np.append([1],prop_alive))
+        ax_h.set_xlabel('Time since expt. start (d)')
+        ax_h.set_ylabel('Proportion alive')
+        ax_h.set_title('Survival curve - n = {}'.format(np.size(lifespan)))
     
-    ax_h[1].hist(lifespan)
-    ax_h[1].set_xlabel('Time to death (d)')
-    ax_h[1].set_ylabel('Frequency')
-    ax_h[1].set_title('Mean+/-STD: {:.2f}+/-{:.2f}d\nMedian:{}d'.format(np.mean(lifespan),np.std(lifespan),np.median(lifespan)))
+    return fig_h, ax_h
 
 
 def clean_plot(my_plot,make_labels=False,suppress_ticklabels=False):
