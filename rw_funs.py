@@ -32,13 +32,13 @@ def rw_load_last_images_fromexpt(rw_obj, expt_dir, filter_kw='bf.png'):
             img_fns.append([img_file for img_file in subdir.iterdir() if img_file.is_file() and filter_kw in str(img_file)][-1])
     rw_obj.flipbook.add_image_files(img_fns)
 
-def get_labeled_positions(rw_obj, labels = ['c']):
+def get_labeled_positions(rw_obj, labels):
     '''
         labels - list of labels to look for in risWidget flipbook pages (e.g. ['c'])
     '''
     
-    labeled_positions = {my_label:[] for my_label in label}
+    labeled_positions = {my_label:[] for my_label in labels}
     for my_label in labels:
-        for time_idx, flipbook_page in enumerate(rw.flipbook.pages):
-            if flipbook_page.name == my_label: labeled_positions['my_label'].append(times)
+        for time_idx, flipbook_page in enumerate(rw_obj.flipbook.pages):
+            if flipbook_page.name == my_label: labeled_positions[my_label].append(time_idx)
     return labeled_positions
