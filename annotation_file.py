@@ -8,11 +8,6 @@ import json
 import pandas as pd
 import pathlib
 
-'''
-TODO
-o Fix indexing in data_as_timestamps with restricted lists; currently doesn't support boolean indexing
-'''
-
 def find_char(string,ch):
     '''
         Pulls out positions for a particular character in a string
@@ -20,27 +15,27 @@ def find_char(string,ch):
     return [idx for (idx, letter) in enumerate(string) if letter == ch]
 
 class AnnotationFile:
-    
-   def __init__(self, input_data, annotation_prefix=''):
+    def __init__(self, input_data, annotation_prefix=''):
         '''
             Arguments:
                 file_name - file path to annotation file of interest
                 annotation_prefix - character to add to front of annotation; useful for annotations coming from multiple experiments
         '''
         if type(input_data) is str or type(input_data) is pathlib.Path:
-            self.data = pd.read_csv(file_name)
+            self.data = pd.read_table(input_data,dtype=str)
         else:   # Assume compatible with pandas DataFrame
-            self.data = pd.DataFrame(input_data)
-
+            self.data = pd.DataFrame(input_data,dtype=str)
+        self.data.fillna('-1')
+        
         if annotation_prefix != '':
             for tag in self.data.keys():
                 if tag not in ['Notes','Worm']:
                     for row_idx, val in zip(self.data[tag].index, self.data[tag]):
                         if val != '' and not val[0].isalpha():
                             self.data.set_value(row_idx,tag,annotation_prefix+val)
-    
-    
-    def raw_data(self, expt_name='',restricted_list=None):        
+        
+        
+    def raw_data(self, expt_name='',restricted_list=None):
         raw_data = self.data.copy()
         if expt_name != '':
             raw_data.loc[:,'Worm_FullName'] = pd.Series(
@@ -147,7 +142,7 @@ class AnnotationFile:
         skip_idxs = np.where((not good_worms)|dead_worms)[0][0]
         return [str(idx).zfill(len(self.data['Worm'][0].index)) for idx in skip_idxs]
     
-    def save_timestamp_tsv(self, output_file, **metadata_args):
+    def save_timestamp_tsv(self, output_file):
         if type(output_file) is not pathlib.Path:
             output_file = pathlib.Path(output_file)
         
@@ -201,13 +196,9 @@ def compile_expt_raw_data(expt_dirs):
     raw_data[np.isnan(raw_data)]=-1 # Replace hanging entries for columns not contained in an experiment with -1
     return raw_data
 
-def make_annotation_file(data,output_file):
+def write_annotation_data(data,output_file):
     '''
-        data - OrderedDict dictionary object containing data (so that keys are written in the proper order
+        data - pandas Dataframe
         output_file - path for the output file
     '''
-    with open(output_file,'w') as output_fp:
-        output_writer = csv.writer(output_fp,delimiter='\t')
-        output_writer.writerow([a_tag for a_tag in data.keys()])
-        for worm_data in zip(*data.values()):
-            output_writer.writerow(worm_data)
+    data.to_tsv(output_file,sep='\t')
