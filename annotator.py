@@ -64,12 +64,16 @@ class DeathDayEvaluator:
             self.set_index(index+offset)
 
     def parse_inputs(self): 
-        subdirectories= glob.glob(self.in_dir+'/[0-9][0-9]*')
+        #subdirectories= glob.glob(self.in_dir+'/[0-9][0-9]*')
+        subdirectories= glob.glob(self.in_dir+'/[0-9]*/')
+        print(subdirectories)
         worm_positions=[]
         meow=[]
         for item in subdirectories:
-            r=re.search('\d{2,3}$', item)
-            worm_positions.append(r.group())
+            #r=re.search('\d{2,3}$', item)
+            r=re.search('/\d{1,3}[/]$', item)
+            #worm_positions.append(r.group())
+            worm_positions.append(r.group()[:-1])   # Remove trailing '/'
             all_images=glob.glob(item+self.image_glob)
             all_images=list(map(pathlib.Path,all_images))
             meow.append(all_images)
@@ -84,40 +88,48 @@ class DeathDayEvaluator:
         self.actions.append(action)
 
     def set_index(self, index):
-        if autosave_dir is not None:
-            self.worm_info.to_csv((self.autosave_dir/'annotator_autosave.tsv').open(),sep='\t')
+        if self.autosave_dir is not None:
+            self.worm_info.to_csv((self.autosave_dir/'annotator_autosave.tsv').open('w'),sep='\t')
         
         self.well_index = index
         self.current_worm_position=self.worm_positions[index]
         self.rw.flipbook.add_image_files(self.all_images[index][80:])
-        
         self.refresh_info()
         
-    def refresh_info():
+    def refresh_info(self):
         # Repopulate page titles with information from worm_info
         for label in self.labels:
-            if (self.worm_info.loc[self.worm_positions[index]].notnull())[label]:
+            if (self.worm_info.loc[self.worm_positions[self.well_index]].notnull())[label]:
                 self.rw.flipbook.pages[
-                    self.worm_info.loc[self.worm_positions[index]][label]].name=label
-        if (self.worm_info.loc[self.worm_positions[index]].notnull())['Notes']:
-            self.rw.qt_object.nf.set_text(self.worm_info.loc[self.worm_positions[index]]['Notes'])
+                    self.worm_info.loc[self.worm_positions[self.well_index]][label]].name=label
+        if (self.worm_info.loc[self.worm_positions[self.well_index]].notnull())['Notes']:
+            self.rw.qt_object.nf.set_text(self.worm_info.loc[self.worm_positions[self.well_index]]['Notes'])
+        else:
+            self.rw.qt_object.nf.set_text('')
     
-    def save_annotations():
+    def save_annotations(self):
+        self.record_labeled_positions() # Grab the latest annotations
         file_dialog = Qt.QFileDialog()
         file_dialog.setAcceptMode(Qt.QFileDialog.AcceptSave)
         if file_dialog.exec_():     # Run dialog box and check for a good exit
             save_path = pathlib.Path(file_dialog.selectedFiles()[0])
-            self.worm_info.to_csv(save_path.open(),sep='\t')
+            self.worm_info.to_csv(save_path.open('w'),sep='\t')
             print('file written to '+str(save_path))
     
-    def load_annotations():
+    def load_annotations(self):
         file_dialog = Qt.QFileDialog()
-        file_dialog.setAcceptMode(Qt.QFileDialog.AcceptLoad)
+        file_dialog.setAcceptMode(Qt.QFileDialog.AcceptOpen)
         if file_dialog.exec_():     # Run dialog box and check for a good exit
             load_path = pathlib.Path(file_dialog.selectedFiles()[0])
-            self.worm_info = pd.read_csv(load_path.open(),sep='\t') # Overwrite current worm_info
+            loaded_info = pd.read_csv(load_path.open(),sep='\t',index_col=0)
+            if (set(loaded_info.columns.values) != set(self.worm_info.columns.values)) or (set(loaded_info.index) != set(self.worm_info.index)):
+                print(loaded_info)
+                print(self.worm_info)
+                raise Exception('Bad annotation file')
+            
+            self.worm_info = loaded_info
             self.labels = list(self.worm_info.columns.values)
-            print('annotations read from '+str(save_path))
+            print('annotations read from '+str(load_path))
 
 class NoteField(Qt.QWidget):
     '''
