@@ -5,6 +5,22 @@ import zplib.scalar_stats.kde
 
 import annotation_file
 
+# I Want Hue color map
+qual_colors = np.array([[0,0,0],
+    [211,66,126],
+    [104,116,201],
+    [127,111,47],
+    [172,88,197],
+    [215,144,72],
+    [178,176,68],
+    [194,99,109],
+    [190,117,177],
+    [93,174,70],
+    [86,165,116],
+    [81,173,208],
+    [203,81,54]])/255
+
+
 def quick_plot_dev(ann_fps, expt_mds,bad_worm_kws=[]):
     my_ann_files = [annotation_file.AnnotationFile(ann_fp) for ann_fp in ann_fps]  
     
