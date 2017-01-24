@@ -6,4 +6,5 @@
 *.pyc
 
 # Directory and everything inside with infinite depth
-wzhang/**
+wzhang/
+corral_annotations/
