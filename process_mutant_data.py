@@ -6,6 +6,7 @@ import os
 import numpy as np
 import scipy.interpolate
 import scipy.optimize
+import scipy.stats as stats
 
 import analyzeHealth
 import graphingFigures
@@ -15,17 +16,80 @@ plt.ion()
 plt.show()
 plt.close('all')
 
-def load_strain_data(strains):
-    strain_dfs = []
+def load_strain_data(strains,health_dir = '/media/Data/Work/ZPLab/Analysis/MutantHealth/worm_health_data/'):
+    strain_data = []
     for strain in strains:
         #with open('/mnt/bulkdata/wzhang/human_dir/'+strain+'_health/df_'+strain+'.pickle','rb') as my_file:
-        with open('/media/Data/Work/ZPLab/Analysis/MutantHealth/worm_health_data/'+strain+'_health/df_'+strain+'.pickle','rb') as my_file:
-            strain_dfs.append(pickle.load(my_file)['adult_df'])
-        print(strain+": n = {}".format(len(strain_dfs[-1].worms)))
+        with open(health_dir+os.path.sep+strain+'_health/df_'+strain+'.pickle','rb') as my_file:
+            strain_data.append(pickle.load(my_file))
+        print(strain+": n = {}".format(len(strain_data[-1]['adult_df'].worms)))
         print(strain+": CV={:.2f}".format(
-            np.std(analyzeHealth.selectData.get_adultspans(strain_dfs[-1]))/np.mean(analyzeHealth.selectData.get_adultspans(strain_dfs[-1]))))
-    return strain_dfs
+            np.std(analyzeHealth.selectData.get_adultspans(strain_data[-1]['adult_df']))/np.mean(analyzeHealth.selectData.get_adultspans(strain_data[-1]['adult_df']))))
+    return strain_data
+
+def plot_survival(strain_dfs, out_dir='', make_labels=True, plot_mode = 'pop'):
+    # Plot survival curves and lifespan distributions for each strain
     
+    if plot_mode is 'cohorts':
+        # Use percentile bins
+        animal_bins = np.array([len(my_bin) for my_bin in analyzeHealth.selectData.adult_cohort_bins(strain_dfs[0], my_worms = strain_dfs[0].worms, bin_width_days = 2)[0]])
+        animal_bins = 100*np.cumsum(animal_bins)/sum(animal_bins) # Make percentile bins
+        
+        survival_fig, ax_h = plt.subplots(len(strains),2)
+        for strain_health, strain_ax in zip(strain_dfs,ax_h.T):
+            graphingFigures.cannedFigures.survival_lifespan(strain_ax[0],strain_ax[1],strain_health, make_labels=make_labels,
+                cohort_info=analyzeHealth.selectData.adult_cohort_bins(strain_health, my_worms = strain_health.worms, bin_width_days = animal_bins,bin_mode='percentile'))
+        [plotting_tools.clean_plot(my_ax, make_labels=make_labels,suppress_ticklabels=not make_labels) for my_ax in ax_h.flatten()]
+
+    elif plot_mode in ['pop','population']:
+        survival_fig, ax_h = plt.subplots(1,1)
+        max_life = max([max(analyzeHealth.selectData.get_adultspans(strain_df))/24 for strain_df in strain_dfs])//1 + 1
+        data_series = []
+        
+        
+        for strain_num,strain_df in enumerate(strain_dfs):
+            lifespans = analyzeHealth.selectData.get_lifespans(strain_df)/24
+            sorted_ls = sorted(lifespans)
+            prop_alive = 1 - np.arange(start=0,stop=np.size(lifespans))/np.size(lifespans)
+            data_series.append(
+                ax_h.plot(np.append([0],sorted_ls),np.append([1],prop_alive)))
+            print('Stats for strain {} +: ({:.2f}+/-{:.2f})'.format(strain_num,np.mean(lifespans),np.std(lifespans)))
+        
+        ax_h.set_ylabel('Percent Survival')
+        ax_h.set_xlabel('Days Post-Maturity')
+        ax_h.set_ylim([0,1.1])
+        ax_h.set_xlim([0,max_life])
+        plotting_tools.clean_plot(ax_h, make_labels=make_labels,suppress_ticklabels=not make_labels)
+    
+    if len(out_dir)>0:
+        survival_fig.savefig(out_dir+os.path.sep+'survival_curves.png')
+    
+    if plot_mode is 'cohorts':
+        return (survival_fig, ax_h)
+    elif plot_mode in ['pop','population']:
+        return (survival_fig, ax_h, data_series)
+
+def test_adultspans(strain_dfs,strain_labels):
+    figs, axs = [], []
+    
+    for strain_df,strain_label in zip(strain_dfs,strain_labels):
+        adultspans = analyzeHealth.selectData.get_adultspans(strain_df)/24
+        lifespans = analyzeHealth.selectData.get_lifespans(strain_df)/24
+        devspans = lifespans-adultspans
+        
+        fig_h,ax_h = plt.subplots(1,1)
+        ax_h.scatter(adultspans,lifespans)
+        ax_h.set_title(strain_label+'\nr={:.2f}\np={:.2f}'.format(
+            *stats.pearsonr(adultspans,lifespans)))
+        
+        figs.append(fig_h)
+        axs.append(ax_h)
+        #~ fig_h,ax_h = plt.subplots(1,1)
+        #~ ax_h.scatter(devspans,lifespans)
+        #~ ax_h.set_title('r={:.2f}\np={:.2f}'.format(
+            #~ *stats.pearsonr(devspans,lifespans)))
+    return(figs,axs)
+
 def generate_regression_data(strain_dfs,strains=None,out_dir='',make_labels=True,verbose=True):
     if strains is None:
         strains = [{}.format(i) for i,strain in enumerate(strains)]
@@ -144,7 +208,7 @@ def plot_strain_health(strain_dfs,group_mode='population',make_labels=True,out_d
         var_fig, var_ax = plt.subplots(len(health_vars),1)
         for var_plot,var in zip(var_ax.T,health_vars):
             graphingFigures.cannedFigures.cohort_traces(var_plot,var,strain_dfs[0],make_labels=make_labels,bin_width_days=animal_bins,bin_mode='percentile',line_style='-',cohorts_to_use=cohorts_to_use)
-            for strain_health,line_style in zip(strain_dfs[1:],['--']):
+            for strain_health,line_style in zip(strain_dfs[1:],['--','-.',':']):
                 if collapse_mutant:
                     graphingFigures.cannedFigures.cohort_traces(var_plot,var,strain_health,make_labels=make_labels,bin_width_days=np.array([100]),bin_mode='percentile',line_style=line_style,cohorts_to_use=cohorts_to_use,stop_with_death=False)
                 else:
@@ -161,7 +225,7 @@ def plot_strain_health(strain_dfs,group_mode='population',make_labels=True,out_d
         for var in health_vars:
             var_fig, var_ax = plt.subplots(1,1)
             graphingFigures.cannedFigures.cohort_traces(var_ax,var,strain_dfs[0],make_labels=make_labels,bin_width_days=animal_bins,bin_mode='percentile',line_style='-',cohorts_to_use=cohorts_to_use)
-            for strain_health,line_style in zip(strain_dfs[1:],['--']):
+            for strain_health,line_style in zip(strain_dfs[1:],['--','-.',':']):
                 if collapse_mutant:
                     graphingFigures.cannedFigures.cohort_traces(var_ax,var,strain_health,make_labels=make_labels,bin_width_days=np.array([100]),bin_mode='percentile',line_style=line_style,cohorts_to_use=cohorts_to_use,stop_with_death=False)
                 else:
@@ -177,11 +241,11 @@ def plot_strain_health(strain_dfs,group_mode='population',make_labels=True,out_d
     
     health_fig, health_ax = plt.subplots(1,1)
     graphingFigures.cannedFigures.cohort_traces(health_ax,'health',strain_dfs[0],make_labels=make_labels,bin_width_days=animal_bins,bin_mode='percentile',line_style='-')
-    for strain_health,line_style in zip(strain_dfs[1:],['--']):
+    for strain_health,line_style in zip(strain_dfs[1:],['--','-.',':']):
         if collapse_mutant:
             graphingFigures.cannedFigures.cohort_traces(health_ax,'health',strain_health,make_labels=make_labels,bin_width_days=np.array([100]),bin_mode='percentile',line_style=line_style,stop_with_death=False)
         else:
-            graphingFigures.cannedFigures.cohort_traces(health_ax,'health',strain_health,make_labels=make_labels,bin_width_days=animal_bins,bin_mode='percentile',line_style=line_style)
+            graphingFigures.cannedFigures.cohort_traces(health_ax,'health',strain_health,make_labels=make_labels,bin_width_days=animal_bins,bin_mode='percentile',line_style=line_style,cohorts_to_use=cohorts_to_use)
     if len(out_dir)>0: 
         plotting_tools.clean_plot(health_ax,make_labels,suppress_ticklabels=not make_labels)
         if collapse_mutant is not True: 
@@ -300,23 +364,6 @@ def plot_strain_rescaling(strain_dfs,strains,out_dir='', make_labels=True, do_bo
             plotting_tools.clean_plot(ax_h, make_labels=make_labels,suppress_ticklabels=not make_labels)
             fig_h.savefig(out_dir+os.path.sep+'health_overall_scaling.png')
     return fig_data
-    
-
-def plot_survival(strain_dfs, out_dir='', make_labels=True):
-    # Plot survival curves and lifespan distributions for each strain
-    
-    # Use percentile bins
-    animal_bins = np.array([len(my_bin) for my_bin in analyzeHealth.selectData.adult_cohort_bins(strain_dfs[0], my_worms = strain_dfs[0].worms, bin_width_days = 2)[0]])
-    animal_bins = 100*np.cumsum(animal_bins)/sum(animal_bins) # Make percentile bins
-    
-    survival_fig, ax_h = plt.subplots(len(strains),2)
-    for strain_health, strain_ax in zip(strain_dfs,ax_h.T):
-        graphingFigures.cannedFigures.survival_lifespan(strain_ax[0],strain_ax[1],strain_health, make_labels=make_labels,
-            cohort_info=analyzeHealth.selectData.adult_cohort_bins(strain_health, my_worms = strain_health.worms, bin_width_days = animal_bins,bin_mode='percentile'))
-    if len(out_dir)>0:
-        [plotting_tools.clean_plot(my_ax, make_labels=make_labels,suppress_ticklabels=not make_labels) for my_ax in ax_h.flatten()]
-        survival_fig.savefig(out_dir+os.path.sep+'survival_curves.png')
-    return (survival_fig, ax_h)
 
 # Parameters scatter (start vs. rate vs. death)
 def parameter_analysis(strain_dfs, cohort_info=None, out_dir='',make_labels=None,):
@@ -475,24 +522,22 @@ if __name__ is "__main__":
     #out_dir = '/media/Data/Work/ZPLab/Analysis/MutantHealth/processed_data/age-1_cohorts+regression_20160818/'
     #out_dir = ''
     #strains = ['spe-9percombinedweightedSVM','age-1percombinedweightedSVM']
-    strains = ['spe-9','age-1specific']
-    out_dir = '/media/Data/Work/ZPLab/Analysis/MutantHealth/processed_data/spe-9+age-1percombinedweightedSVM_20161006/'
-    out_dir=''
+    #~ strains = ['spe-9','age-1specific']
+    strains = ['spe-9','age-1','ife-2','clk-1']
+    out_dir='/media/Data/Documents/Presentations/LabMeeting_20170119/Analysis_Figures_WTclassifier/'
     if make_labels and out_dir is not '': 
         out_dir = out_dir+os.path.sep+'labeled'+os.path.sep
         if not os.path.isdir(out_dir): os.mkdir(out_dir)
     
-    strain_dfs = load_strain_data(strains)
-    plot_strain_rescaling(strain_dfs,strains,out_dir=out_dir,make_labels=make_labels,do_bootstrap=True)
-    plot_strain_rescaling(strain_dfs,strains,out_dir=out_dir,make_labels=make_labels,do_bootstrap=True,percent_range=[20,40])
-    plot_strain_rescaling(strain_dfs,strains,out_dir=out_dir,make_labels=make_labels,do_bootstrap=True,percent_range=[60,80])
-    bob
+    #~ strain_dfs = load_strain_data(strains)
+    strain_data = load_strain_data(strains,'/media/Data/Work/ZPLab/Analysis/MutantHealth/worm_health_data/dfs/WT_classifier/')
+    strain_dfs = [data['adult_df'] for data in strain_data]
     
     plot_survival(strain_dfs,out_dir=out_dir,make_labels=make_labels)
     
     #plot_strain_health(strain_dfs,group_mode='population',make_labels=make_labels,out_dir=out_dir)
     plot_strain_health(strain_dfs,group_mode='spe9_allcohorts',make_labels=make_labels,out_dir=out_dir)
-    plot_strain_health(strain_dfs,group_mode='spe9_allcohorts',make_labels=make_labels,out_dir=out_dir,var_plot_mode='separate')
+    #~ plot_strain_health(strain_dfs,group_mode='spe9_allcohorts',make_labels=make_labels,out_dir=out_dir,var_plot_mode='separate')#Broken need to fix
     plot_strain_health(strain_dfs,group_mode='spe9_allcohorts',make_labels=make_labels,out_dir=out_dir,collapse_mutant=True)
     plot_strain_health(strain_dfs,group_mode='spe9_3cohorts',make_labels=make_labels,out_dir=out_dir)
     plot_strain_health(strain_dfs,group_mode='equalbins_7',make_labels=make_labels,out_dir=out_dir)
@@ -513,3 +558,8 @@ if __name__ is "__main__":
         out_dir=out_dir,make_labels=make_labels)
     [abs_fig, abs_ax] = deviation_rescaling(strain_dfs,'relative',
         out_dir=out_dir,make_labels=make_labels)
+    
+    #~ plot_strain_rescaling(strain_dfs,strains,out_dir=out_dir,make_labels=make_labels,do_bootstrap=True)
+    #~ plot_strain_rescaling(strain_dfs,strains,out_dir=out_dir,make_labels=make_labels,do_bootstrap=True,percent_range=[20,40])
+    #~ plot_strain_rescaling(strain_dfs,strains,out_dir=out_dir,make_labels=make_labels,do_bootstrap=True,percent_range=[60,80])
+    #~ bob
