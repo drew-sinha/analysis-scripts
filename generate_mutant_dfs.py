@@ -175,10 +175,10 @@ def make_df(strains,df_savedir, svm_directory=''):
                 os.mkdir(full_savedir)
         adult_df = characterizeTrajectories.CompleteWormDF(directory_bolus, full_savedir,
             {'adult_only': True, 'svm_directory':svm_directory})
-        life_df = characterizeTrajectories.CompleteWormDF(directory_bolus, full_savedir,
-            {'adult_only': False, 'svm_directory':svm_directory})
+        #~ life_df = characterizeTrajectories.CompleteWormDF(directory_bolus, full_savedir,
+            #~ {'adult_only': False, 'svm_directory':svm_directory})
         with open(full_savedir+'df_combined.pickle','wb') as my_file:
-            pickle.dump({'adult_df':adult_df,'life_df':life_df,'svm_directory':svm_directory,'data_list':data_list},my_file)
+            pickle.dump({'adult_df':adult_df,'svm_directory':svm_directory,'data_list':data_list},my_file)
     else:
         for strain in strains:
             directory_bolus = folderStuff.DirectoryBolus(working_directory, human_directory, 
@@ -192,7 +192,7 @@ def make_df(strains,df_savedir, svm_directory=''):
                     os.mkdir(full_savedir)
             adult_df = characterizeTrajectories.CompleteWormDF(directory_bolus, full_savedir,
                 {'adult_only': True, 'svm_directory':svm_directory})
-            life_df = characterizeTrajectories.CompleteWormDF(directory_bolus, full_savedir,
-                {'adult_only': False, 'svm_directory':svm_directory})
+            #~ life_df = characterizeTrajectories.CompleteWormDF(directory_bolus, full_savedir,
+                #~ {'adult_only': False, 'svm_directory':svm_directory})
             with open(full_savedir+'df_'+strain+'.pickle','wb') as my_file:
-                pickle.dump({'adult_df':adult_df,'life_df':life_df,'svm_directory':svm_directory,'data_list':data_list},my_file)
+                pickle.dump({'adult_df':adult_df,'svm_directory':svm_directory,'data_list':data_list},my_file)
