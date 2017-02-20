@@ -3,11 +3,24 @@ import matplotlib.pyplot as plt
 import os
 import zplib.scalar_stats.kde
 
-import annotation_file
+#~ import annotation_file
 
 # I Want Hue color map
-qual_colors = np.array([[0,0,0],
-    [211,66,126],
+#~ qual_colors = np.array([[0,0,0],
+    #~ [211,66,126],
+    #~ [104,116,201],
+    #~ [127,111,47],
+    #~ [172,88,197],
+    #~ [215,144,72],
+    #~ [178,176,68],
+    #~ [194,99,109],
+    #~ [190,117,177],
+    #~ [93,174,70],
+    #~ [86,165,116],
+    #~ [81,173,208],
+    #~ [203,81,54]])/255
+qual_colors = np.array([[0,0,0],    # Switched the 2nd and 9th colors
+    [93,174,70],
     [104,116,201],
     [127,111,47],
     [172,88,197],
@@ -15,160 +28,170 @@ qual_colors = np.array([[0,0,0],
     [178,176,68],
     [194,99,109],
     [190,117,177],
-    [93,174,70],
+    [211,66,126],
     [86,165,116],
     [81,173,208],
     [203,81,54]])/255
 
 
-def quick_plot_dev(ann_fps, expt_mds,bad_worm_kws=[]):
-    my_ann_files = [annotation_file.AnnotationFile(ann_fp) for ann_fp in ann_fps]  
+#~ def quick_plot_dev(ann_fps, expt_mds,bad_worm_kws=[]):
+    #~ my_ann_files = [annotation_file.AnnotationFile(ann_fp) for ann_fp in ann_fps]  
     
-    timestamped_data = {}
-    [timestamped_data.setdefault(expt_key,np.array([])) for expt_key in my_ann_files[0].get_data_keys()]
-    for [expt_md_fp, ann_file] in zip(expt_mds, my_ann_files):
-        ann_file_data = ann_file.data_as_timestamps_simple(expt_md_fp)
-        for expt_key in timestamped_data.keys():
-            timestamped_data[expt_key] = np.append(timestamped_data[expt_key],ann_file_data[expt_key])
-    print(timestamped_data)
+    #~ timestamped_data = {}
+    #~ [timestamped_data.setdefault(expt_key,np.array([])) for expt_key in my_ann_files[0].get_data_keys()]
+    #~ for [expt_md_fp, ann_file] in zip(expt_mds, my_ann_files):
+        #~ ann_file_data = ann_file.data_as_timestamps_simple(expt_md_fp)
+        #~ for expt_key in timestamped_data.keys():
+            #~ timestamped_data[expt_key] = np.append(timestamped_data[expt_key],ann_file_data[expt_key])
+    #~ print(timestamped_data)
     
-    viable_worm = (timestamped_data['Hatch']!=-1) \
-        & np.array([not any([kw in note for kw in bad_worm_kws]) for note in timestamped_data['Notes']])
-    hatched_on_corral = timestamped_data['Hatch'] != 0
+    #~ viable_worm = (timestamped_data['Hatch']!=-1) \
+        #~ & np.array([not any([kw in note for kw in bad_worm_kws]) for note in timestamped_data['Notes']])
+    #~ hatched_on_corral = timestamped_data['Hatch'] != 0
     
-    L1_durations = (timestamped_data['L1 ecdysis']-timestamped_data['Hatch'])[viable_worm & hatched_on_corral]/3600
-    L2_durations = (timestamped_data['L2 ecdysis']-timestamped_data['L1 ecdysis'])[viable_worm]/3600
-    L3_durations = (timestamped_data['L3 ecdysis']-timestamped_data['L2 ecdysis'])[viable_worm]/3600
-    L4_durations = (timestamped_data['L4 ecdysis']-timestamped_data['L3 ecdysis'])[viable_worm]/3600
-    larval_durations = (timestamped_data['L4 ecdysis']-timestamped_data['Hatch'])[viable_worm & hatched_on_corral]/3600
-    print(L1_durations)
+    #~ L1_durations = (timestamped_data['L1 ecdysis']-timestamped_data['Hatch'])[viable_worm & hatched_on_corral]/3600
+    #~ L2_durations = (timestamped_data['L2 ecdysis']-timestamped_data['L1 ecdysis'])[viable_worm]/3600
+    #~ L3_durations = (timestamped_data['L3 ecdysis']-timestamped_data['L2 ecdysis'])[viable_worm]/3600
+    #~ L4_durations = (timestamped_data['L4 ecdysis']-timestamped_data['L3 ecdysis'])[viable_worm]/3600
+    #~ larval_durations = (timestamped_data['L4 ecdysis']-timestamped_data['Hatch'])[viable_worm & hatched_on_corral]/3600
+    #~ print(L1_durations)
     
-    plt.show()
-    plt.ion()
+    #~ plt.show()
+    #~ plt.ion()
     
-    plt.gcf().clf()
-    fig_h,ax_h = plt.subplots(5,1,sharex=True)
+    #~ plt.gcf().clf()
+    #~ fig_h,ax_h = plt.subplots(5,1,sharex=True)
 
-    ax_h[0].hist(L1_durations)
-    ax_h[0].set_xlabel('Duration (hr)')
-    ax_h[0].set_ylabel('Frequency')
-    ax_h[0].set_title('L1 (n={}) - Mean: {}, Std:{}'.format(np.size(L1_durations),np.mean(L1_durations),np.std(L1_durations)))
+    #~ ax_h[0].hist(L1_durations)
+    #~ ax_h[0].set_xlabel('Duration (hr)')
+    #~ ax_h[0].set_ylabel('Frequency')
+    #~ ax_h[0].set_title('L1 (n={}) - Mean: {}, Std:{}'.format(np.size(L1_durations),np.mean(L1_durations),np.std(L1_durations)))
 
-    ax_h[1].hist(L2_durations)
-    ax_h[1].set_title('L2 (n={}) - Mean: {}, Std:{}'.format(np.size(L2_durations),np.mean(L2_durations),np.std(L2_durations)))
+    #~ ax_h[1].hist(L2_durations)
+    #~ ax_h[1].set_title('L2 (n={}) - Mean: {}, Std:{}'.format(np.size(L2_durations),np.mean(L2_durations),np.std(L2_durations)))
 
-    ax_h[2].hist(L3_durations)
-    ax_h[2].set_title('L3 - Mean: {}, Std:{}'.format(np.mean(L3_durations),np.std(L3_durations)))
+    #~ ax_h[2].hist(L3_durations)
+    #~ ax_h[2].set_title('L3 - Mean: {}, Std:{}'.format(np.mean(L3_durations),np.std(L3_durations)))
 
-    ax_h[3].hist(L4_durations)
-    ax_h[3].set_title('L4 - Mean: {}, Std:{}'.format(np.mean(L4_durations),np.std(L4_durations)))
+    #~ ax_h[3].hist(L4_durations)
+    #~ ax_h[3].set_title('L4 - Mean: {}, Std:{}'.format(np.mean(L4_durations),np.std(L4_durations)))
 
-    ax_h[4].hist(larval_durations)
-    ax_h[4].set_xlabel('Time to maturity (hr)')
-    ax_h[4].set_title('Maturity (n={}) - Mean: {}, Std:{}'.format(np.size(larval_durations),np.mean(larval_durations),np.std(larval_durations)))
+    #~ ax_h[4].hist(larval_durations)
+    #~ ax_h[4].set_xlabel('Time to maturity (hr)')
+    #~ ax_h[4].set_title('Maturity (n={}) - Mean: {}, Std:{}'.format(np.size(larval_durations),np.mean(larval_durations),np.std(larval_durations)))
 
-def quick_plot_lifespan(ann_fps, expt_mds, bad_worm_kws=[],debug_mode=False):
-    my_ann_files = [annotation_file.AnnotationFile(ann_fp) for ann_fp in ann_fps]  
+#~ def quick_plot_lifespan(ann_fps, expt_mds, bad_worm_kws=[],debug_mode=False):
+    #~ my_ann_files = [annotation_file.AnnotationFile(ann_fp) for ann_fp in ann_fps]  
     
-    timestamped_data = {}
-    [timestamped_data.setdefault(expt_key,np.array([])) for expt_key in my_ann_files[0].get_data_keys()]
-    for [expt_md_fp, ann_file] in zip(expt_mds, my_ann_files):
-        if debug_mode: print(expt_md_fp)
-        ann_file_data = ann_file.data_as_timestamps_simple(expt_md_fp)
-        for expt_key in timestamped_data.keys():
-            timestamped_data[expt_key] = np.append(timestamped_data[expt_key],ann_file_data[expt_key])
+    #~ timestamped_data = {}
+    #~ [timestamped_data.setdefault(expt_key,np.array([])) for expt_key in my_ann_files[0].get_data_keys()]
+    #~ for [expt_md_fp, ann_file] in zip(expt_mds, my_ann_files):
+        #~ if debug_mode: print(expt_md_fp)
+        #~ ann_file_data = ann_file.data_as_timestamps_simple(expt_md_fp)
+        #~ for expt_key in timestamped_data.keys():
+            #~ timestamped_data[expt_key] = np.append(timestamped_data[expt_key],ann_file_data[expt_key])
     
-    viable_worm = (timestamped_data['Hatch']!=-1) \
-        & (timestamped_data['Death']!=-1) \
-        & np.array([not any([kw in note for kw in bad_worm_kws]) for note in timestamped_data['Notes']])
-    print(timestamped_data['Worm'][viable_worm])
+    #~ viable_worm = (timestamped_data['Hatch']!=-1) \
+        #~ & (timestamped_data['Death']!=-1) \
+        #~ & np.array([not any([kw in note for kw in bad_worm_kws]) for note in timestamped_data['Notes']])
+    #~ print(timestamped_data['Worm'][viable_worm])
     
-    lifespan = (timestamped_data['Death']-timestamped_data['Hatch'])[viable_worm]/(3600*24) # Days
-    sorted_ls = sorted(lifespan)
-    prop_alive = 1 - (np.arange(start=0,stop=np.size(lifespan)))/np.size(lifespan)
+    #~ lifespan = (timestamped_data['Death']-timestamped_data['Hatch'])[viable_worm]/(3600*24) # Days
+    #~ sorted_ls = sorted(lifespan)
+    #~ prop_alive = 1 - (np.arange(start=0,stop=np.size(lifespan)))/np.size(lifespan)
     
-    plt.show()
-    plt.ion()
+    #~ plt.show()
+    #~ plt.ion()
     
-    plt.gcf().clf()
-    fig_h, ax_h = plt.subplots(2,1,sharex=True)
-    ax_h[0].plot(np.append([0],sorted_ls),np.append([1],prop_alive))
-    ax_h[0].set_xlabel('Time since expt. start (d)')
-    ax_h[0].set_ylabel('Proportion alive')
-    ax_h[0].set_title('Survival curve - n = {}'.format(np.size(lifespan)))
+    #~ plt.gcf().clf()
+    #~ fig_h, ax_h = plt.subplots(2,1,sharex=True)
+    #~ ax_h[0].plot(np.append([0],sorted_ls),np.append([1],prop_alive))
+    #~ ax_h[0].set_xlabel('Time since expt. start (d)')
+    #~ ax_h[0].set_ylabel('Proportion alive')
+    #~ ax_h[0].set_title('Survival curve - n = {}'.format(np.size(lifespan)))
     
-    ax_h[1].hist(lifespan)
-    ax_h[1].set_xlabel('Time to death (d)')
-    ax_h[1].set_ylabel('Frequency')
-    ax_h[1].set_title('Mean+/-STD: {:.2f}+/-{:.2f}d\nMedian:{}d'.format(np.mean(lifespan),np.std(lifespan),np.median(lifespan)))
+    #~ ax_h[1].hist(lifespan)
+    #~ ax_h[1].set_xlabel('Time to death (d)')
+    #~ ax_h[1].set_ylabel('Frequency')
+    #~ ax_h[1].set_title('Mean+/-STD: {:.2f}+/-{:.2f}d\nMedian:{}d'.format(np.mean(lifespan),np.std(lifespan),np.median(lifespan)))
     
-def plot_lifespan(ann_fps, expt_mds, annotation_prefix_list = [], bad_worm_kws=[],debug_mode=False,plot_mode='both',hist_mode='kde'):
-    def draw_hist(data, my_ax, hist_mode = 'kde'):
-        if hist_mode is 'kde':
-            interval_supp,interval_data,interval_obj = zplib.scalar_stats.kde.kd_distribution(data)
-            my_ax.plot(interval_supp,interval_data)
-        elif hist_mode is 'bar':
-            my_ax.hist(data)
-        return my_ax
+#~ def plot_lifespan(ann_fps, expt_mds, annotation_prefix_list = [], bad_worm_kws=[],debug_mode=False,plot_mode='both',hist_mode='kde'):
+    #~ def draw_hist(data, my_ax, hist_mode = 'kde'):
+        #~ if hist_mode is 'kde':
+            #~ interval_supp,interval_data,interval_obj = zplib.scalar_stats.kde.kd_distribution(data)
+            #~ my_ax.plot(interval_supp,interval_data)
+        #~ elif hist_mode is 'bar':
+            #~ my_ax.hist(data)
+        #~ return my_ax
         
-    if annotation_prefix_list == []:
-        my_ann_files = [annotation_file.AnnotationFile(ann_fp) for ann_fp in ann_fps]
-    else:
-        my_ann_files = [annotation_file.AnnotationFile(ann_fp,annotation_prefix=prefix) for (ann_fp,prefix) in zip(ann_fps,annotation_prefix_list)]
+    #~ if annotation_prefix_list == []:
+        #~ my_ann_files = [annotation_file.AnnotationFile(ann_fp) for ann_fp in ann_fps]
+    #~ else:
+        #~ my_ann_files = [annotation_file.AnnotationFile(ann_fp,annotation_prefix=prefix) for (ann_fp,prefix) in zip(ann_fps,annotation_prefix_list)]
     
-    timestamped_data = {}
-    [timestamped_data.setdefault(expt_key,np.array([])) for expt_key in list(my_ann_files[0].data.keys())]
-    for [expt_md_fp, ann_file] in zip(expt_mds, my_ann_files):
-        if debug_mode: print(expt_md_fp)
-        if type(expt_mds[0]) == str:    # Simple - one md file
-            ann_file_data = ann_file.data_as_timestamps_simple(expt_md_fp)
-        if type(expt_mds[0]) == dict:   # Need to link multiple md files
-            ann_file_data = ann_file.data_as_timestamps(expt_md_fp)
+    #~ timestamped_data = {}
+    #~ [timestamped_data.setdefault(expt_key,np.array([])) for expt_key in list(my_ann_files[0].data.keys())]
+    #~ for [expt_md_fp, ann_file] in zip(expt_mds, my_ann_files):
+        #~ if debug_mode: print(expt_md_fp)
+        #~ if type(expt_mds[0]) == str:    # Simple - one md file
+            #~ ann_file_data = ann_file.data_as_timestamps_simple(expt_md_fp)
+        #~ if type(expt_mds[0]) == dict:   # Need to link multiple md files
+            #~ ann_file_data = ann_file.data_as_timestamps(expt_md_fp)
             
-        for expt_key in timestamped_data.keys():
-            timestamped_data[expt_key] = np.append(timestamped_data[expt_key],ann_file_data[expt_key])
+        #~ for expt_key in timestamped_data.keys():
+            #~ timestamped_data[expt_key] = np.append(timestamped_data[expt_key],ann_file_data[expt_key])
     
-    viable_worm = (timestamped_data['Hatch']!=-1) \
-        & (timestamped_data['Death']!=-1) \
-        & np.array([not any([kw in note for kw in bad_worm_kws]) for note in timestamped_data['Notes']])
-    print(timestamped_data['Worm'][viable_worm])
+    #~ viable_worm = (timestamped_data['Hatch']!=-1) \
+        #~ & (timestamped_data['Death']!=-1) \
+        #~ & np.array([not any([kw in note for kw in bad_worm_kws]) for note in timestamped_data['Notes']])
+    #~ print(timestamped_data['Worm'][viable_worm])
     
-    lifespan = (timestamped_data['Death']-timestamped_data['Hatch'])[viable_worm]/(3600*24) # Days
-    sorted_ls = sorted(lifespan)
-    prop_alive = 1 - (np.arange(start=0,stop=np.size(lifespan)))/np.size(lifespan)
+    #~ lifespan = (timestamped_data['Death']-timestamped_data['Hatch'])[viable_worm]/(3600*24) # Days
+    #~ sorted_ls = sorted(lifespan)
+    #~ prop_alive = 1 - (np.arange(start=0,stop=np.size(lifespan)))/np.size(lifespan)
     
-    plt.show()
-    plt.ion()
+    #~ plt.show()
+    #~ plt.ion()
     
-    plt.gcf().clf()
-    if plot_mode is 'both':
-        fig_h, ax_h = plt.subplots(2,1,sharex=True)
-        ax_h[0].plot(np.append([0],sorted_ls),np.append([1],prop_alive))
-        ax_h[0].set_xlabel('Time since expt. start (d)')
-        ax_h[0].set_ylabel('Proportion alive')
-        ax_h[0].set_title('Survival curve - n = {}'.format(np.size(lifespan)))
+    #~ plt.gcf().clf()
+    #~ if plot_mode is 'both':
+        #~ fig_h, ax_h = plt.subplots(2,1,sharex=True)
+        #~ ax_h[0].plot(np.append([0],sorted_ls),np.append([1],prop_alive))
+        #~ ax_h[0].set_xlabel('Time since expt. start (d)')
+        #~ ax_h[0].set_ylabel('Proportion alive')
+        #~ ax_h[0].set_title('Survival curve - n = {}'.format(np.size(lifespan)))
         
-        ax_h[1].hist(lifespan)
-        ax_h[1].set_xlabel('Time to death (d)')
-        ax_h[1].set_ylabel('Frequency')
-        ax_h[1].set_title('Mean+/-STD: {:.2f}+/-{:.2f}d\nMedian:{}d'.format(np.mean(lifespan),np.std(lifespan),np.median(lifespan)))
-    elif plot_mode is 'lifespan':
-        fig_h,ax_h = plt.subplots(1,1)
-        draw_hist(lifespan, ax_h)
-        ax_h.set_xlabel('Time to death (d)')
-        ax_h.set_ylabel('Frequency')
-        ax_h.set_title('Mean+/-STD: {:.2f}+/-{:.2f}d\nMedian:{}d'.format(np.mean(lifespan),np.std(lifespan),np.median(lifespan)))
-    else:
-        fig_h,ax_h = plt.subplots(1,1)
-        ax_h.plot(np.append([0],sorted_ls),np.append([1],prop_alive))
-        ax_h.set_xlabel('Time since expt. start (d)')
-        ax_h.set_ylabel('Proportion alive')
-        ax_h.set_title('Survival curve - n = {}'.format(np.size(lifespan)))
+        #~ ax_h[1].hist(lifespan)
+        #~ ax_h[1].set_xlabel('Time to death (d)')
+        #~ ax_h[1].set_ylabel('Frequency')
+        #~ ax_h[1].set_title('Mean+/-STD: {:.2f}+/-{:.2f}d\nMedian:{}d'.format(np.mean(lifespan),np.std(lifespan),np.median(lifespan)))
+    #~ elif plot_mode is 'lifespan':
+        #~ fig_h,ax_h = plt.subplots(1,1)
+        #~ draw_hist(lifespan, ax_h)
+        #~ ax_h.set_xlabel('Time to death (d)')
+        #~ ax_h.set_ylabel('Frequency')
+        #~ ax_h.set_title('Mean+/-STD: {:.2f}+/-{:.2f}d\nMedian:{}d'.format(np.mean(lifespan),np.std(lifespan),np.median(lifespan)))
+    #~ else:
+        #~ fig_h,ax_h = plt.subplots(1,1)
+        #~ ax_h.plot(np.append([0],sorted_ls),np.append([1],prop_alive))
+        #~ ax_h.set_xlabel('Time since expt. start (d)')
+        #~ ax_h.set_ylabel('Proportion alive')
+        #~ ax_h.set_title('Survival curve - n = {}'.format(np.size(lifespan)))
     
-    return fig_h, ax_h
+    #~ return fig_h, ax_h
 
 
-def clean_plot(my_plot,make_labels=False,suppress_ticklabels=False):
+def clean_plot(my_plot,make_labels=False,suppress_ticklabels=False, cleaning_mode=None):
+    if cleaning_mode == 'visualize':
+        make_labels=False
+        suppress_ticklabels = False
+    elif cleaning_mode == 'PPT':
+        make_labels = False
+        suppress_ticklabels = True
+    elif cleaning_mode == 'verbose':
+        make_labels = True
+        suppress_ticklabels = False
+    
     my_plot.spines['right'].set_visible(False)
     my_plot.spines['top'].set_visible(False)
     
