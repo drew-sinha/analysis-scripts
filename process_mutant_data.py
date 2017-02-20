@@ -516,8 +516,11 @@ def deviation_rescaling(strain_dfs, anal_mode='absolute', cohort_info=None,out_d
         dev_fig.savefig(out_dir+os.path.sep+anal_mode+'_deviationrescaling.png')
     return (dev_fig, ax_h)
 
-# Spans analysis
 def span_analysis(strain_dfs, strains, out_dir='', make_labels=True, cutoff_type=None,plot_mode='separate'):
+    '''
+        Look at the health/gerospans of each strain based on Willie's old span finding code
+    '''
+    
     # Use percentile bins
     animal_bins = np.array([len(my_bin) for my_bin in analyzeHealth.selectData.adult_cohort_bins(strain_dfs[0], my_worms = strain_dfs[0].worms, bin_width_days = 2)[0]])
     animal_bins = 100*np.cumsum(animal_bins)/sum(animal_bins) # Make percentile bins
@@ -581,47 +584,10 @@ def span_analysis(strain_dfs, strains, out_dir='', make_labels=True, cutoff_type
 
     return (span_figs,span_axs)
 
-'''
-Legacy/obsolete - a reminder though that there are two ways to get spans and the units/approaches are different
-'''
-
-#~ def get_healthspans(strain_df, a_var = 'health', my_cutoff = None, stop_with_death = True, relative_time = 0.5):
-    #~ '''
-        #~ Passes healthspans back in hours (be consistent with selectData)!
-    #~ '''
-    #~ worm_transitions = np.array([])
-    #~ if my_cutoff is None:
-        #~ flat_data = np.ndarray.flatten(strain_df.mloc(strain_df.worms, [a_var]))
-        #~ flat_data = flat_data[~np.isnan(flat_data)]
-        #~ my_cutoff = np.percentile(flat_data, (relative_time)*100)
-        #~ my_cutoff = adult_df.display_variables(my_cutoff, a_var)[0]
-    
-    #~ for my_worm in strain_df.worms:
-        #~ worm_data = strain_df.mloc([my_worm], [a_var])[:,0,:]
-        #~ worm_data = worm_data[~np.isnan(worm_data).all(axis=1)][0,:]
-        #~ (worm_data, my_unit, fancy_name) = strain_df.display_variables(worm_data, a_var)
-        #~ worm_ages = np.array(strain_df.ages[:worm_data.shape[0]])
-         
-        #~ healthy_mask = (worm_data > my_cutoff)
-        #~ first_unhealthy_idx = healthy_mask.argmin()  # False < True when casted!
-        #~ unhealthy_mask = (worm_data < my_cutoff)
-        #~ unhealthy_mask[first_unhealthy_idx - 1] = True
-
-        #~ if healthy_mask.all():
-            #~ worm_transitions = np.append(worm_transitions,worm_ages[-1])                  
-        #~ else:
-            #~ worm_transitions = np.append(worm_transitions,worm_ages[first_unhealthy_idx])
-    #~ return worm_transitions*24
-'''
-        #~ flat_data = np.ndarray.flatten(strain_dfs[0].mloc(strain_dfs[0].worms, ['health']))  # Old based on my function....
-        #~ flat_data = flat_data[~np.isnan(flat_data)]
-        #~ my_cutoff = np.percentile(flat_data, relative_time*100)
-        #~ my_cutoff = strain_dfs[0].display_variables(my_cutoff, 'health')[0]
-        
-        #healthspans = get_healthspans(strain_df,my_cutoff=my_cutoff)/24
-'''
-
 def span_comparison(strain_dfs,cutoff_type=None,plot_layout='combined',time_mode='absolute',plot_var = 'gerospan', relative_time = 0.5):    
+    '''
+        Generates a scatter of health- or gerospans against adultspan (of individuals) in each supplied populations; also generates a regression curve using lowess
+    '''
     
     if cutoff_type is 'global':
         flat_data = np.concatenate(np.array([np.ndarray.flatten(strain_df.mloc(strain_df.worms,['health'])) for strain_df in strain_dfs])).ravel()
@@ -687,6 +653,10 @@ def span_comparison(strain_dfs,cutoff_type=None,plot_layout='combined',time_mode
         return figs, axs
 
 def avghealth_comparison(strain_dfs, plot_layout='combined',time_mode='absolute'):
+    '''
+        Generates a scatter of average health across life against adultspan (of individuals) in each supplied population; also generates a regression curve using lowess
+    '''
+    
     def plot_helper(strain_df, strain_color, time_mode, plot_layout,ax_h):
         adultspans = analyzeHealth.selectData.get_adultspans(strain_df)/24
         
@@ -729,6 +699,10 @@ def avghealth_comparison(strain_dfs, plot_layout='combined',time_mode='absolute'
         return figs, axs
         
 def healthagainstdev_comparison(strain_dfs, time_mode = 'absolute'):
+    '''
+        Generates a scatter of average health across life against deviation in each supplied population (as a sanity check - should be correlated decently well....
+    '''
+    
     health_scatter, ax_h = plt.subplots(1,1)
     for strain_df,strain_color in zip(strain_dfs,plotting_tools.qual_colors[:len(strain_dfs)]):
         pop_data = strain_df.mloc(strain_df.worms,['health'])[:,0,:]
@@ -753,6 +727,10 @@ def healthagainstdev_comparison(strain_dfs, time_mode = 'absolute'):
     return health_scatter, ax_h
 
 def cohort_percentiles(strain_dfs,time_mode='absolute',plot_var='gerospan',ntiles=5,bin_mode='percent'):    
+    '''
+        Generates a scatter of gerospan or average health across life (for percentile cohorts) against adultspan in each supplied population
+    '''
+    
     fig_h, ax_h = plt.subplots(1,1)
     
     for strain_num, (strain_df,strain_color) in enumerate(zip(strain_dfs,plotting_tools.qual_colors[:len(strain_dfs)])):
@@ -801,6 +779,11 @@ def cohort_percentiles(strain_dfs,time_mode='absolute',plot_var='gerospan',ntile
     return (fig_h, ax_h)
     
 def cohort_percentiles_oldadapted(strain_dfs,ntiles=5,mean_analysis='ind'):    
+        '''
+        Generates a scatter of gerospan for percentile cohorts against adultspan using a Willie-ish apporach to calculating gerospan in each supplied population
+        Helpful for debugging new analyses against Willie's old approach
+    '''
+    
     fig_h, ax_h = plt.subplots(1,1)
     
     flat_data = np.ndarray.flatten(
