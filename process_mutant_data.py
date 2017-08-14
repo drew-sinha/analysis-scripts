@@ -1,4 +1,5 @@
 import matplotlib.pyplot as plt
+import matplotlib.lines
 import pickle
 import numpy as np
 import collections
@@ -13,6 +14,7 @@ import graphingFigures
 import plotting_tools
 
 import zplib.scalar_stats.smoothing as smoothing
+import zplib.scalar_stats.kde
 
 plt.ion()
 plt.show()
@@ -29,7 +31,7 @@ def load_strain_data(strains,health_dir = '/media/Data/Work/ZPLab/Analysis/Mutan
             np.std(analyzeHealth.selectData.get_adultspans(strain_data[-1]['adult_df']))/np.mean(analyzeHealth.selectData.get_adultspans(strain_data[-1]['adult_df']))))
     return strain_data
 
-def plot_survival(strain_dfs,strains, out_dir='', make_labels=True, plot_mode = 'pop'):
+def plot_survival(strain_dfs,strains, out_dir='', make_labels=True, plot_mode = 'pop',ax_h=None):
     # Plot survival curves and lifespan distributions for each strain
     
     if plot_mode is 'cohorts':
@@ -44,7 +46,10 @@ def plot_survival(strain_dfs,strains, out_dir='', make_labels=True, plot_mode = 
         [plotting_tools.clean_plot(my_ax, make_labels=make_labels,suppress_ticklabels=not make_labels) for my_ax in ax_h.flatten()]
 
     elif plot_mode in ['pop','population']:
-        survival_fig, ax_h = plt.subplots(1,1)
+        if ax_h is None:
+            survival_fig, ax_h = plt.subplots(1,1)
+            ax_provided = False
+        else: ax_provided = True
         max_life = max([max(analyzeHealth.selectData.get_adultspans(strain_df))/24 for strain_df in strain_dfs])//1 + 1
         data_series = []
         
@@ -62,9 +67,12 @@ def plot_survival(strain_dfs,strains, out_dir='', make_labels=True, plot_mode = 
         ax_h.set_xlabel('Days Post-Maturity')
         ax_h.set_ylim([0,1.1])
         ax_h.set_xlim([0,max_life])
+        #~ ax_h.legend(plotting_tools.flatten_list(data_series),
+            #~ [('+' if strain=='spe-9' else '+;'+strain) + ' (n={})'.format(len(strain_df.worms)) for strain,strain_df in zip(strains,strain_dfs)],
+            #~ frameon=False)
         ax_h.legend(plotting_tools.flatten_list(data_series),
-            [('+' if strain=='spe-9' else '+;'+strain) + ' (n={})'.format(len(strain_df.worms)) for strain,strain_df in zip(strains,strain_dfs)],
-            frameon=False)
+            [('spe-9' if strain=='spe-9' else 'spe-9;'+strain) + ' (n={})'.format(len(strain_df.worms)) for strain,strain_df in zip(strains,strain_dfs)],
+            frameon=False, bbox_to_anchor=(1.1,1.1))
         plotting_tools.clean_plot(ax_h, make_labels=make_labels,suppress_ticklabels=not make_labels)
         #~ plotting_tools.clean_plot(ax_h, make_labels=make_labels,suppress_ticklabels=False)
     
@@ -73,9 +81,11 @@ def plot_survival(strain_dfs,strains, out_dir='', make_labels=True, plot_mode = 
         survival_fig.savefig(out_dir+os.path.sep+'survival_curves.svg')
     
     if plot_mode is 'cohorts':
-        return (survival_fig, ax_h)
+        if not ax_provided: return (survival_fig, ax_h)
+        else: return ax_h
     elif plot_mode in ['pop','population']:
-        return (survival_fig, ax_h, data_series)
+        if not ax_provided: return (survival_fig, ax_h, data_series)
+        else: return [ax_h, data_series]
 
 def unique_items(seq):  # Credit to Peterbe
     seen = set()
@@ -225,12 +235,22 @@ def generate_regression_data(strain_dfs,strains=None,out_dir='',make_labels=True
         predictbiomarker_fig_h.savefig(out_dir+os.path.sep+'reg_biomarkers_prognostic.png')
         
 
-def plot_strain_health(strain_dfs,group_mode='population',make_labels=True,out_dir='',collapse_mutant=False,var_plot_mode='combined'):
+def add_strain_legend(ax_h,strains,data_series=None):
+    if data_series is None:
+        last_idx = [idx for idx,child in enumerate(ax_h.get_children()) if type(child) is not matplotlib.lines.Line2D][0]
+        data_series = ax_h.get_children()[last_idx-len(strains):last_idx]
+        ax_h.legend(plotting_tools.flatten_list(data_series),
+            #[('spe-9;'+strain if strain != 'spe-9' else strain) for strain in strains],
+            strains,
+            frameon=False, bbox_to_anchor=(1.1,1.1))
+
+def plot_strain_health(strain_dfs,strains=None,group_mode='population',make_labels=True,out_dir='',collapse_mutant=False,var_plot_mode='combined'):
     default_fnames = {
         'population':'pop',
         'spe9_allcohorts':'allcohorts',
         'spe9_3cohorts':'3cohorts',
         'equalbins_7':'7equalbins',
+        'equalbins_5':'5equalbins',
     }
     custom_fname = default_fnames[group_mode]
     
@@ -247,6 +267,9 @@ def plot_strain_health(strain_dfs,group_mode='population',make_labels=True,out_d
         cohorts_to_use = [0,int(len(animal_bins)/2)+1, -1]
     elif group_mode is 'equalbins_7':
         animal_bins = np.linspace(100/7,100,7)
+        cohorts_to_use = []
+    elif group_mode is 'equalbins_5':
+        animal_bins = np.linspace(100/5,100,5)
         cohorts_to_use = []
     
     health_vars = ['bulk_movement', 'intensity_80', 'life_texture', 'cumulative_eggs','adjusted_size']
@@ -295,6 +318,7 @@ def plot_strain_health(strain_dfs,group_mode='population',make_labels=True,out_d
     if collapse_mutant: # Use qualitative color map to compare populations
         for strain_health,line_color in zip(strain_dfs[1:],plotting_tools.qual_colors[1:len(strain_dfs)]):
             graphingFigures.cannedFigures.cohort_traces(health_ax,'health',strain_health,make_labels=make_labels,bin_width_days=np.array([100]),bin_mode='percentile',line_color=line_color,stop_with_death=False)
+        add_strain_legend(health_ax,strains[1:])
     else:
         for strain_health,line_style in zip(strain_dfs[1:],['--','-.',':']):
             graphingFigures.cannedFigures.cohort_traces(health_ax,'health',strain_health,make_labels=make_labels,bin_width_days=animal_bins,bin_mode='percentile',line_style=line_style,cohorts_to_use=cohorts_to_use)
@@ -421,13 +445,19 @@ def plot_strain_rescaling(strain_dfs,strains,out_dir='', make_labels=True, do_bo
     return fig_data
 
 # Parameters scatter (start vs. rate vs. death)
-def parameter_analysis(strain_dfs, cohort_info=None, out_dir='',make_labels=None,):
+def parameter_analysis(strain_dfs, cohort_info=None, out_dir='',make_labels=None,strain_colors=None,plot_trenddata=True,orient='horiz'):
+    if strain_colors == None: strain_colors = 4*[None]
+    
     # Use spe-9 percentile bins
     animal_bins = np.array([len(my_bin) for my_bin in analyzeHealth.selectData.adult_cohort_bins(strain_dfs[0], my_worms = strain_dfs[0].worms, bin_width_days = 2)[0]])
     animal_bins = 100*np.cumsum(animal_bins)/sum(animal_bins)
     
-    par_fig, ax_h = plt.subplots(3,len(strain_dfs))
-    for strain_health, strain_axs in zip(strain_dfs, ax_h.T):
+    if orient=='horiz':
+        par_fig, ax_h = plt.subplots(3,len(strain_dfs))
+        ax_h = ax_h.T
+    elif orient =='vert':
+        par_fig, ax_h = plt.subplots(len(strain_dfs),3)
+    for strain_health, strain_axs,strain_color in zip(strain_dfs, ax_h,strain_colors):
         my_adultspans = analyzeHealth.selectData.get_adultspans(strain_health)/24  
         
         geometry_dict = analyzeHealth.computeStatistics.one_d_geometries(strain_health, 'health')
@@ -436,9 +466,12 @@ def parameter_analysis(strain_dfs, cohort_info=None, out_dir='',make_labels=None
         rate_data = (start_data - end_data)/my_adultspans
         
         # Make scatters
-        graphingFigures.cannedFigures.cohort_scatters(strain_axs[0], my_adultspans, start_data, strain_health, bin_width_days=animal_bins,bin_mode='percentile',the_title = 'Start', the_xlabel = 'Days of Adult Lifespan', the_ylabel = 'Starting Prognosis (Remaining Days)', label_coordinates = (4, 7.5))
-        graphingFigures.cannedFigures.cohort_scatters(strain_axs[1], my_adultspans, rate_data, strain_health, bin_width_days=animal_bins,bin_mode='percentile', the_title = 'Rate', the_xlabel = 'Days of Adult Lifespan', the_ylabel = 'Aging Rate (Dimensionless)', label_coordinates = (10, 1.5), polyfit_degree = 2)
-        graphingFigures.cannedFigures.cohort_scatters(strain_axs[2], my_adultspans, end_data, strain_health, bin_width_days=animal_bins,bin_mode='percentile', the_title = 'End', the_xlabel = 'Days of Adult Lifespan', the_ylabel = 'Ending Prognosis (Remaining Days)', label_coordinates = (0.5, 1), polyfit_degree = 2)
+        graphingFigures.cannedFigures.cohort_scatters(strain_axs[0], my_adultspans, start_data, strain_health, bin_width_days=animal_bins,bin_mode='percentile',the_title = 'Start', the_xlabel = 'Days of Adult Lifespan', the_ylabel = 'Starting Prognosis (Remaining Days)', label_coordinates = (4, 5),no_cohorts_color=strain_color,s=1**2,plot_trenddata=plot_trenddata)
+        graphingFigures.cannedFigures.cohort_scatters(strain_axs[1], my_adultspans, rate_data, strain_health, bin_width_days=animal_bins,bin_mode='percentile', the_title = 'Rate', the_xlabel = 'Days of Adult Lifespan', the_ylabel = 'Aging Rate (Dimensionless)', label_coordinates = (10, 1.5), polyfit_degree = 2,no_cohorts_color=strain_color,s=1**2,plot_trenddata=plot_trenddata)
+        graphingFigures.cannedFigures.cohort_scatters(strain_axs[2], my_adultspans, end_data, strain_health, bin_width_days=animal_bins,bin_mode='percentile', the_title = 'End', the_xlabel = 'Days of Adult Lifespan', the_ylabel = 'Ending Prognosis (Remaining Days)', label_coordinates = (4, 6), polyfit_degree = 2,no_cohorts_color=strain_color,s=1**2,plot_trenddata=plot_trenddata)
+    if orient == 'horiz': [plotting_tools.force_same_plot_attributes(axs,'ylim') for axs in ax_h.T]
+    elif orient == 'vert': [plotting_tools.force_same_plot_attributes(axs,'ylim') for axs in ax_h.T]
+    
     if len(out_dir)>0:
         [plotting_tools.clean_plot(my_ax, make_labels=make_labels,suppress_ticklabels=not make_labels) for my_ax in ax_h.flatten()]
         par_fig.savefig(out_dir+os.path.sep+'par_analysis.png')
@@ -516,14 +549,19 @@ def deviation_rescaling(strain_dfs, anal_mode='absolute', cohort_info=None,out_d
         dev_fig.savefig(out_dir+os.path.sep+anal_mode+'_deviationrescaling.png')
     return (dev_fig, ax_h)
 
-def span_analysis(strain_dfs, strains, out_dir='', make_labels=True, cutoff_type=None,plot_mode='separate'):
+def span_analysis(strain_dfs, strains, out_dir='', make_labels=True, cutoff_type=None,plot_mode='separate', bin_info={'bin_mode':'WT'}):
     '''
         Look at the health/gerospans of each strain based on Willie's old span finding code
     '''
     
     # Use percentile bins
-    animal_bins = np.array([len(my_bin) for my_bin in analyzeHealth.selectData.adult_cohort_bins(strain_dfs[0], my_worms = strain_dfs[0].worms, bin_width_days = 2)[0]])
-    animal_bins = 100*np.cumsum(animal_bins)/sum(animal_bins) # Make percentile bins
+    if bin_info['bin_mode'] == 'WT':
+        animal_bins = np.array([len(my_bin) for my_bin in analyzeHealth.selectData.adult_cohort_bins(strain_dfs[0], my_worms = strain_dfs[0].worms, bin_width_days = 2)[0]])
+        animal_bins = 100*np.cumsum(animal_bins)/sum(animal_bins) # Make percentile bins
+    elif bin_info['bin_mode'] in ['percent','percentile']:
+        ntiles=bin_info['ntiles']
+        animal_bins = [(i+1)*100/ntiles for i in range(ntiles)]
+
     
     if cutoff_type is 'global':
         flat_data = np.concatenate(np.array([np.ndarray.flatten(strain_df.mloc(strain_df.worms,['health'])) for strain_df in strain_dfs])).ravel()
@@ -541,7 +579,8 @@ def span_analysis(strain_dfs, strains, out_dir='', make_labels=True, cutoff_type
         raise Exception('(span_analysis) Bad cutofftype')
         
         
-    span_figs, span_axs = [], []
+    span_figs = []
+    span_axs = []
     if plot_mode is 'separate':
         for strain, strain_health in zip(strains,strain_dfs):
             span_fig, ax_h = plt.subplots(2,2)
@@ -574,8 +613,8 @@ def span_analysis(strain_dfs, strains, out_dir='', make_labels=True, cutoff_type
                     my_cutoff=my_cutoff,
                     bar_plot_mode='uniform',
                     stop_with_death=False)
-            span_figs.append(span_fig)
-            span_axs.append(ax_h)
+        span_axs.append(ax_h)
+        span_figs.append(span_fig)
         if len(out_dir)>0:
             [plotting_tools.clean_plot(my_ax, make_labels=make_labels,suppress_ticklabels=not make_labels) for my_ax in ax_h.flatten()]
             #~ [plotting_tools.clean_plot(my_ax, make_labels=make_labels,suppress_ticklabels=False) for my_ax in ax_h.flatten()]
@@ -777,9 +816,9 @@ def cohort_percentiles(strain_dfs,time_mode='absolute',plot_var='gerospan',ntile
     
     
     return (fig_h, ax_h)
-    
+
 def cohort_percentiles_oldadapted(strain_dfs,ntiles=5,mean_analysis='ind'):    
-        '''
+    '''
         Generates a scatter of gerospan for percentile cohorts against adultspan using a Willie-ish apporach to calculating gerospan in each supplied population
         Helpful for debugging new analyses against Willie's old approach
     '''
@@ -865,6 +904,86 @@ def cohort_percentiles_oldadapted(strain_dfs,ntiles=5,mean_analysis='ind'):
     
     return (fig_h, ax_h)
 
+def get_healthspans(adult_df, a_variable='health',cutoff_value=None,return_crossings=False):
+    '''
+        Get healthspans based on dwell time under threshold (more robust than Willie spans, part. to end of life noise)
+    '''
+    
+    data_values = adult_df.mloc(measures=[a_variable])[:,0,:] * -1 # -1 to reverse direction
+    if cutoff_value is None:
+        all_data = np.ndarray.flatten(data_values*-1)
+        all_data = all_data[~np.isnan(all_data)]
+        cutoff_value = np.percentile(all_data, 0.5*100)
+    adultspans = analyzeHealth.selectData.get_adultspans(adult_df)
+    ghost_ages = adult_df.mloc(measures=['ghost_age'])[:,0,:]
+    
+    healthspans = []
+    crossing_idxs = []
+    for my_worm,worm_data,adultspan,ghost_age in zip(adult_df.worms,data_values,adultspans,ghost_ages):
+        # Get all crossings and isolate those that are going down
+        adj_data = worm_data-cutoff_value
+        adj_data = adj_data[~np.isnan(adj_data)]
+        crossings = np.where((adj_data[:-1]>0) & (adj_data[1:]<0))[0]
+        
+        adultspan_len = len(ghost_age[~np.isnan(ghost_age)])
+        
+        # Handle no crossings
+        if len(crossings) == 0:
+            #print('no crossings found')
+            if adj_data[0]>0:
+                healthspans.append(adultspan)
+                crossing_idxs.append(adultspan_len)
+            if adj_data[0]<0:
+                healthspans.append(0)
+                crossing_idxs.append(0)
+        else:
+            # Get the first crossing that lingers below the cutoff for more than 10% of lifetime
+            found_crossing = False
+            for crossing_idx in crossings:
+                if (adj_data[crossing_idx+1:np.floor(crossing_idx+0.1*adultspan_len)+1]<0).all():
+                    healthspans.append(adult_df.ages[crossing_idx]*24)
+                    crossing_idxs.append(crossing_idx)
+                    found_crossing=True
+                    break
+            if not found_crossing:
+                #print('couldnt find crossing for '+my_worm)
+                healthspans.append(adult_df.ages[crossing_idx]*24) # Default to take the last crossing in a bad situation
+                crossing_idxs.append(crossing_idx)
+    
+    
+    if not return_crossings:
+        return np.array(healthspans)
+    else:
+        return np.array(healthspans),np.array(crossing_idxs)
+
+def get_strain_dist(strain_df, plot_var='gerospan',**kw_data):
+    '''
+        Build kde estimates of various span constructs
+    '''
+    adultspans = analyzeHealth.selectData.get_adultspans(strain_df)/24
+    healthspans = get_healthspans(strain_df,'health', cutoff_value = kw_data['cutoff_value'])/24
+    
+    if plot_var == 'gerospan':
+        gerospans = (adultspans-healthspans)
+        gs_support, gs_density, kde_obj = zplib.scalar_stats.kde.kd_distribution(gerospans)
+        return [gs_support, gs_density]
+    elif plot_var == 'fgerospan':
+        fgerospans = (adultspans-healthspans)/adultspans
+        hs_support, hs_density, kde_obj = zplib.scalar_stats.kde.kd_distribution(fgerospans)
+        return [hs_support, hs_density]
+    elif plot_var == 'healthspan':
+        hs_support, hs_density, kde_obj = zplib.scalar_stats.kde.kd_distribution(healthspans)
+        return [hs_support, hs_density]
+    elif plot_var == 'fhealthspan':
+        hs_support, hs_density, kde_obj = zplib.scalar_stats.kde.kd_distribution(healthspans/adultspans)
+        return [hs_support, hs_density]
+    elif plot_var == 'avg_health':
+        pop_data = strain_df.mloc(strain_df.worms,['health'])[:,0,:]
+        avg_health = np.nanmean(pop_data,axis=1)
+        (avg_health,trash,trash) = strain_df.display_variables(avg_health, 'health')
+        
+        health_support, health_density, kde_obj = zplib.scalar_stats.kde.kd_distribution(average_health)
+        return [health_support, health_density]
 
 if __name__ is "__main__":
     make_labels= False
