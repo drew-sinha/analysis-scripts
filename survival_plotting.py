@@ -4,6 +4,30 @@ import matplotlib.pyplot as plt
 import numpy as np
 import scipy.stats
 
+def plot_spanseries(spans,ax_h = None,**kws):
+    '''
+        Helper for plotting a single set of spans (e.g. lifespans) on an axis)
+    '''
+    if ax_h is None:
+        fig_h, ax_h = plt.subplots(1,1)
+        ax_provided = False
+    else:
+        ax_provided = True
+    sorted_s = np.sort(spans[~np.isnan(spans)]) #handling the nan eliminates potential leak-through of alive animals when used with annotation code
+    prop_alive = (1 - (np.arange(start=0,stop=np.size(spans[~np.isnan(spans)])))/np.size(spans))
+    
+    # Generate all the points needed for plotting
+    # Plot the first point (0,1), then a straight line across and down for each event/death
+    x_vals = np.sort(np.concatenate(([0],sorted_s,sorted_s)))
+    y_vals = np.sort(np.concatenate(([1,1],prop_alive[:-1],prop_alive[:-1],[prop_alive[-1]])))[::-1] # Reverse this.
+    
+    data = ax_h.plot(x_vals,y_vals,**kws)
+    
+    if not ax_provided:
+        return [fig_h,ax_h,data]
+    else:
+        return data
+
 def plot_manual_ls(annotation_fns):
     '''
         Plotting tool for plotting survival curves from manually curated tsv files (e.g. identified individuals in worm corrals)
@@ -32,12 +56,7 @@ def plot_manual_ls(annotation_fns):
     print('T-test for lifespan of *dead* animals')
     clean_compiled_ls = [ls[~np.isnan(ls)] for ls in compiled_ls] #Take care of worms that are still alive
     print(scipy.stats.ttest_ind(*clean_compiled_ls,equal_var=False))
-    
-#     ax_h.legend(data_series,['spe-9/HT115-GFP (n={:d})'.format(int(md[0]['n'])),'spe-9/HT115-pos-1 (n={:d})'.format(int(md[1]['n']))],
-#             frameon=False)
-    #ax_h.legend(data_series, ['spe-9/OP50 (n={:d})'])
 
-    #plotting_tools.clean_plot(ax_h,cleaning_mode='verbose')
     return [fig_h, ax_h, data_series, metadata]
 
 #~ def plot_lifespan(ann_fps, expt_mds, annotation_prefix_list = [], bad_worm_kws=[],debug_mode=False,plot_mode='both',hist_mode='kde'):
