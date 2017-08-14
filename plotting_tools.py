@@ -134,8 +134,6 @@ def clean_plot(my_plot, cleaning_mode=None,**kws):
         make_labels = True
         suppress_ticklabels = False
     
-    #~ my_plot.spines['right'].set_visible(False)
-    #~ my_plot.spines['top'].set_visible(False)
     [my_plot.spines[spine_line].set_visible(False) for spine_line in spines_off]
     
     my_plot.tick_params(axis='both',which='both', top='off', bottom='off', left='off', right='off')
@@ -168,7 +166,6 @@ def clean_plot(my_plot, cleaning_mode=None,**kws):
             my_plot.set_yticks(np.linspace(first_ytick, last_ytick, num_yticks))
         my_plot.yaxis.set_ticks_position('none')
         
-    #else:
     if suppress_ticklabels:
         my_plot.set_xticks([])
         my_plot.set_yticks([])
