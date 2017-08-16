@@ -12,6 +12,7 @@ import scipy.stats as stats
 import analyzeHealth
 import graphingFigures
 import plotting_tools
+import survival_plotting
 
 import zplib.scalar_stats.smoothing as smoothing
 import zplib.scalar_stats.kde
@@ -46,6 +47,7 @@ def plot_survival(strain_dfs,strains, out_dir='', make_labels=True, plot_mode = 
         [plotting_tools.clean_plot(my_ax, make_labels=make_labels,suppress_ticklabels=not make_labels) for my_ax in ax_h.flatten()]
 
     elif plot_mode in ['pop','population']:
+        
         if ax_h is None:
             survival_fig, ax_h = plt.subplots(1,1)
             ax_provided = False
@@ -53,28 +55,20 @@ def plot_survival(strain_dfs,strains, out_dir='', make_labels=True, plot_mode = 
         max_life = max([max(analyzeHealth.selectData.get_adultspans(strain_df))/24 for strain_df in strain_dfs])//1 + 1
         data_series = []
         
-        
         for strain,strain_df,strain_color in zip(strains,strain_dfs,plotting_tools.qual_colors[:len(strains)]):
             lifespans = analyzeHealth.selectData.get_lifespans(strain_df)/24
-            sorted_ls = sorted(lifespans)
-            prop_alive = 1 - np.arange(start=0,stop=np.size(lifespans))/np.size(lifespans)
-            data_series.append(
-                ax_h.plot(np.append([0],sorted_ls),np.append([1],prop_alive),linewidth=2.0,
-                color = strain_color))
+            data_series.append(survival_plotting.plot_spanseries(lifespans,ax_h=ax_h,color=strain_color,linewidth=2.0))
             print('Stats for strain '+strain+' +: ({:.2f}+/-{:.2f})'.format(np.mean(lifespans),np.std(lifespans)))
+            print('Comparison for average lifespan (t-test): t = {:.4f}, p = {}'.format(*scipy.stats.ttest_ind(analyzeHealth.selectData.get_lifespans(strain_dfs[0])/24,lifespans,equal_var=False)))
         
         ax_h.set_ylabel('Percent Survival')
         ax_h.set_xlabel('Days Post-Maturity')
         ax_h.set_ylim([0,1.1])
         ax_h.set_xlim([0,max_life])
-        #~ ax_h.legend(plotting_tools.flatten_list(data_series),
-            #~ [('+' if strain=='spe-9' else '+;'+strain) + ' (n={})'.format(len(strain_df.worms)) for strain,strain_df in zip(strains,strain_dfs)],
-            #~ frameon=False)
         ax_h.legend(plotting_tools.flatten_list(data_series),
             [('spe-9' if strain=='spe-9' else 'spe-9;'+strain) + ' (n={})'.format(len(strain_df.worms)) for strain,strain_df in zip(strains,strain_dfs)],
             frameon=False, bbox_to_anchor=(1.1,1.1))
         plotting_tools.clean_plot(ax_h, make_labels=make_labels,suppress_ticklabels=not make_labels)
-        #~ plotting_tools.clean_plot(ax_h, make_labels=make_labels,suppress_ticklabels=False)
     
     if len(out_dir)>0:
         survival_fig.savefig(out_dir+os.path.sep+'survival_curves.png')
@@ -933,9 +927,11 @@ def get_healthspans(adult_df, a_variable='health',cutoff_value=None,return_cross
             if adj_data[0]>0:
                 healthspans.append(adultspan)
                 crossing_idxs.append(adultspan_len)
-            if adj_data[0]<0:
+            elif adj_data[0]<=0:
                 healthspans.append(0)
                 crossing_idxs.append(0)
+            #~ else:
+                #~ raise Exception('Bad days')
         else:
             # Get the first crossing that lingers below the cutoff for more than 10% of lifetime
             found_crossing = False
@@ -956,12 +952,12 @@ def get_healthspans(adult_df, a_variable='health',cutoff_value=None,return_cross
     else:
         return np.array(healthspans),np.array(crossing_idxs)
 
-def get_strain_dist(strain_df, plot_var='gerospan',**kw_data):
+def get_strain_dist(strain_df, plot_var='gerospan', health_var='health',**kw_data):
     '''
         Build kde estimates of various span constructs
     '''
     adultspans = analyzeHealth.selectData.get_adultspans(strain_df)/24
-    healthspans = get_healthspans(strain_df,'health', cutoff_value = kw_data['cutoff_value'])/24
+    healthspans = get_healthspans(strain_df,health_var, cutoff_value = kw_data['cutoff_value'])/24
     
     if plot_var == 'gerospan':
         gerospans = (adultspans-healthspans)
@@ -984,6 +980,43 @@ def get_strain_dist(strain_df, plot_var='gerospan',**kw_data):
         
         health_support, health_density, kde_obj = zplib.scalar_stats.kde.kd_distribution(average_health)
         return [health_support, health_density]
+        
+def plot_health_dist(strain_dfs, plot_var,health_var='health', my_cutoff = None, ax_h = None):
+    if my_cutoff is None: # Use WT cutoff
+        flat_data = np.ndarray.flatten(
+            -1*strain_dfs[0].mloc(measures=[health_var])[:,0,:])
+        flat_data = flat_data[~np.isnan(flat_data)]
+        my_cutoff = np.percentile(flat_data, (1-0.5)*100)
+        
+    if ax_h is None:
+        fig_h, ax_h = plt.subplots(1,1)
+        ax_provided = False
+    else: ax_provided = True
+
+    for strain_df,strain_color in zip(strain_dfs,plotting_tools.qual_colors[:len(strain_dfs)]):
+        dist_x, dist_y = get_strain_dist(strain_df,plot_var = plot_var,health_var=health_var,cutoff_value = my_cutoff)
+        ax_h.plot(dist_x,dist_y,color=strain_color,linewidth=2)
+
+    if plot_var == 'gerospan': 
+        ax_h.set_xlabel('Gerospan (days)')
+        ax_h.set_xlim([0,ax_h.get_xlim()[1]])
+    elif plot_var == 'fgerospan': 
+        ax_h.set_xlabel('Fractional Gerospan')
+        ax_h.set_xlim([0,1])
+    elif plot_var =='healthspan':
+        ax_h.set_xlabel('Healthspan (days)')
+    elif plot_var == 'fhealthspan':
+        ax_h.set_xlabel('Fractional Healthspan')
+        ax_h.set_xlim([0,1])
+    elif plot_var == 'avg_health':
+        ax_h.set_xlabel('Average Health')
+    
+    ax_h.set_ylabel('Density')
+    
+    if ax_provided:
+        return ax_h
+    else:
+        return (fig_h,ax_h)
 
 if __name__ is "__main__":
     make_labels= False
