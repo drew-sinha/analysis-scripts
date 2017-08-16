@@ -904,12 +904,38 @@ def get_healthspans(adult_df, a_variable='health',cutoff_value=None,return_cross
         Cutoff (i.e. everything) should be raw!! (i.e. not adjusted with CompleteDF.display_variables)
     '''
     
+    unit_multipliers = {    #
+            'intensity_90': None, 
+            'intensity_80': None, 
+            'cumulative_eggs': 1,
+            'cumulative_eggs_rate': 1/3,
+            'cumulative_area': (1.304/1000)**2,
+            'visible_eggs': 1,
+            'total_size': (1.304/1000)**2, 
+            'age_texture': 1, 
+            'bulk_movement': (1.304/1000)/3,
+            'stimulated_rate_a': (1.304/1000),
+            'stimulated_rate_b': (1.304/1000),
+            'unstimulated_rate': (1.304/1000),
+            'area': 1/100000,
+            'life_texture': -1,
+            'adjusted_size': (1.304/1000)**2,
+            'adjusted_size_rate': ((1.304/1000)**2)/3,
+            'great_lawn_area': (1.304/1000)**2, 
+            'texture': (-1/24),
+            'eggs': (-1/24),
+            'autofluorescence': (-1/24),
+            'movement': (-1/24),
+            'size': (-1/24),
+            'health': (-1/24),
+    }
+    
     data_values = adult_df.mloc(measures=[a_variable])[:,0,:]
-    if a_variable in ['health','autofluorescence','texture','size','eggs','movement']: #Composite health variables....
+    if unit_multipliers[a_variable] < 0 or 'intensity' in a_variable:
         data_values = data_values*-1 # Reverse direction (unit_multiplier for these is negative)
     if cutoff_value is None:
         all_data = np.ndarray.flatten(data_values*-1)
-        if a_variable in ['health','autofluorescence','texture','size','eggs','movement']:
+        if unit_multipliers[a_variable] < 0 or 'intensity' in a_variable:
             all_data = all_data*-1
         all_data = all_data[~np.isnan(all_data)]
         cutoff_value = np.percentile(all_data, 0.5*100)
