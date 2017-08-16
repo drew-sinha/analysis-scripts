@@ -898,14 +898,19 @@ def cohort_percentiles_oldadapted(strain_dfs,ntiles=5,mean_analysis='ind'):
     
     return (fig_h, ax_h)
 
-def get_healthspans(adult_df, a_variable='health',cutoff_value=None,return_crossings=False):
+def get_healthspans(adult_df, a_variable='health',cutoff_value=None,return_crossings=False,temp=None):
     '''
         Get healthspans based on dwell time under threshold (more robust than Willie spans, part. to end of life noise)
+        Cutoff (i.e. everything) should be raw!! (i.e. not adjusted with CompleteDF.display_variables)
     '''
     
-    data_values = adult_df.mloc(measures=[a_variable])[:,0,:] * -1 # -1 to reverse direction
+    data_values = adult_df.mloc(measures=[a_variable])[:,0,:]
+    if a_variable in ['health','autofluorescence','texture','size','eggs','movement']: #Composite health variables....
+        data_values = data_values*-1 # Reverse direction (unit_multiplier for these is negative)
     if cutoff_value is None:
         all_data = np.ndarray.flatten(data_values*-1)
+        if a_variable in ['health','autofluorescence','texture','size','eggs','movement']:
+            all_data = all_data*-1
         all_data = all_data[~np.isnan(all_data)]
         cutoff_value = np.percentile(all_data, 0.5*100)
     adultspans = analyzeHealth.selectData.get_adultspans(adult_df)
@@ -930,8 +935,6 @@ def get_healthspans(adult_df, a_variable='health',cutoff_value=None,return_cross
             elif adj_data[0]<=0:
                 healthspans.append(0)
                 crossing_idxs.append(0)
-            #~ else:
-                #~ raise Exception('Bad days')
         else:
             # Get the first crossing that lingers below the cutoff for more than 10% of lifetime
             found_crossing = False
