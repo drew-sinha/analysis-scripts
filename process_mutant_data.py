@@ -929,13 +929,15 @@ def get_healthspans(adult_df, a_variable='health',cutoff_value=None,return_cross
             'size': (-1/24),
             'health': (-1/24),
     }
+    measures_to_negate = ['intensity_90','intensity_80', 'life_texture', 'autofluorescence','movement','size','health','eggs']
+    # TODO - think about how to span size.... Need to change anything?
     
     data_values = adult_df.mloc(measures=[a_variable])[:,0,:]
-    if unit_multipliers[a_variable] < 0 or 'intensity' in a_variable:
+    if a_variable in measures_to_negate:
         data_values = data_values*-1 # Reverse direction (unit_multiplier for these is negative)
     if cutoff_value is None:
         all_data = np.ndarray.flatten(data_values*-1)
-        if unit_multipliers[a_variable] < 0 or 'intensity' in a_variable:
+        if a_variable in measures_to_negate:
             all_data = all_data*-1
         all_data = all_data[~np.isnan(all_data)]
         cutoff_value = np.percentile(all_data, 0.5*100)
