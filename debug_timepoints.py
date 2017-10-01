@@ -6,6 +6,12 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 def remove_offending_tp(expt_path,timept_str,dry_run=False):
+    '''
+        expt_path - str/pathlib.Path pointing to expt. dir
+        timept_str - str in format yyyymmdd-thhmm
+        dry_run - Toggles taking action (if False, will not delete but will verbosely specify where offending files are found
+    '''
+    
     if type(expt_path) is str: expt_path = pathlib.Path(expt_path)
     
     for sub_dir in expt_path.iterdir():
@@ -17,7 +23,7 @@ def remove_offending_tp(expt_path,timept_str,dry_run=False):
                 print('Found offending files in: '+str(sub_dir))
                 
                 if not dry_run:
-                    if not (sub_dir/'offending_files').exists(): (sub_dir/'offending_files').mkdir(mode=744)
+                    if not (sub_dir/'offending_files').exists(): (sub_dir/'offending_files').mkdir(mode=755)
                     [im_file.rename(im_file.parent/'offending_files'/im_file.parts[-1]) for im_file in offending_files]
             
             # Check if position metadata is bad and handle 
@@ -31,7 +37,7 @@ def remove_offending_tp(expt_path,timept_str,dry_run=False):
                     if has_bad_md_tmpt:
                         print('Found offending entry in position_metadata in: '+str(sub_dir))
                         if not dry_run:
-                            if not (sub_dir/'offending_files').exists(): (sub_dir/'offending_files').mkdir(mode=744)
+                            if not (sub_dir/'offending_files').exists(): (sub_dir/'offending_files').mkdir(mode=755)
                             md_file.rename(md_file.parent/'offending_files'/'position_metadata_old.json')     # Backup old
                             pos_md = [tp_data for tp_data in pos_md if tp_data['timepoints'] != timept_str]
                             with (sub_dir/'position_metadata.json').open('w') as md_fp:
@@ -49,7 +55,7 @@ def remove_offending_tp(expt_path,timept_str,dry_run=False):
         expt_md['brightfield_metering']={key:val for key,val in expt_md['brightfield_metering'] if key != timept_str}
         
         md_file.rename(md_file.parent/'experiment_metadata_old.json') #Backup
-        with (expt_path/'experiment_metadata').open('w') as md_fp:  # Write out new
+        with (expt_path/'experiment_metadata.json').open('w') as md_fp:  # Write out new
             encode_legible_to_file(expt_md,md_fp)
     except:  # Offending timepoint didn't make it into metadata
         pass
@@ -85,6 +91,10 @@ def check_expt_movement_acquisitions(expt_dir, mode='absolute'):
         [movement_ax.set_ylabel('Time Taken (s)') for movement_ax in ax_h]
 
 def copy_position_md(expt_dir, dest_dir):
+    '''
+        Copies position metadatas all to one destination folder ('dest_dir') for backing up
+    '''
+    
     if type(expt_dir) is str: expt_dir = pathlib.Path(expt_dir)
     if type(dest_dir) is str: dest_dir = pathlib.Path(dest_dir)
     for sub_dir in expt_dir.iterdir():
