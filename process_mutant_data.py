@@ -32,7 +32,7 @@ def load_strain_data(strains,health_dir = '/media/Data/Work/ZPLab/Analysis/Mutan
             np.std(analyzeHealth.selectData.get_adultspans(strain_data[-1]['adult_df']))/np.mean(analyzeHealth.selectData.get_adultspans(strain_data[-1]['adult_df']))))
     return strain_data
 
-def plot_survival(strain_dfs,strains, out_dir='', make_labels=True, plot_mode = 'pop',ax_h=None):
+def plot_survival(strain_dfs,strains, out_dir='', make_labels=True, plot_mode = 'pop',plot_format='survival',ax_h=None):
     # Plot survival curves and lifespan distributions for each strain
     
     if plot_mode is 'cohorts':
@@ -57,18 +57,38 @@ def plot_survival(strain_dfs,strains, out_dir='', make_labels=True, plot_mode = 
         
         for strain,strain_df,strain_color in zip(strains,strain_dfs,plotting_tools.qual_colors[:len(strains)]):
             lifespans = analyzeHealth.selectData.get_lifespans(strain_df)/24
-            data_series.append(survival_plotting.plot_spanseries(lifespans,ax_h=ax_h,color=strain_color,linewidth=2.0))
             print('Stats for strain '+strain+' +: ({:.2f}+/-{:.2f})'.format(np.mean(lifespans),np.std(lifespans)))
             print('Comparison for average lifespan (t-test): t = {:.4f}, p = {}'.format(*scipy.stats.ttest_ind(analyzeHealth.selectData.get_lifespans(strain_dfs[0])/24,lifespans,equal_var=False)))
-        
-        ax_h.set_ylabel('Percent Survival')
-        ax_h.set_xlabel('Days Post-Maturity')
-        ax_h.set_ylim([0,1.1])
-        ax_h.set_xlim([0,max_life])
-        ax_h.legend(plotting_tools.flatten_list(data_series),
-            [('spe-9' if strain=='spe-9' else 'spe-9;'+strain) + ' (n={})'.format(len(strain_df.worms)) for strain,strain_df in zip(strains,strain_dfs)],
-            frameon=False, bbox_to_anchor=(1.1,1.1))
-        plotting_tools.clean_plot(ax_h, make_labels=make_labels,suppress_ticklabels=not make_labels)
+            
+            if plot_format == 'survival':
+                data_series.append(survival_plotting.plot_spanseries(lifespans,ax_h=ax_h,color=strain_color,linewidth=2.0))
+            elif plot_format == 'lifespan':
+                ls_support, ls_density, kde_obj = zplib.scalar_stats.kde.kd_distribution(lifespans)
+                data_series.append(
+                    ax_h.plot(ls_support,ls_density, linewidth=2.0, color = strain_color)
+                )
+            
+        if plot_format == 'survival':
+            
+            
+            ax_h.set_ylabel('Percent Survival')
+            ax_h.set_xlabel('Days Post-Maturity')
+            ax_h.set_ylim([0,1.1])
+            ax_h.set_xlim([0,max_life])
+            ax_h.legend(plotting_tools.flatten_list(data_series),
+                [('spe-9' if strain=='spe-9' else 'spe-9;'+strain) + ' (n={})'.format(len(strain_df.worms)) for strain,strain_df in zip(strains,strain_dfs)],
+                frameon=False, bbox_to_anchor=(1.1,1.1))
+            plotting_tools.clean_plot(ax_h, make_labels=make_labels,suppress_ticklabels=not make_labels)
+        elif plot_format == 'lifespan':
+          
+            ax_h.set_ylabel('Probability Density')
+            ax_h.set_xlabel('Days Post-Maturity')
+            #ax_h.set_ylim([0,1.1])
+            ax_h.set_xlim([0,max_life])
+            ax_h.legend(plotting_tools.flatten_list(data_series),
+                [('spe-9' if strain=='spe-9' else 'spe-9;'+strain) + ' (n={})'.format(len(strain_df.worms)) for strain,strain_df in zip(strains,strain_dfs)],
+                frameon=False, bbox_to_anchor=(1.1,1.1))
+            plotting_tools.clean_plot(ax_h, make_labels=make_labels,suppress_ticklabels=not make_labels)
     
     if len(out_dir)>0:
         survival_fig.savefig(out_dir+os.path.sep+'survival_curves.png')
@@ -99,11 +119,9 @@ def test_lifespan_replicates(strain_df):
     stats = []
     
     for num,rep_label in enumerate(rep_labels):
-        sorted_ls = sorted(lifespans[worm_assignments==num])
-        prop_alive = 1 - np.arange(start=0,stop=np.size(sorted_ls))/np.size(sorted_ls)
         data_series.append(
-            ax_h.plot(np.append([0],sorted_ls),np.append([1],prop_alive),linewidth=2.0))
-        stats.append([np.mean(sorted_ls),np.std(sorted_ls)])
+            survival_plotting.plot_spanseries(lifespans[worm_assignments==num],ax_h=ax_h,linewidth=2.0))
+        stats.append([np.mean(lifespans[worm_assignments==num]),np.std(lifespans[worm_assignments==num])])
         print('Stats for rep '+rep_label+': ({:.2f}+/-{:.2f})'.format(stats[-1][0],stats[-1][1]))
     
     ax_h.set_ylabel('Percent Survival')
@@ -117,7 +135,37 @@ def test_lifespan_replicates(strain_df):
         np.mean([item[0] for item in stats]),np.std([item[0] for item in stats])))
     
     return (survival_fig,ax_h)
-        
+    
+def test_healthspan_replicates(strain_df):
+    rep_labels = unique_items([(' '.join(worm_label.split(' ')[:-1])) for worm_label in strain_df.worms])
+    rep_labels = unique_items([rep_label if rep_label[-1].isnumeric() else rep_label[:-1] for rep_label in rep_labels])
+    print(rep_labels)
+    worm_assignments = np.array(
+        [num for worm_label in strain_df.worms for num,rep_label in enumerate(rep_labels) if rep_label in ' '.join(worm_label.split(' ')[:-1])])
+    healthspans = get_healthspans(strain_df)/24
+    
+    survival_fig, ax_h = plt.subplots(1,1)
+    max_health = max(healthspans)//1 + 1
+    data_series = []
+    stats = []
+    
+    for num,rep_label in enumerate(rep_labels):
+        data_series.append(
+            survival_plotting.plot_spanseries(healthspans[worm_assignments==num],ax_h=ax_h,linewidth=2.0))
+        stats.append([np.mean(healthspans[worm_assignments==num]),np.std(healthspans[worm_assignments==num])])
+        print('Stats for rep '+rep_label+': ({:.2f}+/-{:.2f})'.format(stats[-1][0],stats[-1][1]))
+    
+    ax_h.set_ylabel('Percent in Good Health')
+    ax_h.set_xlabel('Days Post-Maturity')
+    ax_h.set_ylim([0,1.1])
+    ax_h.set_xlim([0,max_health])
+    ax_h.legend(plotting_tools.flatten_list(data_series),
+        [rep_label + ' (n={})'.format(np.count_nonzero(worm_assignments==num)) for num,rep_label in enumerate(rep_labels)],
+        frameon=False)
+    print('Intertrial variability across replicates for tested strain: {:.2f} +/- {:.2f}'.format(
+        np.mean([item[0] for item in stats]),np.std([item[0] for item in stats])))
+    
+    return (survival_fig,ax_h)
 
 def test_adultspans(strain_dfs,strain_labels):
     figs, axs = [], []
