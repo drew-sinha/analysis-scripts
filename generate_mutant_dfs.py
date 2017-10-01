@@ -118,7 +118,28 @@ data_list = {
         'extra_directories':None,
         'experiment_directories':None,
         'annotation_directories':None
-    }
+    },
+    'daf-16': {
+        'data_directories':[
+            r'/mnt/scopearray/Sinha_Drew/20170206 daf-16 spe-9 Run 32A',
+            r'/mnt/scopearray/Sinha_Drew/20170407 daf-16 spe-9 Run 33A',
+            r'/mnt/scopearray/Sinha_Drew/20170407 daf-16 spe-9 Run 33B',
+        ],
+        'extra_directories':None,
+        'experiment_directories':None,
+        'annotation_directories':None
+    },
+    'pqm-1': {
+        'data_directories':[
+            r'/mnt/scopearray/Sinha_Drew/20170706 pqm-1 spe-9 Run 1A',
+            r'/mnt/scopearray/Sinha_Drew/20170706 pqm-1 spe-9 Run 1B',
+            r'/mnt/scopearray/Sinha_Drew/20170717 pqm-1 spe-9 Run 2',
+            r'/mnt/scopearray/Sinha_Drew/20170721 pqm-1 spe-9 Run 3',
+        ],
+        'extra_directories':None,
+        'experiment_directories':None,
+        'annotation_directories':None
+    },
 }
 for strain in data_list:
     for meta_dirs in ['extra_directories','experiment_directories','annotation_directories']:
