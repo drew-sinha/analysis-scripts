@@ -140,6 +140,17 @@ data_list = {
         'experiment_directories':None,
         'annotation_directories':None
     },
+    'mev-1': {
+        'data_directories':[
+            r'/mnt/scopearray/Sinha_Drew/20170825 mev-1 spe-9 Run 4',
+            r'/mnt/scopearray/Sinha_Drew/20170831 mev-1 spe-9 Run 6A',
+            r'/mnt/scopearray/Sinha_Drew/20170908 mev-1 spe-9 Run 7A',
+            r'/mnt/scopearray/Sinha_Drew/20170908 mev-1 spe-9 Run 7B',
+        ],
+        'extra_directories':None,
+        'experiment_directories':None,
+        'annotation_directories':None
+    },
 }
 for strain in data_list:
     for meta_dirs in ['extra_directories','experiment_directories','annotation_directories']:
@@ -180,7 +191,7 @@ def make_SVR(strains,svm_save_dir):
             adult_df = characterizeTrajectories.CompleteWormDF(directory_bolus, save_directory,
                 {'adult_only': True, 'svm_dir_out':svm_dir_out})
 
-def make_df(strains,df_savedir, svm_directory=''):
+def make_df(strains,df_savedir, svm_directory='',custom_savename=''):
     if strains is 'combined':
         compiled_list = {my_key:[] for my_key in ['data_directories','extra_directories','experiment_directories','annotation_directories']}
         for my_strain in data_list:
@@ -198,7 +209,7 @@ def make_df(strains,df_savedir, svm_directory=''):
             {'adult_only': True, 'svm_directory':svm_directory})
         #~ life_df = characterizeTrajectories.CompleteWormDF(directory_bolus, full_savedir,
             #~ {'adult_only': False, 'svm_directory':svm_directory})
-        with open(full_savedir+'df_combined.pickle','wb') as my_file:
+        with open(full_savedir+'df_combined'+custom_savename+'.pickle','wb') as my_file:
             pickle.dump({'adult_df':adult_df,'svm_directory':svm_directory,'data_list':data_list},my_file)
     else:
         for strain in strains:
@@ -215,5 +226,5 @@ def make_df(strains,df_savedir, svm_directory=''):
                 {'adult_only': True, 'svm_directory':svm_directory})
             #~ life_df = characterizeTrajectories.CompleteWormDF(directory_bolus, full_savedir,
                 #~ {'adult_only': False, 'svm_directory':svm_directory})
-            with open(full_savedir+'df_'+strain+'.pickle','wb') as my_file:
+            with open(full_savedir+'df_'+strain+custom_savename+'.pickle','wb') as my_file:
                 pickle.dump({'adult_df':adult_df,'svm_directory':svm_directory,'data_list':data_list},my_file)
