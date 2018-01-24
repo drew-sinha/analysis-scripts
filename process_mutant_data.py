@@ -1,10 +1,12 @@
-import matplotlib.pyplot as plt
-import matplotlib.lines
-import pickle
-import numpy as np
 import collections
 import os
+import pathlib
+import pickle
+
+import matplotlib.pyplot as plt
+import matplotlib.lines
 import numpy as np
+import pandas as pd
 import scipy.interpolate
 import scipy.optimize
 import scipy.stats as stats
@@ -78,7 +80,7 @@ def plot_survival(strain_dfs,strains, out_dir='', make_labels=True, plot_mode = 
             ax_h.legend(plotting_tools.flatten_list(data_series),
                 [('spe-9' if strain=='spe-9' else 'spe-9;'+strain) + ' (n={})'.format(len(strain_df.worms)) for strain,strain_df in zip(strains,strain_dfs)],
                 frameon=False, bbox_to_anchor=(1.1,1.1))
-            plotting_tools.clean_plot(ax_h, make_labels=make_labels,suppress_ticklabels=not make_labels)
+            #plotting_tools.clean_plot(ax_h, make_labels=make_labels,suppress_ticklabels=not make_labels)
         elif plot_format == 'lifespan':
           
             ax_h.set_ylabel('Probability Density')
@@ -948,8 +950,9 @@ def cohort_percentiles_oldadapted(strain_dfs,ntiles=5,mean_analysis='ind'):
 
 def get_healthspans(adult_df, a_variable='health',cutoff_value=None,return_crossings=False,temp=None):
     '''
-        Get healthspans based on dwell time under threshold (more robust than Willie spans, part. to end of life noise)
+        Get healthspans based on dwell time under threshold (more robust than Willie spans, part. to end of life noise) after falling below cutoff.
         Cutoff (i.e. everything) should be raw!! (i.e. not adjusted with CompleteDF.display_variables)
+        This formulation intrinsically takes care of nonmonotonicity in measurement early in life (e.g. for measurements like size that still rise early in adulthood)
     '''
     
     unit_multipliers = {    #
@@ -1096,6 +1099,36 @@ def plot_health_dist(strain_dfs, plot_var,health_var='health', my_cutoff = None,
         return ax_h
     else:
         return (fig_h,ax_h)
+
+def save_span_data(strain_df, strain, cutoff_values, out_dir, health_vars = ['health']):
+    '''
+        Arguments:
+            strain_df - CompleteWormDF object containing data to be saved
+            strain - string label used when saving out file
+            cutoff_values - list of cutoff values used for calculating spans
+            out_dir - Where csv is saved out
+            health_vars - List of health variables to generate spans for.
+    '''
+    
+    out_dir = pathlib.Path(out_dir)
+    if type(cutoff_values) is not list: cutoff_values = list(cutoff_values)
+    if len(cutoff_values) != len(health_vars):
+        raise Exception('Bad number of cutoff values passed')
+    
+    worms = strain_df.worms
+    adultspans = analyzeHealth.selectData.get_adultspans(strain_df)/24
+    
+    healthspans = [
+        get_healthspans(strain_df,health_var, cutoff_value = cutoff_value)/24
+        for health_var,cutoff_value in zip(health_vars,cutoff_values)]
+    
+    compiled_spans = [adultspans]
+    [compiled_spans.append(hs) for hs in healthspans]
+    compiled_idxs = ['Adultspan (days)']
+    [compiled_idxs.append(health_var+'span') for health_var in health_vars]
+    df = pd.DataFrame(compiled_spans,index=compiled_idxs,columns=list(worms)).transpose()
+    print(df)
+    df.to_csv(str(out_dir/(strain+'_span_data.csv')))
 
 if __name__ is "__main__":
     make_labels= False
