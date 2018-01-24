@@ -40,7 +40,7 @@ def plot_manual_ls(annotation_fns):
     for ann_data, ann_color in zip(compiled_ann_data,plotting_tools.qual_colors):
         good_worms = pd.Series(['DEAD' in note for note in ann_data['Notes']])
         good_ls = ann_data['Death'][good_worms]-ann_data['Hatch'][good_worms]
-        data_series.append(plot_survival(good_ls, ax_h=ax_h,color=ann_color))
+        data_series.append(plot_spanseries(good_ls, ax_h=ax_h,color=ann_color))
         metadata.append({'n':len(good_ls)})
         compiled_ls.append(good_ls)
     ax_h.set_ylim([0,1])
