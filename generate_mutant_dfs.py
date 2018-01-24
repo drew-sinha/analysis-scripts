@@ -86,9 +86,9 @@ data_list = {
             r'/mnt/iscopearray/Zhang_William/2016.05.02 spe-9 age-1 osxi346 Run 17C', #18
             r'/mnt/iscopearray/Zhang_William/2016.05.02 spe-9 age-1 osxi346 Run 17D', #19
             r'/mnt/iscopearray/Zhang_William/2016.05.02 spe-9 age-1 osxi346 Run 17E', #20
-            r'/mnt/scopearray/ZhangWillie/2016.05.12 spe-9 age-1 Run 18B',   #21
-            r'/mnt/scopearray/ZhangWillie/2016.05.24 spe-9 age-1 Run 24A',  #22 7 worms alive as of 20160624
-            r'/mnt/scopearray/ZhangWillie/2016.07.01 spe-9 age-1 Run 21',  #23
+            r'/mnt/iscopearray/Sinha_Drew/2016.05.12 spe-9 age-1 Run 18B',   #21
+            r'/mnt/iscopearray/Sinha_Drew/2016.05.24 spe-9 age-1 Run 24A',  #22 7 worms alive as of 20160624
+            r'/mnt/iscopearray/Sinha_Drew/2016.07.01 spe-9 age-1 Run 21',  #23
             r'/mnt/iscopearray/Sinha_Drew/2016.07.01 spe-9 age-1 Run 22',
         ],
         'extra_directories':None,
@@ -121,9 +121,9 @@ data_list = {
     },
     'daf-16': {
         'data_directories':[
-            r'/mnt/scopearray/Sinha_Drew/20170206 daf-16 spe-9 Run 32A',
-            r'/mnt/scopearray/Sinha_Drew/20170407 daf-16 spe-9 Run 33A',
-            r'/mnt/scopearray/Sinha_Drew/20170407 daf-16 spe-9 Run 33B',
+            r'/mnt/purplearray/Sinha_Drew/20170206 daf-16 spe-9 Run 32A',
+            r'/mnt/purplearray/Sinha_Drew/20170407 daf-16 spe-9 Run 33A',
+            r'/mnt/purplearray/Sinha_Drew/20170407 daf-16 spe-9 Run 33B',
         ],
         'extra_directories':None,
         'experiment_directories':None,
@@ -131,10 +131,10 @@ data_list = {
     },
     'pqm-1': {
         'data_directories':[
-            r'/mnt/scopearray/Sinha_Drew/20170706 pqm-1 spe-9 Run 1A',
-            r'/mnt/scopearray/Sinha_Drew/20170706 pqm-1 spe-9 Run 1B',
-            r'/mnt/scopearray/Sinha_Drew/20170717 pqm-1 spe-9 Run 2',
-            r'/mnt/scopearray/Sinha_Drew/20170721 pqm-1 spe-9 Run 3',
+            r'/mnt/purplearray/Sinha_Drew/20170706 pqm-1 spe-9 Run 1A',
+            r'/mnt/purplearray/Sinha_Drew/20170706 pqm-1 spe-9 Run 1B',
+            r'/mnt/purplearray/Sinha_Drew/20170717 pqm-1 spe-9 Run 2',
+            r'/mnt/purplearray/Sinha_Drew/20170721 pqm-1 spe-9 Run 3',
         ],
         'extra_directories':None,
         'experiment_directories':None,
@@ -142,10 +142,22 @@ data_list = {
     },
     'mev-1': {
         'data_directories':[
-            r'/mnt/scopearray/Sinha_Drew/20170825 mev-1 spe-9 Run 4',
-            r'/mnt/scopearray/Sinha_Drew/20170831 mev-1 spe-9 Run 6A',
-            r'/mnt/scopearray/Sinha_Drew/20170908 mev-1 spe-9 Run 7A',
-            r'/mnt/scopearray/Sinha_Drew/20170908 mev-1 spe-9 Run 7B',
+            r'/mnt/purplearray/Sinha_Drew/20170825 mev-1 spe-9 Run 4',
+            r'/mnt/purplearray/Sinha_Drew/20170831 mev-1 spe-9 Run 6A',
+            r'/mnt/purplearray/Sinha_Drew/20170908 mev-1 spe-9 Run 7A',
+            r'/mnt/purplearray/Sinha_Drew/20170908 mev-1 spe-9 Run 7B',
+        ],
+        'extra_directories':None,
+        'experiment_directories':None,
+        'annotation_directories':None
+    },
+    'rsks-1': {
+        'data_directories':[
+            r'/mnt/scopearray/Sinha_Drew/20171030 rsks-1 spe-9 Run 1A',
+            r'/mnt/scopearray/Sinha_Drew/20171030 rsks-1 spe-9 Run 1B',
+            r'/mnt/scopearray/Sinha_Drew/20171114 rsks-1 spe-9 Run 2A',
+            r'/mnt/scopearray/Sinha_Drew/20171114 rsks-1 spe-9 Run 2B',
+            r'/mnt/scopearray/Sinha_Drew/20171213 rsks-1 spe-9 Run 3',
         ],
         'extra_directories':None,
         'experiment_directories':None,
@@ -157,10 +169,13 @@ for strain in data_list:
         if data_list[strain][meta_dirs] is None:
             data_list[strain][meta_dirs] = [None for ii in range(len(data_list[strain]['data_directories']))]
 
-def make_SVR(strains,svm_save_dir):
+def make_SVR(strains,svm_save_dir,**df_extra_args):
     save_directory = ''
     print('Work directory exists:'+str(os.path.isdir(working_directory)))
     print('Human directory exists:'+str(os.path.isdir(human_directory)))
+    df_extra_args.setdefault('adult_only',True)
+    df_extra_args.setdefault('add_health',True)
+    df_extra_args['svm_save_dir'] = svm_save_dir
     
     if strains == 'combined':
         compiled_list = {my_key:[] for my_key in ['data_directories','extra_directories','experiment_directories','annotation_directories']}
@@ -176,7 +191,7 @@ def make_SVR(strains,svm_save_dir):
                 print('(make_SVR) Making directory at: '+svm_dir_out)
                 os.mkdir(svm_dir_out)
         adult_df = characterizeTrajectories.CompleteWormDF(directory_bolus, save_directory,
-            {'adult_only': True, 'svm_dir_out':svm_dir_out})
+            df_extra_args)
     else:
         for strain in strains:
             directory_bolus = folderStuff.DirectoryBolus(working_directory, human_directory, 
@@ -189,7 +204,7 @@ def make_SVR(strains,svm_save_dir):
                     print('(make_SVR) Making directory at: '+svm_dir_out)
                     os.mkdir(svm_dir_out)
             adult_df = characterizeTrajectories.CompleteWormDF(directory_bolus, save_directory,
-                {'adult_only': True, 'svm_dir_out':svm_dir_out})
+                df_extra_args)
 
 def make_df(strains,df_savedir,custom_savename='',**df_extra_args):
     '''
@@ -198,6 +213,7 @@ def make_df(strains,df_savedir,custom_savename='',**df_extra_args):
     '''
     
     df_extra_args.setdefault('adult_only',True)
+    df_extra_args.setdefault('add_health',True)
     if strains is 'combined':
         compiled_list = {my_key:[] for my_key in ['data_directories','extra_directories','experiment_directories','annotation_directories']}
         for my_strain in data_list:
@@ -211,8 +227,8 @@ def make_df(strains,df_savedir,custom_savename='',**df_extra_args):
             if not os.path.isdir(full_savedir): 
                 print('(make_df) Making directory at:'+full_savedir)
                 os.mkdir(full_savedir)
-        adult_df = characterizeTrajectories.CompleteWormDF(directory_bolus, full_savedir,
-            **df_extra_args)
+        adult_df = characterizeTrajectories.CompleteWormDF(directory_bolus,
+            df_extra_args)
         #~ life_df = characterizeTrajectories.CompleteWormDF(directory_bolus, full_savedir,
             #~ {'adult_only': False, 'svm_directory':svm_directory})
         data_to_save = {'adult_df':adult_df,'data_list':data_list}
@@ -220,21 +236,29 @@ def make_df(strains,df_savedir,custom_savename='',**df_extra_args):
         with open(full_savedir+'df_combined'+custom_savename+'.pickle','wb') as my_file:
             pickle.dump(data_to_save,my_file)
     else:
+        dfs = []
         for strain in strains:
             directory_bolus = folderStuff.DirectoryBolus(working_directory, human_directory, 
                 *[data_list[strain][dirs] for dirs in ['data_directories','extra_directories','experiment_directories','annotation_directories']], 
                 ready = len(data_list[strain]['data_directories']))    
             
             if df_savedir is not '':
-                full_savedir = df_savedir+os.path.sep+strain+'_health'+os.path.sep
+                if custom_savename == '':
+                    full_savedir = df_savedir+os.path.sep+strain+'_health'+os.path.sep
+                else:
+                    full_savedir = df_savedir+os.path.sep+custom_savename+'_health'+os.path.sep
                 if not os.path.isdir(full_savedir): 
                     print('(make_df) Making directory at: '+full_savedir)
                     os.mkdir(full_savedir)
-            adult_df = characterizeTrajectories.CompleteWormDF(directory_bolus, full_savedir,
-                **df_extra_args)
+            else:
+                full_savedir = ''
+            adult_df = characterizeTrajectories.CompleteWormDF(directory_bolus,
+                df_extra_args)
             #~ life_df = characterizeTrajectories.CompleteWormDF(directory_bolus, full_savedir,
                 #~ {'adult_only': False, 'svm_directory':svm_directory})
             data_to_save = {'adult_df':adult_df,'data_list':data_list}
             data_to_save.update(df_extra_args)
             with open(full_savedir+'df_'+strain+custom_savename+'.pickle','wb') as my_file:
                 pickle.dump(data_to_save,my_file)
+            dfs.append(adult_df)
+        return dfs
