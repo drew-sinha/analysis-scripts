@@ -8,6 +8,7 @@ import shutil
 import zplib
 import zplib.image.mask as zplib_image_mask
 
+
 import skimage.feature
 import skimage.morphology
 import skimage.filters.rank
@@ -24,6 +25,8 @@ import concurrent.futures
 import multiprocessing
 
 import annotation_file
+
+import pathlib.Path
 
 def import_json_fromfn(fn):
     return json.loads(open(fn).read())
@@ -52,24 +55,46 @@ class Experiment:
         for well in self.acquired_wells:
             position_mdata[well]=import_json_fromfn(expt_path+os.path.sep+well+os.path.sep+'position_metadata.json')
     
-    #def get_expt_path(self):
-        #return self.expt_path
-    
     def get_expt_times(self):
         return [extract_datetime_fromstr(time_point) for time_point in self.expt_mdata['timepoints']]
     
-    #def get_acquired_wells(self):
-        #return self.acquired_wells
-    
     def get_expt_time_offsets(self):
+        '''
+            Return expt_times relative to the start of the experiment (in *seconds*)
+        '''
+        
         expt_times = self.get_expt_times()
         return [(expt_tp - expt_times[0]).total_seconds() for expt_tp in expt_times]
         
     # TODO: Continue working on (have to figure out how to handle multiple images (e.g. bf and fl)
+    # TODO: Implicitly allow calibration.
     def get_well_images(self, well, start_idx = 0, stop_idx = None):
         #well_image_files = list_image_files(self.expt_path+os.path.sep+well)
         #if stop_idx is None: stop_idx = len(well_image
         pass
+        #yield self.
+    
+    #TODO: Update based on batch (??? forgot what this means.)
+    def calibrate_single_image(self, time_point, well, master_v_mask, microscopy_type='bf', save_path = '', save_str = '', image_type = 'tiff'):
+        if save_path != '' and not os.path.exists(save_path):
+            print('save path not found; making save path at:'+save_path)
+            os.mkdir(save_path)
+        
+        cali_path = self.expt_dir+os.path.sep+'calibrations'+os.path.sep
+        median_ref_intensity = np.median([self.expt_mdata['brightfield_metering'][dataset]['ref_intensity'] for dataset in expt_mdata['brightfield metering'].keys()])
+        
+        # Build a master vignette mask from all of the calibration files
+        #master_v_mask = np.logical_and.reduce(np.array([freeimage.read(cali_path+os.path.sep+cali_file) > 0 for cali_file in os.listdir(cali_path) if (microscopy_type+'_flatfield') in cali_file]))
+        metering_data = self.expt_mdata['brightfield metering'][well]
+        image_file = self.expt_dir+os.path.sep+well+os.path.sep+time_point+' '+microscopy_type+'.'+image_type
+        cali_file = cali_path+os.path.sep+(self.expt_mdata['brightfield metering'][well]['cal_image_prefix']+' '+microscopy_type+'_flatfield.tiff')
+        out_img = freeimage.read(image_file)*median_ref_intensity/metering_data['ref_intensity']* \
+            freeimage.read(cali_file)*master_v_mask
+        if save_path != '':
+            save_fn = save_path+os.path.sep+d_file[:-4]+save_str+d_file[-4:]
+            freeimage.write(out_img.astype('uint16'), save_fn)
+        return out_img
+    
     
     #TODO FINISH AND FIX (looks like issue with use of wells below)
     def measure_growth_forexpt(self):
@@ -188,26 +213,7 @@ class Experiment:
         return time_labels
         
     '''
-    #TODO: Update based on batch
-    def calibrate_single_image(self, time_point, well, master_v_mask, microscopy_type='bf', save_path = '', save_str = '', image_type = 'tiff'):
-        if save_path != '' and not os.path.exists(save_path):
-            print('save path not found; making save path at:'+save_path)
-            os.mkdir(save_path)
-        
-        cali_path = self.expt_dir+os.path.sep+'calibrations'+os.path.sep
-        median_ref_intensity = np.median([self.expt_mdata['brightfield_metering'][dataset]['ref_intensity'] for dataset in expt_mdata['brightfield metering'].keys()])
-        
-        # Build a master vignette mask from all of the calibration files
-        #master_v_mask = np.logical_and.reduce(np.array([freeimage.read(cali_path+os.path.sep+cali_file) > 0 for cali_file in os.listdir(cali_path) if (microscopy_type+'_flatfield') in cali_file]))
-        metering_data = self.expt_mdata['brightfield metering'][well]
-        image_file = self.expt_dir+os.path.sep+well+os.path.sep+time_point+' '+microscopy_type+'.'+image_type
-        cali_file = cali_path+os.path.sep+(self.expt_mdata['brightfield metering'][well]['cal_image_prefix']+' '+microscopy_type+'_flatfield.tiff')
-        out_img = freeimage.read(image_file)*median_ref_intensity/metering_data['ref_intensity']* \
-            freeimage.read(cali_file)*master_v_mask
-        if save_path != '':
-            save_fn = save_path+os.path.sep+d_file[:-4]+save_str+d_file[-4:]
-            freeimage.write(out_img.astype('uint16'), save_fn)
-        return out_img
+
     
     #TODO: Update based on batch
     def calibrate_images_forwell(self, well, master_v_mask, microscopy_type, save_path = '', save_str = '', image_type = 'tiff', return_images = False):
@@ -251,11 +257,6 @@ class Experiment:
         #TODO
         pass
     '''
-
-#for worm_idx in np.arange(stop = np.len(events['Hatch'])):
-     ##Since annotations use frame number (0:) to give stage, provide the range to use for binning)
-    #if str(worm_idx).zfill(len(self.acquired_wells[0])) in self.acquired_wells:
-        #time_labels[worm_idx,:] = np.digitize(np.arange(stop=len(self.get_expt_times())), event_times_forbinning[worm_idx])
 
 
 #For making a lawn from a single image
