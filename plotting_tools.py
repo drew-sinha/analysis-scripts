@@ -3,6 +3,7 @@ import matplotlib.pyplot as plt
 import os
 import zplib.scalar_stats.kde
 
+
 #~ import annotation_file
 
 # I Want Hue color map
@@ -32,7 +33,6 @@ qual_colors = np.array([[0,0,0],    # Switched the 2nd and 9th colors
     [86,165,116],
     [81,173,208],
     [203,81,54]])/255
-
 
 #~ def quick_plot_dev(ann_fps, expt_mds,bad_worm_kws=[]):
     #~ my_ann_files = [annotation_file.AnnotationFile(ann_fp) for ann_fp in ann_fps]  
@@ -120,9 +120,11 @@ def clean_plot(my_plot, cleaning_mode=None,**kws):
         make_labels = kws.get('make_labels',False)
         suppress_ticklabels = kws.get('suppress_ticklabels',False)
     spines_off = kws.get('spines_off',['right','top'])
-    num_xticks = kws.get('num_xticks',0)
-    num_yticks = kws.get('num_yticks',0)
+    num_xticks = kws.get('num_xticks', None)
+    num_yticks = kws.get('num_yticks', None)
     square_aspect = kws.get('square_aspect',False)
+    ylim = kws.get('ylim', None)
+    xlim = kws.get('xlim', None)
     
     if cleaning_mode == 'visualize':
         make_labels=False
@@ -138,7 +140,12 @@ def clean_plot(my_plot, cleaning_mode=None,**kws):
     
     my_plot.tick_params(axis='both',which='both', top='off', bottom='off', left='off', right='off')
     
-    if len(my_plot.get_xticks())>0:
+    if ylim is not None:
+        my_plot.set_ylim(ylim)
+    if xlim is not None:
+        my_plot.set_xlim(xlim)
+    
+    if num_xticks is not None and len(my_plot.get_xticks())>0:
         full_xticks = my_plot.get_xticks().copy()
         full_xticklabels = my_plot.get_xticklabels().copy()
         xlim = my_plot.get_xlim()
@@ -152,7 +159,7 @@ def clean_plot(my_plot, cleaning_mode=None,**kws):
             my_plot.set_xticks(np.linspace(first_xtick, last_xtick, num_xticks))
         my_plot.xaxis.set_ticks_position('none')
     
-    if len(my_plot.get_yticks())>0:
+    if num_yticks is not None and len(my_plot.get_yticks())>0:
         full_yticks = my_plot.get_yticks().copy()
         full_yticklabels = my_plot.get_yticklabels().copy()
         ylim = my_plot.get_ylim()
