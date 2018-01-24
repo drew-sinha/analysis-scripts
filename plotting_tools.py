@@ -2,6 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import os
 import zplib.scalar_stats.kde
+import skimage.color
 
 
 #~ import annotation_file
@@ -33,6 +34,27 @@ qual_colors = np.array([[0,0,0],    # Switched the 2nd and 9th colors
     [86,165,116],
     [81,173,208],
     [203,81,54]])/255
+    
+def build_gradient_palette(base_color, num_colors):
+    '''
+        Build a gradient color palette using a provided color as the base and modifying the intensity in LAB space
+        
+        base_color - 3-item list or np.array containing the base color (no alpha channel)
+        num_colors - (int) Number of desired colors
+    '''
+
+    # Handle black (really want white here...)
+    if (np.array(base_color)==np.array([0,0,0])).all():
+        base_color = np.array([1,1,1])*.99 # can't do pure white for stability
+    
+    base_color_lab = skimage.color.rgb2lab(np.array([[base_color]]))
+    
+    return ([skimage.color.lab2rgb(
+        np.array([[[
+            100-(base_color_lab[0,0,0]*i/num_colors),
+            base_color_lab[0,0,1],
+            base_color_lab[0,0,2]]]]))[0,0,:] 
+        for i in range(num_colors+1)][1:])
 
 #~ def quick_plot_dev(ann_fps, expt_mds,bad_worm_kws=[]):
     #~ my_ann_files = [annotation_file.AnnotationFile(ann_fp) for ann_fp in ann_fps]  
