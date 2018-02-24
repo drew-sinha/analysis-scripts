@@ -18,11 +18,16 @@ import platform
 import analyzeHealth.selectData as selectData
 
 
-def randomsearch_fitparams_epsSVR(X,y,n_iter=20,n_jobs=1):
+def randomsearch_fitparams_epsSVR(X,y,n_iter=20,n_jobs=1,**kws):
+    param_distributions = {'C': stats.expon(scale=50), 'gamma': stats.expon(scale=1), 'epsilon':stats.expon(scale=10)}
+    
+    for param in param_distributions.keys():
+        if kws.get(param) is not None:
+            param_distributions[param] = kws[param]
+    
     regressor = svm.SVR(kernel='rbf')
-    param_dist = {'C': stats.expon(scale=50), 'gamma': stats.expon(scale=1), 'epsilon':stats.expon(scale=10)}
     cv = model_selection.ShuffleSplit(n_splits=5, test_size=0.7)
-    random_search = model_selection.RandomizedSearchCV(regressor, param_distributions=param_dist, n_iter=n_iter, verbose=True, cv=cv, n_jobs=n_jobs)
+    random_search = model_selection.RandomizedSearchCV(regressor, param_distributions=param_distributions, n_iter=n_iter, verbose=True, cv=cv, n_jobs=n_jobs)
     random_search.fit(X, y)
     return random_search
 
@@ -101,7 +106,7 @@ def write_cluster_jobfile(save_directory, **template_kws):
 
         source activate zplab_cluster
         cd $$PBS_O_WORKDIR
-        python /home/sinhad/Scripts/df_param_search.py /scratch/sinhad/work_dir/param_search/dfs/WT_classifier_newcode_20171011/spe-9_health/df_spe-9.pickle $param_search_func $${PBS_ARRAYID} n_jobs=1, n_iter=$n_iter
+        python /home/sinhad/Scripts/df_param_search.py $param_search_func $${PBS_ARRAYID} --save_dir=/scratch/sinhad/work_dir/param_search/dfs/WT_classifier_newcode_20171011/spe-9_health/df_spe-9.pickle n_jobs=1 n_iter=$n_iter
         ''')
     param_search_func = template_kws['param_search_func']
     assert param_search_func in func_lookup_table.keys()
@@ -166,23 +171,20 @@ if __name__ == "__main__":
     
     parser = argparse.ArgumentParser()
     parser.add_argument('df_path',type=str)
-    parser.add_argument('save_dir',type=str,nargs='?',default=None)
     parser.add_argument('param_search_func',type=str)
     parser.add_argument('job_id',type=int)
-    parser.add_argument('kws',nargs='*')
-
-    args = parser.parse_args()    
-
-    kwargs = {}
-    for kw_str in args.kws:
-        kw_parsed = kw_str.split(sep='=')
-        filtered_kw = kw_parsed[1].replace('-','')
-        if kw_parsed[0].lower() == 'ls_percentile':
-            kwargs[kw_parsed[0].lower()] = list(map(float,kw_parsed[1][1:-1].split(',')))
-        else:
-            if filtered_kw.isnumeric(): 
-                kw_parsed[1] = int(kw_parsed[1])
-            kwargs[kw_parsed[0]] = kw_parsed[1]    
+    parser.add_argument('--save_dir',type=str,default=None)
+    parser.add_argument('--ls_percentile',type=str)
+    
+    kw_parser = argparse.ArgumentParser()
+    kw_parser.add_argument('--n_jobs',type=int)
+    kw_parser.add_argument('--n_iter',type=int)
+    kw_parser.add_argument('--C',type=float)
+    kw_parser.add_argument('--gamma',type=float)
+    kw_parser.add_argument('--epsilon',type=float)
+    
+    args, remainder = parser.parse_known_args()
+    kwargs = kw_parser.parse_args(remainder)
 
     # Baby-sit loading for simultaneous access attempts on cluster
     READ_SUCCESS = False
@@ -193,11 +195,11 @@ if __name__ == "__main__":
             READ_SUCCESS = True
         except PermissionError:
             pass
-
-    if kwargs.get('ls_percentile',None) is None:
+    
+    if args.ls_percentile is None:
         selected_worms = None
     else:
-        low_percentile, high_percentile = kwargs.pop('ls_percentile')
+        low_percentile, high_percentile = list(map(float,args.ls_percentile.split(',')))
         lifespans = selectData.get_adultspans(my_df)
         low_cutoff, high_cutoff = np.percentile(lifespans,[low_percentile, high_percentile])
         selected_worms = np.array(my_df.worms)[
