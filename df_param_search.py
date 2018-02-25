@@ -26,7 +26,7 @@ def randomsearch_fitparams_epsSVR(X,y,n_iter=20,n_jobs=1,**kws):
         if kws.get(param) is not None: # Assume we're using this to fix a parameter.
             setattr(regressor,param,kws[param])
     
-    param_distributions = {k:v for k,v in param_distributions.items() if kws.get(k) is not None}
+    param_distributions = {k:v for k,v in param_distributions.items() if kws.get(k) is None}
     print(param_distributions)
     
     cv = model_selection.ShuffleSplit(n_splits=5, test_size=0.7)
