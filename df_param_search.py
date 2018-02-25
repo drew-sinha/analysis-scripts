@@ -20,12 +20,15 @@ import analyzeHealth.selectData as selectData
 
 def randomsearch_fitparams_epsSVR(X,y,n_iter=20,n_jobs=1,**kws):
     param_distributions = {'C': stats.expon(scale=50), 'gamma': stats.expon(scale=1), 'epsilon':stats.expon(scale=10)}
+    regressor = svm.SVR(kernel='rbf')
     
     for param in param_distributions.keys():
-        if kws.get(param) is not None:
-            param_distributions[param] = kws[param]
+        if kws.get(param) is not None: # Assume we're using this to fix a parameter.
+            setattr(regressor,param,kws[param])
     
-    regressor = svm.SVR(kernel='rbf')
+    param_distributions = {k:v for k,v in param_distributions.items() if kws.get(k) is not None}
+    print(param_distributions)
+    
     cv = model_selection.ShuffleSplit(n_splits=5, test_size=0.7)
     random_search = model_selection.RandomizedSearchCV(regressor, param_distributions=param_distributions, n_iter=n_iter, verbose=True, cv=cv, n_jobs=n_jobs)
     random_search.fit(X, y)
@@ -73,6 +76,7 @@ def paramsearch_df_parallel(df,param_search_func, num_workers=4):
 def paramsearch_df(df,param_search_func,selected_worms=None, **func_kwargs):
     if selected_worms is not None:
         print('Using custom-selected worms; length = {}'.format(len(selected_worms)))
+    print(func_kwargs)
     
     raw_health_vars = ['bulk_movement','stimulated_rate_a', 'stimulated_rate_b', 'unstimulated_rate', 'intensity_80', 'life_texture','adjusted_size','adjusted_size_rate', 'cumulative_eggs','cumulative_eggs_rate']
     biomarker_data = df.mloc(worms=selected_worms,measures=raw_health_vars) #[animals, measurements, time]
@@ -88,7 +92,22 @@ def paramsearch_df(df,param_search_func,selected_worms=None, **func_kwargs):
     
     return search_results
 
-def write_cluster_jobfile(save_directory, **template_kws):
+def write_cluster_jobfile(save_directory, save_fn = 'job_script_paramsearch.sh', **template_kws):
+    '''
+        # Example usage...
+            for C in [1,2,5,10,20,50,100,200]:
+                template_kws = {'param_search_func':'randomsearch_fitparams_epsSVR',
+                    'save_dir':'/scratch/sinhad/work_dir/param_search/results/spe-9_fixedC_search/C_{}'.format(C),
+                    'extra_args':'--C={}'.format(C),
+                    'job_name':'param_search_randomsearch_fitparams_epsSVR_C_{}'.format(C),
+                    'num_runs':50}
+                df_param_search.write_cluster_jobfile('/home/sinhad/',
+                    save_fn='job_script_paramsearch_fixedC_{}.sh'.format(C),
+                    **template_kws)
+    '''
+    
+    
+    
     jobscript_template = string.Template(
         '''
         #PBS -N $job_name
@@ -106,17 +125,23 @@ def write_cluster_jobfile(save_directory, **template_kws):
 
         source activate zplab_cluster
         cd $$PBS_O_WORKDIR
-        python /home/sinhad/Scripts/df_param_search.py $param_search_func $${PBS_ARRAYID} --save_dir=/scratch/sinhad/work_dir/param_search/dfs/WT_classifier_newcode_20171011/spe-9_health/df_spe-9.pickle n_jobs=1 n_iter=$n_iter
+        python /home/sinhad/Scripts/df_param_search.py /scratch/sinhad/work_dir/param_search/dfs/WT_classifier_20180130/spe-9_health/df_spe-9.pickle $param_search_func $${PBS_ARRAYID} --save_dir=$save_dir --n_jobs=1 --n_iter=$n_iter $extra_args
         ''')
     param_search_func = template_kws['param_search_func']
     assert param_search_func in func_lookup_table.keys()
     
     template_kws.setdefault('n_iter',30)
     template_kws.setdefault('num_runs',5)
-        
-    code = jobscript_template.substitute(job_name='param_search_'+param_search_func,
-        **template_kws)
-    with (pathlib.Path(save_directory) / 'job_script_paramsearch.sh').open('w') as job_script:
+    template_kws.setdefault('extra_args','')
+    if 'centos' in platform.platform(): # Environment @ CHPC
+        template_kws.setdefault('save_dir',str(pathlib.Path('/scratch/sinhad/work_dir/param_search/results')))
+    else:
+        template_kws.setdefault('save_dir',str(pathlib.Path('/home/drew/temp')))
+    template_kws.setdefault('job_name','param_search_'+param_search_func)
+    
+    code = jobscript_template.substitute(**template_kws)
+    
+    with (pathlib.Path(save_directory) / save_fn).open('w') as job_script:
         job_script.write(code)
         
 def compile_paramsearch_results(result_directory,save_directory=None):
@@ -165,7 +190,7 @@ def compile_paramsearch_results(result_directory,save_directory=None):
     
 if __name__ == "__main__":
     ''' Call with signature
-    python df_param_search.py DF_PATH [SAVE_DIR] PARAM_SEARCH_FUNC_STR ARRAYID [LS_PERCENTILE=LOW,HIGH] [ARG1=VAL1 [ARG2=VAL2...]]
+    python df_param_search.py DF_PATH PARAM_SEARCH_FUNC ARRAYID [SAVE_DIR] [LS_PERCENTILE=LOW,HIGH] [ARG1=VAL1 [ARG2=VAL2...]]
     '''
     #~ multiprocessing.set_start_method('spawn',force=True)
     
@@ -205,10 +230,6 @@ if __name__ == "__main__":
         selected_worms = np.array(my_df.worms)[
             (lifespans >= low_cutoff) & (lifespans <= high_cutoff)]
     
-    timestamp = time.strftime('%Y-%m-%d_%H%M')
-    
-    search_results = paramsearch_df(my_df,func_lookup_table[args.param_search_func],selected_worms, **kwargs)
-    
     if args.save_dir is None:
         if 'centos' in platform.platform(): # Environment @ CHPC
             save_dir = pathlib.Path('/scratch/sinhad/work_dir/param_search/results')
@@ -216,6 +237,10 @@ if __name__ == "__main__":
             save_dir = pathlib.Path('/home/drew/temp')
     else:
         save_dir = pathlib.Path(args.save_dir)
+    
+    timestamp = time.strftime('%Y-%m-%d_%H%M')
+    
+    search_results = paramsearch_df(my_df,func_lookup_table[args.param_search_func],selected_worms, **vars(kwargs))
 
     with (save_dir / (timestamp + '_' + str(args.param_search_func) + '_results_' + str(args.job_id) +'.pickle')).open('wb') as result_file:
         pickle.dump(search_results, result_file)
