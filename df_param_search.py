@@ -125,14 +125,14 @@ def write_cluster_jobfile(save_directory, save_fn = 'job_script_paramsearch.sh',
 
         source activate zplab_cluster
         cd $$PBS_O_WORKDIR
-        python /home/sinhad/Scripts/df_param_search.py $data_dir $param_search_func $${PBS_ARRAYID} --save_dir=$save_dir --n_jobs=1 --n_iter=$n_iter $extra_args
+        python /home/sinhad/Scripts/df_param_search.py $data_path $param_search_func $${PBS_ARRAYID} --save_dir=$save_dir --n_jobs=1 --n_iter=$n_iter $extra_args
         ''')
     param_search_func = template_kws['param_search_func']
     assert param_search_func in func_lookup_table.keys()
     
     template_kws.setdefault('n_iter',30)
     template_kws.setdefault('num_runs',5)
-    template_kws.setdefault('data_dir','/scratch/sinhad/work_dir/param_search/dfs/WT_classifier_20180130/spe-9_health/df_spe-9.pickle')
+    template_kws.setdefault('data_path','/scratch/sinhad/work_dir/param_search/dfs/WT_classifier_20180130/spe-9_health/df_spe-9.pickle')
     template_kws.setdefault('extra_args','')
     if 'centos' in platform.platform(): # Environment @ CHPC
         template_kws.setdefault('save_dir',str(pathlib.Path('/scratch/sinhad/work_dir/param_search/results')))
