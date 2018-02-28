@@ -163,6 +163,17 @@ data_list = {
         'experiment_directories':None,
         'annotation_directories':None
     },
+    'age-1;daf-16': {
+        'data_directories':[
+            r'/mnt/scopearray/Sinha_Drew/20180108 age-1 daf-16 spe-9 Run 3A',
+            r'/mnt/scopearray/Sinha_Drew/20180108 age-1 daf-16 spe-9 Run 3B',
+            r'/mnt/scopearray/Sinha_Drew/20180130 age-1 daf-16 spe-9 Run 4A',
+            r'/mnt/scopearray/Sinha_Drew/20180130 age-1 daf-16 spe-9 Run 4B',
+        ],
+        'extra_directories':None,
+        'experiment_directories':None,
+        'annotation_directories':None
+    },
 }
 for strain in data_list:
     for meta_dirs in ['extra_directories','experiment_directories','annotation_directories']:
