@@ -219,14 +219,14 @@ def generate_regression_data(strain_dfs,strains=None,out_dir='',make_labels=True
         flat_dependent = np.ndarray.flatten(strain_df.mloc(measures = ['ghost_age']))
         all_flats = []
         for a_var in all_physiology:
-            flat_var = np.ndarray.flatten(strain_df.mloc(measures = [a_var]))
+            flat_var = np.ndarray.flatten(strain_df.mloc(measures = [a_var])[:,0,:])
             all_flats.append(flat_var)
         all_flats = np.array(all_flats).transpose()
         biomarker_data.append([all_flats, flat_dependent])
         
         all_flats_biomarkerpredict = []
         for a_var in health_measure_keys:
-            flat_var = np.ndarray.flatten(strain_df.extra_data[a_var])
+            flat_var = np.ndarray.flatten(strain_df.mloc(measures=[a_var])[:,0,:])
             all_flats_biomarkerpredict.append(flat_var)
         all_flats_biomarkerpredict = np.array(all_flats_biomarkerpredict).transpose()
         biomarker_predict_data.append([all_flats_biomarkerpredict, flat_dependent])
@@ -240,9 +240,9 @@ def generate_regression_data(strain_dfs,strains=None,out_dir='',make_labels=True
         ax_h.set_title(strain+' Pearson mult. reg. r^2={:.3}'.format(r_squared))
         
         fig_h, ax_h = plt.subplots(1,1)
-        ax_h.scatter(strain_df.extra_data['health'], actual_health)
+        ax_h.scatter(strain_df.mloc(measures=['health'])[:,0,:], actual_health)
         ax_h.set_title(strain+' SVR r^2={:.3}'.format(analyzeHealth.computeStatistics.quick_pearson(    # SVR of actual health on predicted health
-            np.ndarray.flatten(strain_df.extra_data['health']), 
+            np.ndarray.flatten(strain_df.mloc(measures=['health'])), 
             np.ndarray.flatten(actual_health))))
         
         print(strain)
@@ -256,7 +256,7 @@ def generate_regression_data(strain_dfs,strains=None,out_dir='',make_labels=True
         print('Total r^2s')
         print('Pearson multiple regression raw biomarkers and actual health r^2:{:.3}'.format(r_squared))
         print('SVR mult. reg. b/t predicted health and actual health r^2:{:.3}'.format(analyzeHealth.computeStatistics.quick_pearson(
-            np.ndarray.flatten(strain_df.extra_data['health']), 
+            np.ndarray.flatten(strain_df.mloc(measures=['health'])), 
             np.ndarray.flatten(actual_health))))
     
     # Plot the raw biomarker values against actual lifespan
@@ -1018,7 +1018,7 @@ def get_healthspans(adult_df, a_variable='health',cutoff_value=None,return_cross
             # Get the first crossing that lingers below the cutoff for more than 10% of lifetime
             found_crossing = False
             for crossing_idx in crossings:
-                if (adj_data[crossing_idx+1:np.floor(crossing_idx+0.1*adultspan_len)+1]<0).all():
+                if (adj_data[crossing_idx+1:int(np.floor(crossing_idx+0.1*adultspan_len)+1)]<0).all():
                     healthspans.append(adult_df.ages[crossing_idx]*24)
                     crossing_idxs.append(crossing_idx)
                     found_crossing=True
