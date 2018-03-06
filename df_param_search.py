@@ -19,6 +19,14 @@ import analyzeHealth.selectData as selectData
 
 
 def randomsearch_fitparams_epsSVR(X,y,n_iter=20,n_jobs=1,**kws):
+    '''
+        Function for randomized search per sklearn's RandomizedSearchCV
+        
+        X,y - Training input/output pairs following sklearn .fit method conventions
+        n_iter, n_jobs - parameters for # of iterations and threads for the RandomizedSearchCV to use
+        **kws - Additional kws used for explicitly fixing one or more parameters during parameter searching
+    '''
+    
     param_distributions = {'C': stats.expon(scale=50), 'gamma': stats.expon(scale=1), 'epsilon':stats.expon(scale=10)}
     regressor = svm.SVR(kernel='rbf')
     
@@ -35,13 +43,18 @@ def randomsearch_fitparams_epsSVR(X,y,n_iter=20,n_jobs=1,**kws):
     return random_search
 
 def gridsearch_fitparams_epsSVR(X,y,n_iter=20,n_jobs=1):
-    regressor = svm.SVR(kernel='rbf')
-    param_dist = {'C': stats.expon(scale=50), 'gamma': stats.expon(scale=1), 'epsilon': stats.expon(scale=10)}
-    cv = model_selection.ShuffleSplit(n_splits=5, test_size=0.7)
-    random_search = model_selection.RandomizedSearchCV(regressor, param_distributions=param_dist, n_iter=n_iter, verbose=True, cv=cv, n_jobs=n_jobs)
+    '''
+        TODO/Incomplete for future implementation
+    '''
+    raise NotImplementedError()
+    
+    #~ regressor = svm.SVR(kernel='rbf')
+    #~ param_dist = {'C': stats.expon(scale=50), 'gamma': stats.expon(scale=1), 'epsilon': stats.expon(scale=10)}
+    #~ cv = model_selection.ShuffleSplit(n_splits=5, test_size=0.7)
+    #~ random_search = model_selection.RandomizedSearchCV(regressor, param_distributions=param_dist, n_iter=n_iter, verbose=True, cv=cv, n_jobs=n_jobs)
     #~ print('Finished searching; proceeding to fit model.')
     #~ random_search.fit(X, y)
-    return random_search
+    #~ return random_search
     
 func_lookup_table = {
     'randomsearch_fitparams_epsSVR': randomsearch_fitparams_epsSVR,
@@ -51,7 +64,7 @@ func_lookup_table = {
 def paramsearch_df_parallel(df,param_search_func, num_workers=4):
     
     '''
-        Still in beta
+        In beta for local parallel parameter searching....
     '''
     
     biomarker_data = df.mloc(measures=raw_health_vars) #[animals, measurements, time]
@@ -74,6 +87,16 @@ def paramsearch_df_parallel(df,param_search_func, num_workers=4):
     return compiled_search_results
     
 def paramsearch_df(df,param_search_func,selected_worms=None, **func_kwargs):
+    '''
+        Top-level function for actually performing a parameter search
+            df - Willie style CompleteWormDF containing input data points
+            param_search_func - One of a function in func_lookup_table above
+            selected_worms - Optional exposed parameter for specifying which worms' observations as input points
+            func_kwsargs - arguments to pass to param_search_func
+        
+        Returns search_results from specified param_search_func (i.e. a *SearchCV object)
+    '''
+    
     if selected_worms is not None:
         print('Using custom-selected worms; length = {}'.format(len(selected_worms)))
     print(func_kwargs)
@@ -94,6 +117,11 @@ def paramsearch_df(df,param_search_func,selected_worms=None, **func_kwargs):
 
 def write_cluster_jobfile(save_directory, save_fn = 'job_script_paramsearch.sh', **template_kws):
     '''
+        Writes out jobfile at "save_directory/save_fn"
+        
+        save_directory/save_fn - (str/pathlib.Path) directory and filename for saved job file
+        template_kws - parameter values to replace in the template for the job file
+        
         # Example usage...
             for C in [1,2,5,10,20,50,100,200]:
                 template_kws = {'param_search_func':'randomsearch_fitparams_epsSVR',
@@ -193,7 +221,6 @@ if __name__ == "__main__":
     ''' Call with signature
     python df_param_search.py DF_PATH PARAM_SEARCH_FUNC ARRAYID [SAVE_DIR] [LS_PERCENTILE=LOW,HIGH] [ARG1=VAL1 [ARG2=VAL2...]]
     '''
-    #~ multiprocessing.set_start_method('spawn',force=True)
     
     parser = argparse.ArgumentParser()
     parser.add_argument('df_path',type=str)
@@ -202,6 +229,7 @@ if __name__ == "__main__":
     parser.add_argument('--save_dir',type=str,default=None)
     parser.add_argument('--ls_percentile',type=str)
     
+    # Second parser specifically for param_search_func specific kws
     kw_parser = argparse.ArgumentParser()
     kw_parser.add_argument('--n_jobs',type=int)
     kw_parser.add_argument('--n_iter',type=int)
