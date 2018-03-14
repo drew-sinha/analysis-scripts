@@ -86,12 +86,13 @@ def paramsearch_df_parallel(df,param_search_func, num_workers=4):
         compiled_search_results.extend(results)
     return compiled_search_results
     
-def paramsearch_df(df,param_search_func,selected_worms=None, **func_kwargs):
+def paramsearch_df(df,param_search_func,selected_worms=None, spacing=0, **func_kwargs):
     '''
         Top-level function for actually performing a parameter search
             df - Willie style CompleteWormDF containing input data points
             param_search_func - One of a function in func_lookup_table above
             selected_worms - Optional exposed parameter for specifying which worms' observations as input points
+            spacing - Optional int to specify subsampling of spaced timepoints per animal (0=no subsampling)
             func_kwsargs - arguments to pass to param_search_func
         
         Returns search_results from specified param_search_func (i.e. a *SearchCV object)
@@ -103,17 +104,58 @@ def paramsearch_df(df,param_search_func,selected_worms=None, **func_kwargs):
     
     raw_health_vars = ['bulk_movement','stimulated_rate_a', 'stimulated_rate_b', 'unstimulated_rate', 'intensity_80', 'life_texture','adjusted_size','adjusted_size_rate', 'cumulative_eggs','cumulative_eggs_rate']
     biomarker_data = df.mloc(worms=selected_worms,measures=raw_health_vars) #[animals, measurements, time]
-    biomarker_data_flat = biomarker_data.swapaxes(1,2).reshape(-1,len(raw_health_vars)) #[animals x time,measurements]
-
     remaining_life = df.mloc(worms=selected_worms,measures=['ghost_age'])[:,0,:] #[animals,time]
-    remaining_life_flat = remaining_life.flatten() #[animals xtime]
-
-    nan_mask = np.isnan(biomarker_data_flat).any(axis=1) | np.isnan(remaining_life_flat)
-    search_results = param_search_func(biomarker_data_flat[~nan_mask], 
-                        remaining_life_flat[~nan_mask],
-                        **func_kwargs)
+    
+    if spacing == 0:
+        biomarker_data_flat = biomarker_data.swapaxes(1,2).reshape(-1,len(raw_health_vars)) #[animals x time,measurements]
+        remaining_life_flat = remaining_life.flatten() #[animals xtime]
+        nan_mask = np.isnan(biomarker_data_flat).any(axis=1) | np.isnan(remaining_life_flat)
+        X = biomarker_data_flat[~nan_mask]
+        y = remaining_life_flat[~nan_mask]
+    else:
+        X,y = extract_spaced_timepointdata(biomarker_data,
+            remaining_life,
+            spacing=spacing)
+    
+    search_results = param_search_func(X,y,**func_kwargs)
     
     return search_results
+    
+def extract_spaced_timepointdata(strain_data,regressed_obs,spacing=8,randomize_startidx=False):
+    '''
+        Take a set of measurement and observations to regress against and subsample each with fixed spacing in time
+        
+        
+        Arguments:
+            strain_data - (animals, measurements, timepoints) matrix of observations
+            regressed_obs - (animals,timepoints) matrix of values to regress against
+            spacing - # of timepoints to space observations
+        
+        Returns:
+        Tuple of
+            pooled_data - (# of valid&admittable timepoints, measurements) matrix
+            pooled_obs - (# of valid&admittable timepoints,) array
+    '''
+    
+    if randomize_startidx:
+        # Randomize where sampling of each animal's data begins 
+        start_idxs = np.random.randint(spacing,size=(strain_data.shape[0],)) 
+    else:
+        # Set it to start at the first element (probably better for comparison across different classifiers)
+        start_idxs = np.zeros((strain_data.shape[0]))
+    
+    pooled_measurements = []    
+    pooled_obs = [] #Ultimately [#valid+admittable timepoints,1]
+    for start_idx,worm_measurements,worm_obs in zip(start_idxs,strain_data,regressed_obs):
+        num_validtimepoints = (
+            (~np.isnan(worm_measurements).any(axis=0)) &
+            (~np.isnan(worm_obs))).sum()
+        spaced_measurements = worm_measurements[:,start_idx:num_validtimepoints:spacing]
+        spaced_obs = worm_obs[start_idx:num_validtimepoints:spacing]
+        pooled_measurements.extend(spaced_measurements.T)
+        pooled_obs.extend(spaced_obs)
+    assert (~np.isnan(pooled_measurements).any())
+    return (np.array(pooled_measurements), np.array(pooled_obs))
 
 def write_cluster_jobfile(save_directory, save_fn = 'job_script_paramsearch.sh', **template_kws):
     '''
@@ -228,6 +270,7 @@ if __name__ == "__main__":
     parser.add_argument('job_id',type=int)
     parser.add_argument('--save_dir',type=str,default=None)
     parser.add_argument('--ls_percentile',type=str)
+    parser.add_argument('--spacing',type=int,default=0)
     
     # Second parser specifically for param_search_func specific kws
     kw_parser = argparse.ArgumentParser()
@@ -269,7 +312,7 @@ if __name__ == "__main__":
     
     timestamp = time.strftime('%Y-%m-%d_%H%M')
     
-    search_results = paramsearch_df(my_df,func_lookup_table[args.param_search_func],selected_worms, **vars(kwargs))
+    search_results = paramsearch_df(my_df,func_lookup_table[args.param_search_func],selected_worms,spacing=args.spacing, **vars(kwargs))
 
     with (save_dir / (timestamp + '_' + str(args.param_search_func) + '_results_' + str(args.job_id) +'.pickle')).open('wb') as result_file:
         pickle.dump(search_results, result_file)
