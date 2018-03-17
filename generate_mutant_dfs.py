@@ -1,12 +1,6 @@
-from basicOperations import folderStuff
-from analyzeHealth import characterizeTrajectories
+from analyzeHealth import characterizeTrajectoriesMinimal
 import pickle
-import os
-
-working_directory = r'/media/Data/Work/ZPLab/Analysis/MutantHealth/worm_health_data/work_dir/'
-human_directory = r'/media/Data/Work/ZPLab/Analysis/MutantHealth/worm_health_data/utilities/'
-#working_directory = '/home/dsinha/work_dir/'
-#human_directory = '/home/dsinha/utilities/'
+import pathlib
 
 data_list = {   
     'spe-9': {
@@ -181,95 +175,82 @@ for strain in data_list:
             data_list[strain][meta_dirs] = [None for ii in range(len(data_list[strain]['data_directories']))]
 
 def make_SVR(strains,svm_save_dir,**df_extra_args):
-    save_directory = ''
-    print('Work directory exists:'+str(os.path.isdir(working_directory)))
-    print('Human directory exists:'+str(os.path.isdir(human_directory)))
-    df_extra_args.setdefault('adult_only',True)
-    df_extra_args.setdefault('add_health',True)
-    df_extra_args['svm_save_dir'] = svm_save_dir
+    #~ save_directory = ''
+    #~ print('Work directory exists:'+working_directory.is_dir())
+    #~ print('Utility directory exists:'+working_directory.is_dir())
+    #~ df_extra_args.setdefault('adult_only',True)
+    #~ df_extra_args.setdefault('add_health',True)
+    #~ df_extra_args['svm_save_dir'] = svm_save_dir
     
-    if strains == 'combined':
-        compiled_list = {my_key:[] for my_key in ['data_directories','extra_directories','experiment_directories','annotation_directories']}
-        for my_strain in data_list:
-            for my_key in ['data_directories','extra_directories','experiment_directories','annotation_directories']:
-                compiled_list[my_key].extend(data_list[my_strain][my_key])
-        directory_bolus = folderStuff.DirectoryBolus(working_directory, human_directory, 
-                *[compiled_list[dirs] for dirs in ['data_directories','extra_directories','experiment_directories','annotation_directories']], 
-                ready = len(compiled_list['data_directories']))
-        if svm_save_dir is not '':
-            svm_dir_out = svm_save_dir+os.path.sep+'combined_health_SVR'+os.path.sep
-            if not os.path.isdir(svm_dir_out): 
-                print('(make_SVR) Making directory at: '+svm_dir_out)
-                os.mkdir(svm_dir_out)
-        adult_df = characterizeTrajectories.CompleteWormDF(directory_bolus, save_directory,
-            df_extra_args)
-    else:
-        for strain in strains:
-            directory_bolus = folderStuff.DirectoryBolus(working_directory, human_directory, 
-                *[data_list[strain][dirs] for dirs in ['data_directories','extra_directories','experiment_directories','annotation_directories']], 
-                ready = len(data_list[strain]['data_directories']))    
+    #~ if strains == 'combined':
+        #~ compiled_list = {my_key:[] for my_key in ['data_directories','extra_directories','experiment_directories','annotation_directories']}
+        #~ for my_strain in data_list:
+            #~ for my_key in ['data_directories','extra_directories','experiment_directories','annotation_directories']:
+                #~ compiled_list[my_key].extend(data_list[my_strain][my_key])
+        #~ directory_bolus = folderStuff.DirectoryBolus(working_directory, human_directory, 
+                #~ *[compiled_list[dirs] for dirs in ['data_directories','extra_directories','experiment_directories','annotation_directories']], 
+                #~ ready = len(compiled_list['data_directories']))
+        #~ if svm_save_dir is not '':
+            #~ svm_dir_out = svm_save_dir+os.path.sep+'combined_health_SVR'+os.path.sep
+            #~ if not os.path.isdir(svm_dir_out): 
+                #~ print('(make_SVR) Making directory at: '+svm_dir_out)
+                #~ os.mkdir(svm_dir_out)
+        #~ adult_df = characterizeTrajectories.CompleteWormDF(directory_bolus, save_directory,
+            #~ df_extra_args)
+    #~ else:
+        #~ for strain in strains:
+            #~ directory_bolus = folderStuff.DirectoryBolus(working_directory, human_directory, 
+                #~ *[data_list[strain][dirs] for dirs in ['data_directories','extra_directories','experiment_directories','annotation_directories']], 
+                #~ ready = len(data_list[strain]['data_directories']))    
             
-            if svm_save_dir is not '':
-                svm_dir_out = svm_save_dir+os.path.sep+strain+'_health_SVR'+os.path.sep
-                if not os.path.isdir(svm_dir_out): 
-                    print('(make_SVR) Making directory at: '+svm_dir_out)
-                    os.mkdir(svm_dir_out)
-            adult_df = characterizeTrajectories.CompleteWormDF(directory_bolus, save_directory,
-                df_extra_args)
+            #~ if svm_save_dir is not '':
+                #~ svm_dir_out = svm_save_dir+os.path.sep+strain+'_health_SVR'+os.path.sep
+                #~ if not os.path.isdir(svm_dir_out): 
+                    #~ print('(make_SVR) Making directory at: '+svm_dir_out)
+                    #~ os.mkdir(svm_dir_out)
+            #~ adult_df = characterizeTrajectories.CompleteWormDF(directory_bolus, save_directory,
+                #~ df_extra_args)
+                
+    '''
+        TODO - get rid of this or reimplement such that it utilizes the refactored fit_regressor func of the DF
+    '''
+    raise NotImplementedError
 
-def make_df(strains,df_savedir,custom_savename='',**df_extra_args):
+def make_df(strains,df_savedir='',custom_savename='',**df_extra_args):
     '''
         Important df arguments
-            svm_directory - directory to find svm pickle file data
+            regressor_fp - (str/pathlib.Path) filepath to health score regressor
     '''
     
     df_extra_args.setdefault('adult_only',True)
-    df_extra_args.setdefault('add_health',True)
-    if strains is 'combined':
-        compiled_list = {my_key:[] for my_key in ['data_directories','extra_directories','experiment_directories','annotation_directories']}
-        for my_strain in data_list:
-            for my_key in ['data_directories','extra_directories','experiment_directories','annotation_directories']:
-                compiled_list[my_key].extend(data_list[my_strain][my_key])
-        directory_bolus = folderStuff.DirectoryBolus(working_directory, human_directory, 
-                *[compiled_list[dirs] for dirs in ['data_directories','extra_directories','experiment_directories','annotation_directories']], 
-                ready = len(compiled_list['data_directories']))
-        if df_savedir is not '':
-            full_savedir = df_savedir+os.path.sep+'combined_health'+os.path.sep
-            if not os.path.isdir(full_savedir): 
-                print('(make_df) Making directory at:'+full_savedir)
-                os.mkdir(full_savedir)
-        adult_df = characterizeTrajectories.CompleteWormDF(directory_bolus,
+    df_extra_args.setdefault('bad_worm_kws',['PVL','BURST'])
+    df_savedir = pathlib.path(df_savedir)
+    
+    if strains == 'combined':
+        data_directories = []
+        for my_strain in data_list.keys():
+            data_directories.append(data_list[my_strain]['data_directories'])
+        adult_df = characterizeTrajectoriesMinimal.BasicWormDF(data_directories,
             df_extra_args)
-        #~ life_df = characterizeTrajectories.CompleteWormDF(directory_bolus, full_savedir,
-            #~ {'adult_only': False, 'svm_directory':svm_directory})
-        data_to_save = {'adult_df':adult_df,'data_list':data_list}
-        data_to_save.update(df_extra_args)
-        with open(full_savedir+'df_combined'+custom_savename+'.pickle','wb') as my_file:
-            pickle.dump(data_to_save,my_file)
-    else:
-        dfs = []
-        for strain in strains:
-            directory_bolus = folderStuff.DirectoryBolus(working_directory, human_directory, 
-                *[data_list[strain][dirs] for dirs in ['data_directories','extra_directories','experiment_directories','annotation_directories']], 
-                ready = len(data_list[strain]['data_directories']))    
             
-            if df_savedir is not '':
-                if custom_savename == '':
-                    full_savedir = df_savedir+os.path.sep+strain+'_health'+os.path.sep
-                else:
-                    full_savedir = df_savedir+os.path.sep+custom_savename+'_health'+os.path.sep
-                if not os.path.isdir(full_savedir): 
-                    print('(make_df) Making directory at: '+full_savedir)
-                    os.mkdir(full_savedir)
-            else:
-                full_savedir = ''
-            adult_df = characterizeTrajectories.CompleteWormDF(directory_bolus,
-                df_extra_args)
-            #~ life_df = characterizeTrajectories.CompleteWormDF(directory_bolus, full_savedir,
-                #~ {'adult_only': False, 'svm_directory':svm_directory})
+        if str(df_savedir) != ''
             data_to_save = {'adult_df':adult_df,'data_list':data_list}
             data_to_save.update(df_extra_args)
-            with open(full_savedir+'df_'+strain+custom_savename+'.pickle','wb') as my_file:
+            with (df_savedir/('df_combined'+custom_savename+'.pickle')).open('wb') as my_file:
                 pickle.dump(data_to_save,my_file)
+        
+        return [adult_df]
+    else:
+        dfs = []
+        for strain in strains:  
+            adult_df = characterizeTrajectoriesMinimal.BasicWormDF(
+                data_list[strain]['data_directories'],
+                df_extra_args)
+            
+            if str(df_savedir) is not '':
+                data_to_save = {'adult_df':adult_df,'data_list':data_list['strain']}
+                data_to_save.update(df_extra_args)
+                with (df_savedir/('df_'+strain+custom_savename+'.pickle')).open('wb') as my_file:
+                    pickle.dump(data_to_save,my_file)
             dfs.append(adult_df)
         return dfs
