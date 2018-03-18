@@ -18,11 +18,12 @@ import platform
 import analyzeHealth.selectData as selectData
 
 
-def randomsearch_fitparams_epsSVR(X,y,n_iter=20,n_jobs=1,**kws):
+def randomsearch_fitparams_epsSVR(X,y,groups=None,n_iter=20,n_jobs=1,**kws):
     '''
         Function for randomized search per sklearn's RandomizedSearchCV
         
         X,y - Training input/output pairs following sklearn .fit method conventions
+        groups - (optional) list of group assignments following sklearn convention; if non-None, GroupKFold is used.
         n_iter, n_jobs - parameters for # of iterations and threads for the RandomizedSearchCV to use
         **kws - Additional kws used for explicitly fixing one or more parameters during parameter searching
     '''
@@ -37,8 +38,14 @@ def randomsearch_fitparams_epsSVR(X,y,n_iter=20,n_jobs=1,**kws):
     param_distributions = {k:v for k,v in param_distributions.items() if kws.get(k) is None}
     print(param_distributions)
     
-    cv = model_selection.ShuffleSplit(n_splits=5, test_size=0.7)
-    random_search = model_selection.RandomizedSearchCV(regressor, param_distributions=param_distributions, n_iter=n_iter, verbose=True, cv=cv, n_jobs=n_jobs)
+    if groups is None:
+        cv = model_selection.KFold(n_splits=5)
+    else:
+        print('Using GroupKFold to separate measurements from different animals')
+        cv = model_selection.GroupKFold(n_splits=5)
+    cv_splits = cv.split(X,y,groups=groups)
+    
+    random_search = model_selection.RandomizedSearchCV(regressor, param_distributions=param_distributions, n_iter=n_iter, verbose=True, cv=cv_splits, n_jobs=n_jobs)
     random_search.fit(X, y)
     return random_search
 
@@ -86,7 +93,7 @@ def paramsearch_df_parallel(df,param_search_func, num_workers=4):
         compiled_search_results.extend(results)
     return compiled_search_results
     
-def paramsearch_df(df,param_search_func,selected_worms=None, spacing=0, **func_kwargs):
+def paramsearch_df(df,param_search_func,selected_worms=None, spacing=0,use_groupkfold=False, **func_kwargs):
     '''
         Top-level function for actually performing a parameter search
             df - Willie style CompleteWormDF containing input data points
@@ -117,7 +124,12 @@ def paramsearch_df(df,param_search_func,selected_worms=None, spacing=0, **func_k
             remaining_life,
             spacing=spacing)
     
-    search_results = param_search_func(X,y,**func_kwargs)
+    if use_groupkfold:  # Generate a label for each measurement corresponding to the worm it came from
+        measurement_labels = np.tile(np.arange(len(df.worms)+1),(len(df.times),1)).T.flatten()[~nan_mask]
+    else:
+        measurement_labels = None
+    
+    search_results = param_search_func(X,y,groups=measurement_labels,**func_kwargs)
     
     return search_results
     
@@ -132,9 +144,9 @@ def extract_spaced_timepointdata(strain_data,regressed_obs,spacing=8,randomize_s
             spacing - # of timepoints to space observations
         
         Returns:
-        Tuple of
-            pooled_data - (# of valid&admittable timepoints, measurements) matrix
-            pooled_obs - (# of valid&admittable timepoints,) array
+            Tuple of
+                pooled_data - (# of valid&admittable timepoints, measurements) matrix
+                pooled_obs - (# of valid&admittable timepoints,) array
     '''
     
     if randomize_startidx:
@@ -271,6 +283,7 @@ if __name__ == "__main__":
     parser.add_argument('--save_dir',type=str,default=None)
     parser.add_argument('--ls_percentile',type=str)
     parser.add_argument('--spacing',type=int,default=0)
+    parser.add_argument('--use_groupkfold',dest=use_groupkfold,default=False,action='store_true')
     
     # Second parser specifically for param_search_func specific kws
     kw_parser = argparse.ArgumentParser()
@@ -312,7 +325,9 @@ if __name__ == "__main__":
     
     timestamp = time.strftime('%Y-%m-%d_%H%M')
     
-    search_results = paramsearch_df(my_df,func_lookup_table[args.param_search_func],selected_worms,spacing=args.spacing, **vars(kwargs))
+    search_results = paramsearch_df(my_df,func_lookup_table[args.param_search_func],selected_worms,
+        spacing=args.spacing,use_groupkfold=args.use_groupkfold,
+        **vars(kwargs))
 
     with (save_dir / (timestamp + '_' + str(args.param_search_func) + '_results_' + str(args.job_id) +'.pickle')).open('wb') as result_file:
         pickle.dump(search_results, result_file)
