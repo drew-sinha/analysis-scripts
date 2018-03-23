@@ -39,10 +39,10 @@ def randomsearch_fitparams_epsSVR(X,y,groups=None,n_iter=20,n_jobs=1,**kws):
     print(param_distributions)
     
     if groups is None:
-        cv = model_selection.KFold(n_splits=5)
+        cv = model_selection.KFold(n_splits=4)
     else:
         print('Using GroupKFold to separate measurements from different animals')
-        cv = model_selection.GroupKFold(n_splits=5)
+        cv = model_selection.GroupKFold(n_splits=4)
     cv_splits = cv.split(X,y,groups=groups)
     
     random_search = model_selection.RandomizedSearchCV(regressor, param_distributions=param_distributions, n_iter=n_iter, verbose=True, cv=cv_splits, n_jobs=n_jobs)
@@ -93,7 +93,7 @@ def paramsearch_df_parallel(df,param_search_func, num_workers=4):
         compiled_search_results.extend(results)
     return compiled_search_results
     
-def paramsearch_df(df,param_search_func,selected_worms=None, spacing=0,use_groupkfold=False, **func_kwargs):
+def paramsearch_df(df,param_search_func,selected_worms=None, spacing=1,use_groupkfold=False, **func_kwargs):
     '''
         Top-level function for actually performing a parameter search
             df - Willie style CompleteWormDF containing input data points
@@ -113,7 +113,7 @@ def paramsearch_df(df,param_search_func,selected_worms=None, spacing=0,use_group
     biomarker_data = df.mloc(worms=selected_worms,measures=raw_health_vars) #[animals, measurements, time]
     remaining_life = df.mloc(worms=selected_worms,measures=['ghost_age'])[:,0,:] #[animals,time]
     
-    if spacing == 0:
+    if spacing == 1:
         biomarker_data_flat = biomarker_data.swapaxes(1,2).reshape(-1,len(raw_health_vars)) #[animals x time,measurements]
         remaining_life_flat = remaining_life.flatten() #[animals xtime]
         nan_mask = np.isnan(biomarker_data_flat).any(axis=1) | np.isnan(remaining_life_flat)
@@ -282,7 +282,7 @@ if __name__ == "__main__":
     parser.add_argument('job_id',type=int)
     parser.add_argument('--save_dir',type=str,default=None)
     parser.add_argument('--ls_percentile',type=str)
-    parser.add_argument('--spacing',type=int,default=0)
+    parser.add_argument('--spacing',type=int,default=1)
     parser.add_argument('--use_groupkfold',dest=use_groupkfold,default=False,action='store_true')
     
     # Second parser specifically for param_search_func specific kws
