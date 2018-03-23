@@ -122,7 +122,8 @@ def paramsearch_df(df,param_search_func,selected_worms=None, spacing=1,use_group
     else:
         X,y = extract_spaced_timepointdata(biomarker_data,
             remaining_life,
-            spacing=spacing)
+            spacing=spacing,
+            randomize_startidx = True)
     
     if use_groupkfold:  # Generate a label for each measurement corresponding to the worm it came from
         measurement_labels = np.tile(np.arange(len(df.worms)+1),(len(df.times),1)).T.flatten()[~nan_mask]
