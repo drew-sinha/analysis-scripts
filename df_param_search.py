@@ -284,7 +284,7 @@ if __name__ == "__main__":
     parser.add_argument('--save_dir',type=str,default=None)
     parser.add_argument('--ls_percentile',type=str)
     parser.add_argument('--spacing',type=int,default=1)
-    parser.add_argument('--use_groupkfold',dest=use_groupkfold,default=False,action='store_true')
+    parser.add_argument('--use_groupkfold',dest='use_groupkfold',default=False,action='store_true')
     
     # Second parser specifically for param_search_func specific kws
     kw_parser = argparse.ArgumentParser()
