@@ -189,6 +189,19 @@ def test_adultspans(strain_dfs,strain_labels):
         #~ ax_h.set_title('r={:.2f}\np={:.2f}'.format(
             #~ *stats.pearsonr(devspans,lifespans)))
     return(figs,axs)
+    
+def plot_df_ls(strain_df,ax_h=None,calc_adultspan=False,**plot_kws):
+    '''
+        Plot a survival curve for a worm DF object
+        
+        calc_adultspan - (bool) flag to toggle whether to calculate adultspan or lifespan
+    '''
+    if calc_adultspan:
+        time_alive = analyzeHealth.selectData.get_adultspans(strain_df)/24
+    else:
+        time_alive = analyzeHealth.selectData.get_lifespans(strain_df)/24
+        
+    return survival_plotting.plot_spanseries(time_alive,ax_h=ax_h,**plot_kws)
 
 def generate_regression_data(strain_dfs,strains=None,out_dir='',make_labels=True,verbose=True):
     if strains is None:
