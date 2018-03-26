@@ -3,6 +3,9 @@ import plotting_tools
 import matplotlib.pyplot as plt
 import numpy as np
 import scipy.stats
+import pathlib
+
+import corral_annotations.annotation_file as annotation_file
 
 def plot_spanseries(spans,ax_h = None,**kws):
     '''
@@ -28,15 +31,22 @@ def plot_spanseries(spans,ax_h = None,**kws):
     else:
         return data
 
-def plot_manual_ls(annotation_fns):
+def plot_manual_ls(annotation_fns,ax_h=None):
     '''
-        Plotting tool for plotting survival curves from manually curated tsv files (e.g. identified individuals in worm corrals)
+        Plotting tool for plotting survival curves from manually curated tsv files (i.e. not automated scope experiments)
+        
+        interval - Conversion from timepoint number (i.e. in 
     '''
     compiled_ann_data = [pd.read_csv(ann_file,sep='\t') for ann_file in annotation_fns]
-    fig_h, ax_h = plt.subplots(1,1)
     data_series = []
     metadata = []
     compiled_ls = []
+    
+    if ax_h is None:
+        fig_h, ax_h = plt.subplots(1,1)
+        ax_provided = False
+    else: ax_provided = True
+    
     for ann_data, ann_color in zip(compiled_ann_data,plotting_tools.qual_colors):
         good_worms = pd.Series(['DEAD' in note for note in ann_data['Notes']])
         good_ls = ann_data['Death'][good_worms]-ann_data['Hatch'][good_worms]
@@ -44,7 +54,7 @@ def plot_manual_ls(annotation_fns):
         metadata.append({'n':len(good_ls)})
         compiled_ls.append(good_ls)
     ax_h.set_ylim([0,1])
-    ax_h.set_xlabel('Time Post-Transfer (d)')
+    ax_h.set_xlabel('Days Post-Transfer')
     ax_h.set_ylabel('Proportion Surviving')
     
     print('Means:')
@@ -56,70 +66,57 @@ def plot_manual_ls(annotation_fns):
     print('T-test for lifespan of *dead* animals')
     clean_compiled_ls = [ls[~np.isnan(ls)] for ls in compiled_ls] #Take care of worms that are still alive
     print(scipy.stats.ttest_ind(*clean_compiled_ls,equal_var=False))
-
-    return [fig_h, ax_h, data_series, metadata]
-
-#~ def plot_lifespan(ann_fps, expt_mds, annotation_prefix_list = [], bad_worm_kws=[],debug_mode=False,plot_mode='both',hist_mode='kde'):
-    #~ def draw_hist(data, my_ax, hist_mode = 'kde'):
-        #~ if hist_mode is 'kde':
-            #~ interval_supp,interval_data,interval_obj = zplib.scalar_stats.kde.kd_distribution(data)
-            #~ my_ax.plot(interval_supp,interval_data)
-        #~ elif hist_mode is 'bar':
-            #~ my_ax.hist(data)
-        #~ return my_ax
+    
+    if not ax_provided:
+        return (fig_h, ax_h, data_series, metadata)
+    else:
+        return (ax_h, data_series, metadata)
         
-    #~ if annotation_prefix_list == []:
-        #~ my_ann_files = [annotation_file.AnnotationFile(ann_fp) for ann_fp in ann_fps]
-    #~ else:
-        #~ my_ann_files = [annotation_file.AnnotationFile(ann_fp,annotation_prefix=prefix) for (ann_fp,prefix) in zip(ann_fps,annotation_prefix_list)]
+def plot_expt_ls(expt_dirs, ax_h=None, calc_adultspan=False,bad_worm_kws=[], **plot_kws):
+    '''
+        Plot lifespans corresponding to one or more single longitudinal scope experiments
+    '''
     
-    #~ timestamped_data = {}
-    #~ [timestamped_data.setdefault(expt_key,np.array([])) for expt_key in list(my_ann_files[0].data.keys())]
-    #~ for [expt_md_fp, ann_file] in zip(expt_mds, my_ann_files):
-        #~ if debug_mode: print(expt_md_fp)
-        #~ if type(expt_mds[0]) == str:    # Simple - one md file
-            #~ ann_file_data = ann_file.data_as_timestamps_simple(expt_md_fp)
-        #~ if type(expt_mds[0]) == dict:   # Need to link multiple md files
-            #~ ann_file_data = ann_file.data_as_timestamps(expt_md_fp)
-            
-        #~ for expt_key in timestamped_data.keys():
-            #~ timestamped_data[expt_key] = np.append(timestamped_data[expt_key],ann_file_data[expt_key])
+    if type(expt_dirs) is not list: expt_dirs = [expt_dirs] # Single path
+    if type(expt_dirs[0]) is str: expt_dirs = list(map(pathlib.Path,expt_dirs))
     
-    #~ viable_worm = (timestamped_data['Hatch']!=-1) \
-        #~ & (timestamped_data['Death']!=-1) \
-        #~ & np.array([not any([kw in note for kw in bad_worm_kws]) for note in timestamped_data['Notes']])
-    #~ print(timestamped_data['Worm'][viable_worm])
+    ax_provided = ax_h is not None
+    if not ax_provided: fig_h, ax_h = plt.subplots()
+
+    expt_afs = [annotation_file.AnnotationFile(
+        [my_file for my_file in my_dir.iterdir() if my_file.is_file() 
+        and '.tsv' == my_file.suffix][0]) 
+    for my_dir in expt_dirs]
     
-    #~ lifespan = (timestamped_data['Death']-timestamped_data['Hatch'])[viable_worm]/(3600*24) # Days
-    #~ sorted_ls = sorted(lifespan)
-    #~ prop_alive = 1 - (np.arange(start=0,stop=np.size(lifespan)))/np.size(lifespan)
+    ts_data = [(my_af.data_as_timestamps_simple(
+        my_dir / 'experiment_metadata.json',restricted_list=my_af.get_goodworms(bad_worm_kws=bad_worm_kws))) 
+        for my_af,my_dir in zip(expt_afs, expt_dirs)]
+
+    if calc_adultspan: initial_time_label = 'First Egg Laid'
+    else: initial_time_label = 'Hatch'
     
-    #~ plt.show()
-    #~ plt.ion()
+    combined_data_series = [plot_spanseries(
+            (my_data['Death']-my_data[initial_time_label])/(3600*24),
+            ax_h=ax_h)[0] 
+        for my_data in ts_data]
+
+    if initial_time_label == 'Hatch':
+        ax_h.set_xlabel('Days Post-Hatch')
+    elif initial_time_label == 'First Egg Laid':
+        ax_h.set_xlabel('Days Post-Adulthood')
+    ax_h.set_ylabel('Proportion Surviving')
+
+    # Print stats
+    print('Avg Lifespan')
+    [print('{}: {:.3f}'.format(my_path.parts[-1],((my_data['Death']-my_data[initial_time_label])/(3600*24)).mean())) for my_path,my_data in zip(expt_dirs,ts_data)]
+    print('All: {:.3f}'.format(np.array([
+        ((my_data['Death']-my_data[initial_time_label])/(3600*24)).mean() for my_data in ts_data
+    ]).mean()))
     
-    #~ plt.gcf().clf()
-    #~ if plot_mode is 'both':
-        #~ fig_h, ax_h = plt.subplots(2,1,sharex=True)
-        #~ ax_h[0].plot(np.append([0],sorted_ls),np.append([1],prop_alive))
-        #~ ax_h[0].set_xlabel('Time since expt. start (d)')
-        #~ ax_h[0].set_ylabel('Proportion alive')
-        #~ ax_h[0].set_title('Survival curve - n = {}'.format(np.size(lifespan)))
-        
-        #~ ax_h[1].hist(lifespan)
-        #~ ax_h[1].set_xlabel('Time to death (d)')
-        #~ ax_h[1].set_ylabel('Frequency')
-        #~ ax_h[1].set_title('Mean+/-STD: {:.2f}+/-{:.2f}d\nMedian:{}d'.format(np.mean(lifespan),np.std(lifespan),np.median(lifespan)))
-    #~ elif plot_mode is 'lifespan':
-        #~ fig_h,ax_h = plt.subplots(1,1)
-        #~ draw_hist(lifespan, ax_h)
-        #~ ax_h.set_xlabel('Time to death (d)')
-        #~ ax_h.set_ylabel('Frequency')
-        #~ ax_h.set_title('Mean+/-STD: {:.2f}+/-{:.2f}d\nMedian:{}d'.format(np.mean(lifespan),np.std(lifespan),np.median(lifespan)))
-    #~ else:
-        #~ fig_h,ax_h = plt.subplots(1,1)
-        #~ ax_h.plot(np.append([0],sorted_ls),np.append([1],prop_alive))
-        #~ ax_h.set_xlabel('Time since expt. start (d)')
-        #~ ax_h.set_ylabel('Proportion alive')
-        #~ ax_h.set_title('Survival curve - n = {}'.format(np.size(lifespan)))
+    print ('Median Lifespan')
+    [print('{}: {:.3f}'.format(my_path.parts[-1],((my_data['Death']-my_data[initial_time_label])/(3600*24)).median())) for my_path,my_data in zip(expt_dirs,ts_data)]
     
-    #~ return fig_h, ax_h
+    if ax_provided:
+        return ax_h, combined_data_series
+    else:
+        return fig_h, ax_h, combined_data_series
