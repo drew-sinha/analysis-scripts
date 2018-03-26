@@ -35,15 +35,14 @@ def randomsearch_fitparams_epsSVR(X,y,groups=None,n_iter=20,n_jobs=1,**kws):
         if kws.get(param) is not None: # Assume we're using this to fix a parameter.
             setattr(regressor,param,kws[param])
     
-    param_distributions = {k:v for k,v in param_distributions.items() if kws.get(k) is None}
-    print(param_distributions)
+    param_distributions = {k:v for k,v in param_distributions.items() if kws.get(k) is None}    
     
     if groups is None:
-        cv = model_selection.KFold(n_splits=4)
+        cv = model_selection.KFold(n_splits=4,shuffle=True)
     else:
         print('Using GroupKFold to separate measurements from different animals')
         cv = model_selection.GroupKFold(n_splits=4)
-    cv_splits = cv.split(X,y,groups=groups)
+    cv_splits = list(cv.split(X,y,groups=groups))
     
     random_search = model_selection.RandomizedSearchCV(regressor, param_distributions=param_distributions, n_iter=n_iter, verbose=True, cv=cv_splits, n_jobs=n_jobs)
     random_search.fit(X, y)
@@ -126,7 +125,7 @@ def paramsearch_df(df,param_search_func,selected_worms=None, spacing=1,use_group
             randomize_startidx = True)
     
     if use_groupkfold:  # Generate a label for each measurement corresponding to the worm it came from
-        measurement_labels = np.tile(np.arange(len(df.worms)+1),(len(df.times),1)).T.flatten()[~nan_mask]
+        measurement_labels = np.tile(np.arange(len(df.worms)),(len(df.times),1)).T.flatten()[~nan_mask]
     else:
         measurement_labels = None
     
@@ -276,7 +275,7 @@ if __name__ == "__main__":
     ''' Call with signature
     python df_param_search.py DF_PATH PARAM_SEARCH_FUNC ARRAYID [SAVE_DIR] [LS_PERCENTILE=LOW,HIGH] [ARG1=VAL1 [ARG2=VAL2...]]
     '''
-    
+    print('Now processing....')
     parser = argparse.ArgumentParser()
     parser.add_argument('df_path',type=str)
     parser.add_argument('param_search_func',type=str)
@@ -295,8 +294,12 @@ if __name__ == "__main__":
     kw_parser.add_argument('--epsilon',type=float)
     
     args, remainder = parser.parse_known_args()
+    print(args)
+    print(remainder)
+    
     kwargs = kw_parser.parse_args(remainder)
-
+    print('arguments parsed')
+    
     # Baby-sit loading for simultaneous access attempts on cluster
     READ_SUCCESS = False
     while not READ_SUCCESS:
@@ -306,6 +309,7 @@ if __name__ == "__main__":
             READ_SUCCESS = True
         except PermissionError:
             pass
+    print('file read')
     
     if args.ls_percentile is None:
         selected_worms = None
@@ -326,6 +330,7 @@ if __name__ == "__main__":
     
     timestamp = time.strftime('%Y-%m-%d_%H%M')
     
+    print(args.use_groupkfold)
     search_results = paramsearch_df(my_df,func_lookup_table[args.param_search_func],selected_worms,
         spacing=args.spacing,use_groupkfold=args.use_groupkfold,
         **vars(kwargs))
