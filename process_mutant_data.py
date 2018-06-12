@@ -107,13 +107,17 @@ def unique_items(seq):  # Credit to Peterbe
     seen = set()
     return [x for x in seq if x not in seen and not seen.add(x)]
 
-def test_lifespan_replicates(strain_df):
-    rep_labels = unique_items([(' '.join(worm_label.split(' ')[:-1])) for worm_label in strain_df.worms])
-    rep_labels = unique_items([rep_label if rep_label[-1].isnumeric() else rep_label[:-1] for rep_label in rep_labels])
+def test_lifespan_replicates(strain_df,calc_adultspans=True,rep_labels=None):
+    if rep_labels is None:
+        rep_labels = unique_items([(' '.join(worm_label.split(' ')[:-1])) for worm_label in strain_df.worms])
+        rep_labels = unique_items([rep_label if rep_label[-1].isnumeric() else rep_label[:-1] for rep_label in rep_labels])
     print(rep_labels)
     worm_assignments = np.array(
         [num for worm_label in strain_df.worms for num,rep_label in enumerate(rep_labels) if rep_label in ' '.join(worm_label.split(' ')[:-1])])
-    lifespans = analyzeHealth.selectData.get_lifespans(strain_df)/24
+    if calc_adultspans:
+        lifespans = analyzeHealth.selectData.get_adultspans(strain_df)/24
+    else:
+        lifespans = analyzeHealth.selectData.get_lifespans(strain_df)/24
     
     survival_fig, ax_h = plt.subplots(1,1)
     max_life = max(lifespans)//1 + 1
@@ -127,7 +131,10 @@ def test_lifespan_replicates(strain_df):
         print('Stats for rep '+rep_label+': ({:.2f}+/-{:.2f})'.format(stats[-1][0],stats[-1][1]))
     
     ax_h.set_ylabel('Percent Survival')
-    ax_h.set_xlabel('Days Post-Maturity')
+    if calc_adultspans:
+        ax_h.set_xlabel('Days Adulthood')
+    else:
+        ax_h.set_xlabel('Days Post-Maturity')
     ax_h.set_ylim([0,1.1])
     ax_h.set_xlim([0,max_life])
     ax_h.legend(plotting_tools.flatten_list(data_series),
@@ -138,9 +145,10 @@ def test_lifespan_replicates(strain_df):
     
     return (survival_fig,ax_h)
     
-def test_healthspan_replicates(strain_df):
-    rep_labels = unique_items([(' '.join(worm_label.split(' ')[:-1])) for worm_label in strain_df.worms])
-    rep_labels = unique_items([rep_label if rep_label[-1].isnumeric() else rep_label[:-1] for rep_label in rep_labels])
+def test_healthspan_replicates(strain_df,rep_labels=None):
+    if rep_labels is None:
+        rep_labels = unique_items([(' '.join(worm_label.split(' ')[:-1])) for worm_label in strain_df.worms])
+        rep_labels = unique_items([rep_label if rep_label[-1].isnumeric() else rep_label[:-1] for rep_label in rep_labels])
     print(rep_labels)
     worm_assignments = np.array(
         [num for worm_label in strain_df.worms for num,rep_label in enumerate(rep_labels) if rep_label in ' '.join(worm_label.split(' ')[:-1])])
@@ -1040,6 +1048,68 @@ def get_healthspans(adult_df, a_variable='health',cutoff_value=None,return_cross
                 #print('couldnt find crossing for '+my_worm)
                 healthspans.append(adult_df.ages[crossing_idx]*24) # Default to take the last crossing in a bad situation
                 crossing_idxs.append(crossing_idx)
+    
+    
+    if not return_crossings:
+        return np.array(healthspans)
+    else:
+        return np.array(healthspans),np.array(crossing_idxs)
+
+def get_healthspans_unconfusing(adult_df, a_variable='health',cutoff_value=None,return_crossings=False,temp=None):
+    '''
+        Get healthspans based on dwell time under threshold (more robust than Willie spans, part. to end of life noise) after falling below cutoff.
+        Cutoff (i.e. everything) should be in display_variable units! (i.e. adjusted with CompleteDF.display_variables)
+        Assume cutoff has been adjusted/negated for autofluorescence measurements.
+        This formulation intrinsically takes care of nonmonotonicity in measurement early in life (e.g. for measurements like size that still rise early in adulthood)
+    '''
+    
+    measures_to_negate = ['intensity_90','intensity_80']
+    
+    data_values = adult_df.display_variables(adult_df.mloc(measures=[a_variable])[:,0,:],a_variable)[0]
+    if a_variable in measures_to_negate:
+        data_values *= -1 # Reverse direction for the measurements that increase with time
+    if cutoff_value is None:
+        all_data = np.ndarray.flatten(data_values)
+        all_data = all_data[~np.isnan(all_data)]
+        cutoff_value = np.percentile(all_data, (1-0.5)*100)
+        print(cutoff_value)
+
+    adultspans = analyzeHealth.selectData.get_adultspans(adult_df)
+    ghost_ages = adult_df.mloc(measures=['ghost_age'])[:,0,:]
+    
+    healthspans = []
+    crossing_idxs = []
+    for my_worm,worm_data,adultspan,ghost_age in zip(adult_df.worms,data_values,adultspans,ghost_ages):
+        # Get all crossings and isolate those that are going down
+        adj_data = worm_data-cutoff_value
+        adj_data = adj_data[~np.isnan(adj_data)]
+        crossings = np.where((adj_data[:-1]>0) & (adj_data[1:]<0))[0]
+        
+        adultspan_len = len(ghost_age[~np.isnan(ghost_age)])
+        
+        # Handle no crossings
+        if len(crossings) == 0:
+            #print('no crossings found')
+            if adj_data[0]>0:
+                healthspans.append(adultspan)
+                crossing_idxs.append(adultspan_len)
+            elif adj_data[0]<=0:
+                healthspans.append(0)
+                crossing_idxs.append(0)
+        else:
+            # Get the first crossing that lingers below the cutoff for more than 10% of lifetime
+            found_crossing = False
+            for crossing_idx in crossings:
+                if (adj_data[crossing_idx+1:int(np.floor(crossing_idx+0.1*adultspan_len)+1)]<0).all():
+                    healthspans.append(adult_df.ages[crossing_idx]*24)
+                    crossing_idxs.append(crossing_idx)
+                    found_crossing=True
+                    break
+            if not found_crossing:
+                #print('couldnt find crossing for '+my_worm)
+                healthspans.append(adult_df.ages[crossing_idx]*24) # Default to take the last crossing in a bad situation
+                crossing_idxs.append(crossing_idx)
+#         raise Exception()
     
     
     if not return_crossings:
