@@ -227,13 +227,14 @@ def write_cluster_jobfile(save_directory, save_fn = 'job_script_paramsearch.sh',
     with (pathlib.Path(save_directory) / save_fn).open('w') as job_script:
         job_script.write(code)
         
-def compile_paramsearch_results(result_directory,save_directory=None):
+def compile_paramsearch_results(result_directory,save_directory=None,result_data_todiscard=None):
     '''
         Compile data from multiple separate parameter searches into a single serializable object (structure of sklearn.model_selection.RandomizedSearchCV) with additional attributes storing the top clasifier from each parameter search and its score (top_classifiers_ and top_scores_, resp.)
 
         Arguments:
             result_directory - directory with saved parameter search data
             save_directory - directory to save pickled results
+            result_data_todiscard - list of strs corresponding to attr's to delete from result_data (not ideal, but maybe necessary!)
     '''
 
     result_directory = pathlib.Path(result_directory)
@@ -263,6 +264,11 @@ def compile_paramsearch_results(result_directory,save_directory=None):
                     attr:np.append(result_data.cv_results_[attr],load_data.cv_results_[attr])
                     for attr in result_data.cv_results_.keys()}
     result_data.cv_results_['rank_test_score'] = np.array([]) # Eliminate this since these ranks are based on the individual searches
+    
+    if result_data_todiscard is not None:
+        [setattr(result_data,key,None) 
+            for key in result_data_todiscard]
+        result_data.result_data_todiscard = result_data_todiscard
     
     if save_directory is not None:
         with (save_directory / 'compiled_results.pickle').open('wb') as result_file:
