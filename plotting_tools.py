@@ -29,10 +29,10 @@ qual_colors = np.array([[0,0,0],    # Switched the 2nd and 9th colors
     [215,144,72],
     [178,176,68],
     [194,99,109],
+    [81,173,208],   # Moved this guy up from 2nd to last
     [190,117,177],
     [211,66,126],
     [86,165,116],
-    [81,173,208],
     [203,81,54]])/255
     
 def build_gradient_palette(base_color, num_colors):
