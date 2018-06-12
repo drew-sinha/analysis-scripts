@@ -167,6 +167,17 @@ data_list = {
         'extra_directories':None,
         'experiment_directories':None,
         'annotation_directories':None
+    },    
+    'spe-9new': {
+        'data_directories':[
+            r'/mnt/scopearray/Sinha_Drew/20180108 spe-9 Ctrl',
+            r'/mnt/scopearray/Sinha_Drew/20180130 spe-9 Ctrl',
+            r'/mnt/scopearray/Sinha_Drew/20180220 spe-9 Ctrl',
+            r'/mnt/scopearray/Sinha_Drew/20180309 spe-9 Ctrl',
+        ],
+        'extra_directories':None,
+        'experiment_directories':None,
+        'annotation_directories':None
     },
 }
 for strain in data_list:
@@ -224,33 +235,18 @@ def make_df(strains,df_savedir='',custom_savename='',**df_extra_args):
     
     df_extra_args.setdefault('adult_only',True)
     df_extra_args.setdefault('bad_worm_kws',['PVL','BURST'])
-    df_savedir = pathlib.path(df_savedir)
+    df_savedir = pathlib.Path(df_savedir)
     
-    if strains == 'combined':
-        data_directories = []
-        for my_strain in data_list.keys():
-            data_directories.append(data_list[my_strain]['data_directories'])
-        adult_df = characterizeTrajectoriesMinimal.BasicWormDF(data_directories,
-            df_extra_args)
-            
-        if str(df_savedir) != ''
-            data_to_save = {'adult_df':adult_df,'data_list':data_list}
-            data_to_save.update(df_extra_args)
-            with (df_savedir/('df_combined'+custom_savename+'.pickle')).open('wb') as my_file:
-                pickle.dump(data_to_save,my_file)
+    dfs = []
+    for strain in strains:  
+        adult_df = characterizeTrajectoriesMinimal.BasicWormDF(
+            data_list[strain]['data_directories'],
+            **df_extra_args)
         
-        return [adult_df]
-    else:
-        dfs = []
-        for strain in strains:  
-            adult_df = characterizeTrajectoriesMinimal.BasicWormDF(
-                data_list[strain]['data_directories'],
-                df_extra_args)
-            
-            if str(df_savedir) is not '':
-                data_to_save = {'adult_df':adult_df,'data_list':data_list['strain']}
-                data_to_save.update(df_extra_args)
-                with (df_savedir/('df_'+strain+custom_savename+'.pickle')).open('wb') as my_file:
-                    pickle.dump(data_to_save,my_file)
-            dfs.append(adult_df)
-        return dfs
+        if str(df_savedir) is not '':
+            data_to_save = {'adult_df':adult_df,'data_list':data_list[strain]}
+            data_to_save.update(df_extra_args)
+            with (df_savedir/('df_'+strain+custom_savename+'.pickle')).open('wb') as my_file:
+                pickle.dump(data_to_save,my_file)
+        dfs.append(adult_df)
+    return dfs
