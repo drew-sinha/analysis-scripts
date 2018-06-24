@@ -1055,7 +1055,7 @@ def get_healthspans(adult_df, a_variable='health',cutoff_value=None,return_cross
     else:
         return np.array(healthspans),np.array(crossing_idxs)
 
-def get_healthspans_unconfusing(adult_df, a_variable='health',cutoff_value=None,return_crossings=False,temp=None):
+def get_healthspans_unconfusing(adult_df, a_variable='health',cutoff_value=None,return_crossings=False,dwell_time=1):
     '''
         Get healthspans based on dwell time under threshold (more robust than Willie spans, part. to end of life noise) after falling below cutoff.
         Cutoff (i.e. everything) should be in display_variable units! (i.e. adjusted with CompleteDF.display_variables)
@@ -1100,7 +1100,9 @@ def get_healthspans_unconfusing(adult_df, a_variable='health',cutoff_value=None,
             # Get the first crossing that lingers below the cutoff for more than 10% of lifetime
             found_crossing = False
             for crossing_idx in crossings:
-                if (adj_data[crossing_idx+1:int(np.floor(crossing_idx+0.1*adultspan_len)+1)]<0).all():
+                dwell_limit = dwell_time*8+1 
+                
+                if (adj_data[crossing_idx+1:crossing_idx+1+dwell_limit]<0).all():
                     healthspans.append(adult_df.ages[crossing_idx]*24)
                     crossing_idxs.append(crossing_idx)
                     found_crossing=True
