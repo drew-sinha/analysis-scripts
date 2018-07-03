@@ -4,8 +4,8 @@ import sys
 from collections import OrderedDict
 
 from ris_widget import ris_widget
-from elegant.elegant import load_data
-from elegant.elegant.gui import experiment_annotator, stage_field
+from elegant import load_data
+from elegant.gui import experiment_annotator, stage_field
 
 def check_stage_annotations(annotations, stages):
     """Check that a set of annotations are complete 
@@ -23,16 +23,16 @@ def check_stage_annotations(annotations, stages):
     
     # Create a suitable function to use with filter_positions using a closure
     def select_by_stage_annotation(position_name,position_annotations, timepoint_annotations):
-        stage_annotations = [timepoint_annotation['stage'] 
+        stage_annotations = [timepoint_annotation.get('stage','')
             for timepoint_annotation in timepoint_annotations.values()]
         return all([stage in stage_annotations for stage in stages])
     
-    return load_data.filter_positions(
+    return load_data.filter_annotations(
         annotations,
         select_by_stage_annotation) # Get positions whose stages are not all annotated
 
-def filter_good(position_name, position_annotations, timepoint_annotations):
-    return position_annotations.get('exclude',False) == False
+#~ def filter_good(position_name, position_annotations, timepoint_annotations):
+    #~ return position_annotations.get('exclude',False) == False
 
 def scan_late_life(expt_dir, datestr):
     annotations = load_data.read_annotations(expt_dir)
@@ -46,7 +46,7 @@ def scan_late_life(expt_dir, datestr):
 def check_for_alive(expt_dir):
     annotations = load_data.read_annotations(expt_dir)
     print(len(annotations))
-    good_annotations = load_data.filter_positions(annotations, filter_good)
+    good_annotations = load_data.filter_annotations(annotations, load_data.filter_excluded)
     print(len(good_annotations))
     dead_annotations = check_stage_annotations(good_annotations, ['dead'])
 
@@ -73,6 +73,7 @@ if __name__ == "__main__":
     #~ expt_pos = load_data.scan_experiment_dir(expt_dir,timepoint_filter = lambda position,timepoint: timepoint > "2018-06-03t1200")
     expt_pos = load_data.scan_experiment_dir(expt_dir)
     #expt_pos = scan_late_life(expt_dir, '2018-06-03t1200')
+    #~ expt_pos = load_data.scan_experiment_dir(expt_dir, timepoint_filter = lambda position, timepoint: timepoint < "2018-05-24t0000")
     
     ea = experiment_annotator.ExperimentAnnotator(rw, expt_dir.parts[-1],
         expt_pos, [sf])
