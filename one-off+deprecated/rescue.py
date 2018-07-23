@@ -1,71 +1,43 @@
-import pathlib
 import shutil
+import pathlib
+import zplib.datafile as datafile
 import json
-import numpy as np
+import os
 
-import matplotlib.pyplot as plt
+def backup_metadata(experiment_dir, backup_dir):
+	experiment_dir = pathlib.Path(experiment_dir)
+	backup_dir = pathlib.Path(backup_dir)
+	for position_dir in sorted(list(experiment_dir.iterdir())):
+		if position_dir.is_dir() and position_dir.parts[-1][0].isnumeric():
+			if not(backup_dir/position_dir.parts[-1]).exists(): os.mkdir(str(backup_dir/position_dir.parts[-1]))
+			shutil.copyfile(str(position_dir/'position_metadata.json'), str(backup_dir/position_dir.parts[-1]/'position_metadata.json'))
 
-def remove_offending_tp(expt_path,timept_str,dry_run=False):
+def prune_z(experiment_dir):
     '''
-        expt_path - str/pathlib.Path pointing to expt. dir
-        timept_str - str in format yyyymmdd-thhmm
-        dry_run - Toggles taking action (if False, will not delete but will verbosely specify where offending files are found
+    For when I needed to rescue some scripts after Zach's update to new code
     '''
     
-    if type(expt_path) is str: expt_path = pathlib.Path(expt_path)
-    
-    for sub_dir in expt_path.iterdir():
-        if sub_dir.is_dir():
-            
-            # Move bad files
-            offending_files = [im_file for im_file in sub_dir.iterdir() if timept_str in str(im_file)]
-            if len(offending_files)>0:
-                print('Found offending files in: '+str(sub_dir))
-                
-                if not dry_run:
-                    if not (sub_dir/'offending_files').exists(): (sub_dir/'offending_files').mkdir(mode=755)
-                    [im_file.rename(im_file.parent/'offending_files'/im_file.parts[-1]) for im_file in offending_files]
-            
-            # Check if position metadata is bad and handle 
-            if sub_dir.parts[-1] != 'calibrations':
-                md_file = (sub_dir/'position_metadata.json')
-                if not md_file.exists(): print('No metadata file found at:'+str(sub_dir))
-                else:
-                    with md_file.open() as md_fp:
-                        pos_md = json.load(md_fp)
-                    has_bad_md_tmpt = any([tmpt['timepoints'] == timept_str for tmpt in pos_md])
-                    if has_bad_md_tmpt:
-                        print('Found offending entry in position_metadata in: '+str(sub_dir))
-                        if not dry_run:
-                            if not (sub_dir/'offending_files').exists(): (sub_dir/'offending_files').mkdir(mode=755)
-                            md_file.rename(md_file.parent/'offending_files'/'position_metadata_old.json')     # Backup old
-                            pos_md = [tp_data for tp_data in pos_md if tp_data['timepoints'] != timept_str]
-                            with (sub_dir/'position_metadata.json').open('w') as md_fp:
-                                encode_legible_to_file(pos_md,md_fp)   # Write out new position_metadata
-    
-    md_file = (expt_path/'experiment_metadata.json')
-    with md_file.open() as md_fp:
-        expt_md = json.load(md_fp)
-    
-    try:
-        tp_idx = np.where(np.array(expt_md['timepoints']) == timept_str)[0][0]
-        del expt_md['timepoints'][tp_idx]
-        del expt_md['timestamps'][tp_idx]
-        del expt_md['durations'][tp_idx]
-        expt_md['brightfield_metering']={key:val for key,val in expt_md['brightfield_metering'] if key != timept_str}
-        
-        md_file.rename(md_file.parent/'experiment_metadata_old.json') #Backup
-        with (expt_path/'experiment_metadata.json').open('w') as md_fp:  # Write out new
-            encode_legible_to_file(expt_md,md_fp)
-    except:  # Offending timepoint didn't make it into metadata
-        pass
+	experiment_dir = pathlib.Path(experiment_dir)
+	for position_dir in sorted(list(experiment_dir.iterdir())):
+		if position_dir.is_dir() and position_dir.parts[-1][0].isnumeric():
+			shutil.copyfile(str(position_dir/'position_metadata.json'), str(position_dir/'position_metadata_old.json'))
+			position_metadata = json.load((position_dir/'position_metadata.json').open('r'))
+			if type(position_metadata[-1]['fine_z']) is list:
+				position_metadata[-1]['fine_z'] = position_metadata[-1]['fine_z'][0]
+			datafile.json_encode_atomic_legible_to_file(position_metadata, (position_dir/'position_metadata.json'))
 
+
+# From debug_timepoints
 #~ def reset_mds(expt_path):
     #~ if type(expt_path) is str: expt_path = pathlib.Path(expt_path)  
     #~ for sub_dir in expt_path.iterdir():
         #~ if sub_dir.is_dir() and (sub_dir/'position_metadata_old.json').exists():
             #~ (sub_dir/'position_metadata_old.json').rename(sub_dir/'position_metadata.json')
             #~ (sub_dir/'position_metadata_old.json').unlink()
+
+"""
+Some debugging for to check consistency of multiframe movement acquistion and imputation
+"""
 
 def check_expt_movement_acquisitions(expt_dir, mode='absolute'):
     if type(expt_dir) is str: expt_dir = pathlib.Path(expt_dir)
@@ -169,45 +141,4 @@ def load_movement_metadata(expt_dir):
                 expt_pos_data[mdata_key][item['timepoint']].append(item[mdata_key])
     
     return (expt_pos_data, dirs_with_mdata, dirs_miss_mdata)
-    
-'''
-age-1 run 22
-bad timepoint: 20160713-1456
-position_metadata_old still in 00 (still with entry for offending timepoint)
-position_metadata in 64-84; offending timepoint purged
 
-'''
-
-
-# Swiped from zplab.rpc_acquisition....json_encode
-class Encoder(json.JSONEncoder):
-    """JSON encoder that is smart about converting iterators and numpy arrays to
-    lists, and converting numpy scalars to python scalars.
-    Caution: it is absurd to send large numpy arrays over the wire this way. Use
-    the transfer_ism_buffer tools to send large data.
-    """
-    def default(self, o):
-        try:
-            return super().default(o)
-        except TypeError as x:
-            if isinstance(o, np.generic):
-                item = o.item()
-                if isinstance(item, npy.generic):
-                    raise x
-                else:
-                    return item
-            try:
-                return list(o)
-            except:
-                raise x
-
-
-COMPACT_ENCODER = Encoder(separators=(',', ':'))
-READABLE_ENCODER = Encoder(indent=4, sort_keys=True)
-
-def encode_compact_to_bytes(data):
-    return COMPACT_ENCODER.encode(data).encode('utf8')
-
-def encode_legible_to_file(data, f):
-    for chunk in READABLE_ENCODER.iterencode(data):
-        f.write(chunk)
