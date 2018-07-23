@@ -31,9 +31,6 @@ def check_stage_annotations(annotations, stages):
         annotations,
         select_by_stage_annotation) # Get positions whose stages are not all annotated
 
-#~ def filter_good(position_name, position_annotations, timepoint_annotations):
-    #~ return position_annotations.get('exclude',False) == False
-
 def scan_late_life(expt_dir, datestr):
     annotations = load_data.read_annotations(expt_dir)
     print(len(annotations))
@@ -41,6 +38,15 @@ def scan_late_life(expt_dir, datestr):
     print(len(good_annotations))
     def latelife_filter(position_name, timepoint_name):
         return timepoint_name > datestr and position_name in good_annotations
+    return load_data.scan_experiment_dir(expt_dir, timepoint_filter=latelife_filter)
+
+def scan_latest(expt_dir):
+    annotations = load_data.read_annotations(expt_dir)
+    print(len(annotations))
+    good_annotations = load_data.filter_positions(annotations, filter_good)
+    print(len(good_annotations))
+    def latelife_filter(position_name, timepoint_name):
+        return position_name in good_annotations and timepoint_name > good_annotations[position_name][0]['__last_timepoint_annotated__']
     return load_data.scan_experiment_dir(expt_dir, timepoint_filter=latelife_filter)
 
 def check_for_alive(expt_dir):
@@ -70,10 +76,7 @@ if __name__ == "__main__":
     sf = stage_field.StageField()
     
     expt_dir = pathlib.Path(sys.argv[1])
-    #~ expt_pos = load_data.scan_experiment_dir(expt_dir,timepoint_filter = lambda position,timepoint: timepoint > "2018-06-03t1200")
     expt_pos = load_data.scan_experiment_dir(expt_dir)
-    #expt_pos = scan_late_life(expt_dir, '2018-06-03t1200')
-    #~ expt_pos = load_data.scan_experiment_dir(expt_dir, timepoint_filter = lambda position, timepoint: timepoint < "2018-05-24t0000")
     
     ea = experiment_annotator.ExperimentAnnotator(rw, expt_dir.parts[-1],
         expt_pos, [sf])
