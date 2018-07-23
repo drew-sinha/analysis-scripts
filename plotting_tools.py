@@ -4,6 +4,7 @@ import os
 import zplib.scalar_stats.kde
 import skimage.color
 
+import utilties
 
 #~ import annotation_file
 
@@ -213,7 +214,7 @@ def save_cleaned_fig(fig_h,ax_h,out_fn,**kws):
     if 'cleaning_mode' not in kws:
         kws['cleaning_mode'] = 'verbose'
     if type(ax_h) in [list, np.ndarray]:
-        [clean_plot(my_ax,**kws) for my_ax in flatten_list(ax_h)]
+        [clean_plot(my_ax,**kws) for my_ax in utilities.flatten_list(ax_h)]
     else:
         clean_plot(ax_h,**kws)
     fig_h.savefig(out_fn)
@@ -228,15 +229,3 @@ def force_same_plot_attributes(my_axes, *args):
             min_y = min([ax.get_ylim()[0] for ax in my_axes])
             max_y = max([ax.get_ylim()[1] for ax in my_axes])
             [ax.set_ylim([min_y,max_y]) for ax in my_axes]
-
-# Take a list and unfold it all the way
-def flatten_list(my_list, to_level=-1, this_level=0):
-    import collections
-    flat_list = []
-    
-    for my_item in my_list:
-        if (not isinstance(my_item, collections.Iterable)) or (type(my_item) is str) or ((to_level is not -1) and (this_level is to_level)):
-            flat_list.append(my_item)
-        else:
-            flat_list.extend(flatten_list(my_item,to_level,this_level+1))
-    return flat_list
