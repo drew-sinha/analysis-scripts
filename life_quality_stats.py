@@ -1,21 +1,21 @@
 import numpy as np
 
-def get_featurespan(worms, feature, cutoff, dwell_time=2, return_crossings=False):
+def get_featurespan(worms, feature, cutoff, dwell_time=2*24, return_crossings=False):
     '''Get amount of time feature is remains above/below a prescribed cutoff value;
-        assumes that all ages are in *days*.
+        assumes that all ages are in *hours*.
 
         Parameters
             worms - Worms object of worm data
             feature - str denoting feature of interest in the worms object
             cutoff - float value for cutoff (in units of the feature)
             dwell_time - (optional) minimum time an individual must stay below the
-                cutoff to continue in "featurespan" (in days)
+                cutoff to continue in "featurespan" (in hours)
             return_crossings - optional bool denoting whether to return the feature value
                 at the time which an individual passed into poor health (good for
                 debugging and visualization)
 
         Returns
-            numpy array of featurespans (in days)
+            numpy array of featurespans (in hours)
             (optional, if return_crossings is True) crossing values
 
     '''
@@ -45,7 +45,11 @@ def get_featurespan(worms, feature, cutoff, dwell_time=2, return_crossings=False
         else:
             found_crossing = False
             for crossing_index in crossings:
-                dwell_end = np.where(ages > (ages[crossing_index] + dwell_time))[0][0]
+                if ages[crossing_index] + dwell_time > ages[-1]: # Case where crossing is near death
+                    dwell_end = len(ages)
+                else:
+                    dwell_end = np.where(ages > (ages[crossing_index] + dwell_time))[0][0]
+
                 if (adjusted_data[crossing_index+1:dwell_end] < 0).all():
                     featurespan = ages[crossing_index]
                     crossing_val = feature_data[crossing_index]
