@@ -2,6 +2,7 @@ import pathlib
 import sys
 
 from elegant import load_data, process_data,worm_data
+import elegant_filters
 
 def filter_living_timepoints(position_name, position_annotations, timepoint_annotations):
     """Filter-function for filter_annotations() to return only non-excluded worms
@@ -62,6 +63,16 @@ def make_basic_measurements(experiment_root):
     # to_measure = load_data.filter_annotations(positions, load_data.filter_living_timepoints)
     to_measure = load_data.filter_annotations(positions, filter_living_timepoints)
     process_data.measure_worms(experiment_root, to_measure, measures, measurement_name)
+
+def make_movement_measurements(experiment_root):
+    measures = [process_data.PoseMeasurements(microns_per_pixel=1.3)]
+    measurement_name = 'pose_measures'
+
+    process_data.update_annotations(experiment_root)
+    annotations = load_data.read_annotations(experiment_root)
+    to_measure = load_data.filter_annotations(annotations, elegant_filters.filter_adult_timepoints)
+    process_data.measure_worms(experiment_root, to_measure, measures, measurement_name)
+
 
 if __name__ == "__main__":
     # Call make_measurements EXPT_DIR
