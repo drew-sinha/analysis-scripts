@@ -1,9 +1,11 @@
 import pathlib
 import shutil
 import json
+import datetime
 import numpy as np
 
 from zplib import datafile
+from elegant import load_data
 
 def remove_offending_tp(expt_path,timept_str,dry_run=False):
     '''
@@ -70,3 +72,50 @@ def remove_offending_tp(expt_path,timept_str,dry_run=False):
             datafile.encode_atomic_legible_to_file(expt_md,md_fp)
     except:  # Offending timepoint didn't make it into metadata
         pass
+
+def clean_dead_timepoints(experiment_root, postmortem_time, delete_excluded=False):
+    '''Deletes excess timepoints in an experiment where worms are dead
+
+        Parameters
+            experiment_root - str/pathlib.Path to experiment
+            postmortem_time - Number of hours of data to keep past the annotated death timepoint;
+                useful for keeping extra timepoints in case one ever wants to validate
+                death for the previously made annotations
+            delete_excluded - bool flag for whether to delete excluded positions; if True
+                deletes folders for each position, but keeps the relevant annotation as a
+                record of what happened at that position
+    '''
+
+    experiment_root = pathlib.Path(experiment_root)
+    annotations = load_data.read_annotations(expeirment_root)
+    good_annotations = load_data.filter_annotations(annotations, load_data.filter_excluded)
+
+    if delete_excluded:
+        excluded_positions = set(annotations.keys()).difference(set(good_annotations.keys()))
+        for position in excluded_positions:
+            if (experiment_root / position).exists():
+                shutil.rmtree(str(experiment_root / position))
+
+    for position, position_annotations in good_annotations.items():
+        general_annotations, timepoint_annotations = position_annotations
+        timepoint_keys, timepoint_values = list(timepoint_annotations.keys()), list(timepoint_annotations.values())
+        death_timepoint = timepoint_keys[timepoint_values.index('dead')]
+
+        for timecourse_file in sorted((experiment_root / position).iterdir()):
+            timepoint_label = timecourse_file.name.split(' ')[0]
+            time_since_death = (_extract_datetime_fromstr(timepoint_label) - _extract_datetime_fromstr(death_timepoint))/3600
+            if time_since_death > postmortem_time:
+                timecourse_file.unlink()
+
+        timepoints_to_delete = []
+        for timepoint, timepoint_info in timepoint_annotations.items():
+            if timepoint_info['stage'] == 'dead':
+                time_since_death = (_extract_datetime_fromstr(timepoint) - _extract_datetime_fromstr(death_timepoint))/3600
+                if time_since_death > postmortem_time:
+                    timepoints_to_delete.append(timepoint)
+        [del timepoint_annotations[dead_timepoint] for dead_timepoint in timepoints_to_delete]
+        load_data.write_annotation_file(experiment_root /'annotations' / f'{position}.tsv', general_annotations, timepoint_annotations)
+
+def _extract_datetime_fromstr(time_str):
+    '''Converts standard experimental timepoint string to time representation (seconds since epoch)'''
+    return datetime.datetime.strptime(time_str,'%Y-%m-%dt%H%M').timestamp()
