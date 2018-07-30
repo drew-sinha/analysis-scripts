@@ -8,7 +8,7 @@ from zplib import datafile
 from elegant import load_data
 
 def remove_offending_tp(experiment_root,timept_str,dry_run=False):
-    '''Removes all of the files/entries for a given timepoint and backs them up elsewhere
+    '''Removes all of the files/entries for a given timepoint (backs them up in an associated "offending_files" directory)
 
     Parameters
         experiment_root - str/pathlib.Path pointing to experiment directory
@@ -72,7 +72,7 @@ def remove_offending_tp(experiment_root,timept_str,dry_run=False):
     except:  # Offending timepoint didn't make it into metadata
         pass
 
-def clean_dead_timepoints(experiment_root, postmortem_time, delete_excluded=False):
+def remove_dead_timepoints(experiment_root, postmortem_time, delete_excluded=False):
     '''Deletes excess timepoints in an experiment where worms are dead
 
         Parameters
@@ -86,21 +86,24 @@ def clean_dead_timepoints(experiment_root, postmortem_time, delete_excluded=Fals
     '''
 
     experiment_root = pathlib.Path(experiment_root)
-    annotations = load_data.read_annotations(expeirment_root)
+    annotations = load_data.read_annotations(experiment_root)
     good_annotations = load_data.filter_annotations(annotations, load_data.filter_excluded)
 
     if delete_excluded:
-        excluded_positions = set(annotations.keys()).difference(set(good_annotations.keys()))
+        excluded_positions = sorted(set(annotations.keys()).difference(set(good_annotations.keys())))
         for position in excluded_positions:
             if (experiment_root / position).exists():
+                print(f'deleting excluded position {position}')
                 shutil.rmtree(str(experiment_root / position))
 
     for position, position_annotations in good_annotations.items():
         general_annotations, timepoint_annotations = position_annotations
-        timepoint_keys, timepoint_values = list(timepoint_annotations.keys()), list(timepoint_annotations.values())
-        death_timepoint = timepoint_keys[timepoint_values.index('dead')]
+        timepoint_keys = list(timepoint_annotations.keys())
+        timepoint_stages = [timepoint_info['stage'] for timepoint_info in timepoint_annotations.values()]
+        death_timepoint = timepoint_keys[timepoint_stages.index('dead')]
 
         for timecourse_file in sorted((experiment_root / position).iterdir()):
+            if timecourse_file.suffix[1:] not in ['png', 'tiff']: continue  # Also handles directories implicitly
             timepoint_label = timecourse_file.name.split(' ')[0]
             time_since_death = (_extract_datetime_fromstr(timepoint_label) - _extract_datetime_fromstr(death_timepoint))/3600
             if time_since_death > postmortem_time:
@@ -114,7 +117,9 @@ def clean_dead_timepoints(experiment_root, postmortem_time, delete_excluded=Fals
                     timepoints_to_delete.append(timepoint)
         for dead_timepoint in timepoints_to_delete:
             del timepoint_annotations[dead_timepoint]
-        load_data.write_annotation_file(experiment_root /'annotations' / f'{position}.tsv', general_annotations, timepoint_annotations)
+        load_data.write_annotation_file(experiment_root /'annotations' / f'{position}.pickle', general_annotations, timepoint_annotations)
+
+        # TODO: Need to handle position_metadatas
 
 def _extract_datetime_fromstr(time_str):
     '''Converts standard experimental timepoint string to time representation (seconds since epoch)'''
