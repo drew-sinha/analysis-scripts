@@ -9,7 +9,7 @@ from PyQt5 import Qt
 from ris_widget import shared_resources
 from ris_widget.overlay import base
 
-import load_data_modified
+from elegant import load_data
 
 class ExperimentAnnotator:
     def __init__(self, ris_widget, experiment_name, positions, annotation_fields, start_position=None, readonly=False,annotation_subdir='annotations'):
@@ -200,7 +200,7 @@ class ExperimentAnnotator:
 
     def load_annotations(self):
         try:
-            self.position_annotations, self.timepoint_annotations = load_data_modified.read_annotation_file(self.annotation_file)
+            self.position_annotations, self.timepoint_annotations = load_data.read_annotation_file(self.annotation_file)
         except FileNotFoundError:
             self.position_annotations = {}
             self.timepoint_annotations = {}
