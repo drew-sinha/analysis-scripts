@@ -73,6 +73,14 @@ def make_movement_measurements(experiment_root):
     to_measure = load_data.filter_annotations(annotations, elegant_filters.filter_adult_timepoints)
     process_data.measure_worms(experiment_root, to_measure, measures, measurement_name)
 
+def make_af_measurements(experiment_root):
+    measures = [process_data.FluorMeasurements('green_yellow_excitation_autofluorescence')]
+    measurement_name = 'af_measures'
+
+    process_data.update_annotations(experiment_root)
+    annotations = load_data.read_annotations(experiment_root)
+    to_measure = load_data.filter_annotations(annotations, elegant_filters.filter_adult_timepoints)
+    process_data.measure_worms(experiment_root, to_measure, measures, measurement_name)
 
 if __name__ == "__main__":
     # Call make_measurements EXPT_DIR
