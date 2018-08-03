@@ -75,7 +75,7 @@ def make_movement_measurements(experiment_root):
 
 def make_af_measurements(experiment_root):
     measures = [process_data.FluorMeasurements('green_yellow_excitation_autofluorescence')]
-    measurement_name = 'af_measures'
+    measurement_name = 'autofluorescence_measures'
 
     process_data.update_annotations(experiment_root)
     annotations = load_data.read_annotations(experiment_root)
@@ -86,4 +86,6 @@ if __name__ == "__main__":
     # Call make_measurements EXPT_DIR
     expt_dir = pathlib.Path(sys.argv[1])
     make_basic_measurements(expt_dir)
+    make_movement_measurements(expt_dir)
+    make_af_measurements(expt_dir)
     process_data.collate_data(expt_dir)
