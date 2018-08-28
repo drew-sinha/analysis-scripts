@@ -5,10 +5,12 @@ import numpy as np
 import scipy.stats
 import pathlib
 
+from elegant import worm_data
+
 def plot_spanseries(spans,ax_h = None,**plot_kws):
-    """Helper function that plots a survival curve specified by a list 
+    """Helper function that plots a survival curve specified by a list
             of times to an event (e.g. lifespans)
-            
+
         Parameters
             spans - list/numpy array of time to endpoints
             ax_h - optional matplotlib axis to plot survival curve on
@@ -21,39 +23,39 @@ def plot_spanseries(spans,ax_h = None,**plot_kws):
         ax_provided = True
     sorted_s = np.sort(spans[~np.isnan(spans)]) #handling the nan eliminates potential leak-through of alive animals when used with annotation code
     prop_alive = (1 - (np.arange(start=0,stop=np.size(spans[~np.isnan(spans)])))/np.size(spans))
-    
+
     # Generate all the points needed for plotting
     # Plot the first point (0,1), then a straight line across and down for each event/death
     x_vals = np.sort(np.concatenate(([0],sorted_s,sorted_s)))
     y_vals = np.sort(np.concatenate(([1,1],prop_alive[:-1],prop_alive[:-1],[prop_alive[-1]])))[::-1] # Reverse this.
-    
+
     data = ax_h.plot(x_vals,y_vals,**plot_kws)
-    
+
     if not ax_provided:
         return [fig_h,ax_h,data]
     else:
         return data
 
 def plot_manual_individual_ls(*annotation_fns,ax_h=None):
-    """Plotting for plotting survival curves from manual lifespan 
-        experiments where single individuals were tracked 
-        (i.e. not automated scope experiments); 
-        
+    """Plotting for plotting survival curves from manual lifespan
+        experiments where single individuals were tracked
+        (i.e. not automated scope experiments);
+
         Parameters:
             annotation_fns - one or more annotation tsv files containing
                 lifespans for a given experiment; files should contain
-                at least the following columns: (Worm, Death, Notes) 
-                where "Worm" is a unique identifier, "Death" is the timepoint 
-                (int) when an individual died, and "Notes" contains 
-                additional information on each individual tracked; if no 
-                lifespan is provided for a given animal, it is assumed to 
+                at least the following columns: (Worm, Death, Notes)
+                where "Worm" is a unique identifier, "Death" is the timepoint
+                (int) when an individual died, and "Notes" contains
+                additional information on each individual tracked; if no
+                lifespan is provided for a given animal, it is assumed to
                 have been censored
             ax_h - optional matplotlib axis to plot lifespans on
-            
+
         Returns:
             data_series - list of matplotlib.plotseries objects plotted on ax_h
             metadata - list of dicts where each entry corresponds to
-                derived metadata about the plotted experiment; this 
+                derived metadata about the plotted experiment; this
                 includes:
                     n - number of animals
                     mean - mean lifespan of animals
@@ -65,12 +67,12 @@ def plot_manual_individual_ls(*annotation_fns,ax_h=None):
     compiled_ann_data = [pd.read_csv(ann_file,sep='\t') for ann_file in annotation_fns]
     data_series = []
     metadata = []
-    
+
     if ax_h is None:
         fig_h, ax_h = plt.subplots(1,1)
         ax_provided = False
     else: ax_provided = True
-    
+
     for ann_data, ann_color in zip(compiled_ann_data,plotting_tools.qual_colors):
         good_worms = ~np.isnan(ann_data['Death']) # Excludes alive/non-annotated/bad worms!
         good_ls = ann_data['Death'][good_worms]
@@ -82,25 +84,25 @@ def plot_manual_individual_ls(*annotation_fns,ax_h=None):
     ax_h.set_ylim([0,1])
     ax_h.set_xlabel('Days Post-Transfer')
     ax_h.set_ylabel('Proportion Surviving')
-    
+
     if not ax_provided:
         return (fig_h, ax_h, data_series, metadata)
     else:
         return (data_series, metadata)
-    
+
 def plot_expt_ls(*expt_dirs, ax_h=None,**plot_kws):
     """Plot survival curves for one or more separate experiments
-        
+
         Parameters
             expt_dirs - one or more experiment root directories with collated
                 lifespan data (i.e. using the elegant pipeline to produce
                 timecourse files)
             ax_h - optional matplotlib axis objects to plot curves on
             plot_kws - optional kw parameters to pass to plt.plot
-        
+
         Returns
             metadata - list of dicts where each entry corresponds to
-                derived metadata about the plotted experiment; this 
+                derived metadata about the plotted experiment; this
                 includes:
                     n - number of animals
                     mean - mean lifespan of animals
@@ -109,59 +111,59 @@ def plot_expt_ls(*expt_dirs, ax_h=None,**plot_kws):
             (fig_h) - matplotlib figure object if supplied ax_h is None
             (ax_h) - matplotlib axis object if supplied ax_h is None
     """
-    
+
     if ax_h is None:
         fig_h, ax_h = plt.subplots()
         ax_provided = False
     else: ax_provided = True
-    
+
     if type(expt_dirs[0]) is str:
         expt_dirs = [pathlib.Path(expt_dir) for expt_dir in expt_dirs]
-    
+
     expt_names = [expt_dir.name for expt_dir in expt_dirs]
-    timecourse_files = [expt_dir / f'/derived_data/{expt_dir.name} timecourse.tsv' for expt_dir in expt_dirs]
+    timecourse_files = [expt_dir / 'derived_data' / f'{expt_dir.name} timecourse.tsv' for expt_dir in expt_dirs]
     legend_entries = []
     metadata = []
     for expt_name,timecourse_file in zip(expt_names,timecourse_files):
-        expt_worms = worm_data.read_worms(timecourse_file,age_scale=1/24) #Convert to hours
+        expt_worms = worm_data.read_worms(timecourse_file) #Convert to hours
         data_series, expt_metadata = plot_spanseries(my_worms.get_feature('lifespan')/24,ax_h=ax_h,**plot_kws)
         metadata.append(expt_metadata)
         legend_entries.append(f'{expt_name} (n={len(expt_worms)})')
     ax_h.legend(legend_entries)
-    
+
     if not ax_provided:
         return (fig_h, ax_h, metadata)
-    else
+    else:
         return metadata
 
 
 def plot_expt_ls_old(*expt_dirs, ax_h=None, calc_adultspan=False,bad_worm_kws=[], **plot_kws):
-    '''Plot lifespans corresponding to one or more single longitudinal scope 
+    '''Plot lifespans corresponding to one or more single longitudinal scope
         experiments using the old setup; i.e. a .tsv file of annotations
         in an experiment root containing "Hatch", "First Egg Laid", and "Death"
     '''
     import corral_annotations.annotation_file as annotation_file
 
     if type(expt_dirs[0]) is str: expt_dirs = list(map(pathlib.Path,expt_dirs))
-    
+
     ax_provided = ax_h is not None
     if not ax_provided: fig_h, ax_h = plt.subplots()
 
     expt_afs = [annotation_file.AnnotationFile(
-        [my_file for my_file in my_dir.iterdir() if my_file.is_file() 
-        and '.tsv' == my_file.suffix][0]) 
+        [my_file for my_file in my_dir.iterdir() if my_file.is_file()
+        and '.tsv' == my_file.suffix][0])
     for my_dir in expt_dirs]
-    
+
     ts_data = [(my_af.data_as_timestamps_simple(
-        my_dir / 'experiment_metadata.json',restricted_list=my_af.get_goodworms(bad_worm_kws=bad_worm_kws))) 
+        my_dir / 'experiment_metadata.json',restricted_list=my_af.get_goodworms(bad_worm_kws=bad_worm_kws)))
         for my_af,my_dir in zip(expt_afs, expt_dirs)]
 
     if calc_adultspan: initial_time_label = 'First Egg Laid'
     else: initial_time_label = 'Hatch'
-    
+
     combined_data_series = [plot_spanseries(
             (my_data['Death']-my_data[initial_time_label])/(3600*24),
-            ax_h=ax_h)[0] 
+            ax_h=ax_h)[0]
         for my_data in ts_data]
 
     if initial_time_label == 'Hatch':
@@ -176,10 +178,10 @@ def plot_expt_ls_old(*expt_dirs, ax_h=None, calc_adultspan=False,bad_worm_kws=[]
     print('All: {:.3f}'.format(np.array([
         ((my_data['Death']-my_data[initial_time_label])/(3600*24)).mean() for my_data in ts_data
     ]).mean()))
-    
+
     print ('Median Lifespan')
     [print('{}: {:.3f}'.format(my_path.parts[-1],((my_data['Death']-my_data[initial_time_label])/(3600*24)).median())) for my_path,my_data in zip(expt_dirs,ts_data)]
-    
+
     if ax_provided:
         return ax_h, combined_data_series
     else:
