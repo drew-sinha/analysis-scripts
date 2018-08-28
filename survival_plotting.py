@@ -92,7 +92,7 @@ def plot_manual_individual_ls(*annotation_fns,ax_h=None):
     else:
         return (data_series, metadata)
 
-def plot_expt_ls(*expt_dirs, ax_h=None,import_mode='elegant',calc_adultspan=False,**plot_kws):
+def plot_expt_ls(*expt_dirs, ax_h=None,import_from_timecourse=True,calc_adultspan=False,**plot_kws):
     """Plot survival curves for one or more separate experiments
 
         Parameters
@@ -100,6 +100,12 @@ def plot_expt_ls(*expt_dirs, ax_h=None,import_mode='elegant',calc_adultspan=Fals
                 lifespan data (i.e. using the elegant pipeline to produce
                 timecourse files)
             ax_h - optional matplotlib axis objects to plot curves on
+            import_mode - bool flag that toggles how to import lifespan data;
+                if True, searches for a timecourse file to use; otherwise, read
+                directly from annotation files
+            calc_adultspan - bool flag that toggles whether to calculate lifespan as adultspan;
+                if True, uses the 'adult' timepoint as the starting timepoint of interest;
+                otherwise, uses the 'larva' timepoint
             plot_kws - optional kw parameters to pass to plt.plot
 
         Returns
@@ -127,14 +133,14 @@ def plot_expt_ls(*expt_dirs, ax_h=None,import_mode='elegant',calc_adultspan=Fals
     for expt_dir in expt_dirs:
         expt_name = expt_dir.name
 
-        if import_mode == 'elegant':
+        if import_from_timecourse:
             timecourse_file = expt_dir / 'derived_data' / f'{expt_name} timecourse.tsv'
             expt_worms = worm_data.read_worms(timecourse_file)
             if calc_adultspan:
                 lifespans = expt_worms.get_feature('adultspan')/24
             else:
                 lifespans = expt_worms.get_feature('lifespan')/24 #Convert to days
-        elif import_mode == 'raw':
+        else:
             experiment_annotations = load_data.read_annotations(expt_dir)
             experiment_annotations = load_data.filter_annotations(experiment_annotations, load_data.filter_excluded)
 
