@@ -1,5 +1,7 @@
 import pathlib
 
+import numpy
+
 import freeimage
 from zplib.image import mask
 
@@ -14,7 +16,7 @@ def save_mask_lcc(experiment_root):
     mask_root = experiment_root / 'derived_data' / 'mask'
 
     for position_mask_root in sorted(mask_root.iterdir()):
-        for mask_file in sorted(positin_mask_root.iterdir()):
+        for mask_file in sorted(position_mask_root.iterdir()):
             mask_image = freeimage.read(str(mask_file)) > 0
             new_mask = mask.get_largest_object(mask_image).astype(numpy.uint8)
             freeimage.write(new_mask*255, str(mask_file))
