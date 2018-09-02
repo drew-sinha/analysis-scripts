@@ -1290,8 +1290,7 @@ def normalize_health_trajectories(df,health_var,norm='population',health_bounds=
             [exhausted_bound, full_bound] = health_bounds
 
         clipped_health = df_health.clip(min=exhausted_bound,max=full_bound)
-        normalized_health = (df_health-exhausted_bound)/(full_bound-exhausted_bound)
-        raise Exception()
+        normalized_health = (clipped_health-exhausted_bound)/(full_bound-exhausted_bound)
 
     elif norm =='individual':
         normalized_health = np.array([])
@@ -1317,16 +1316,10 @@ def normalize_health_trajectories(df,health_var,norm='population',health_bounds=
 def calc_integrated_health(strain_df, health_var, norm=None, **normalize_args):
     if norm is not None:
         df_health = normalize_health_trajectories(strain_df, health_var, norm=norm, **normalize_args)
-        print(norm)
-        print('normalized')
     else:
         df_health = strain_df.mloc(measures=[health_var])[:,0,:] # Animals x time
         df_health = strain_df.display_variables(df_health,health_var)[0]
 
-    raise Exception()
-    return np.array(
-        [np.nansum(worm_health[~np.isnan(worm_health)]) for worm_health in df_health]
-    )
     return np.array(
         [integrate.trapz(worm_health[~np.isnan(worm_health)],np.array(strain_df.ages)[~np.isnan(worm_health)]) for worm_health in df_health])
 
