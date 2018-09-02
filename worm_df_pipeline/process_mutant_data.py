@@ -1292,9 +1292,8 @@ def normalize_health_trajectories(df,health_var,norm='population',health_bounds=
         normalized_health = (df_health-exhausted_bound)/(full_bound-exhausted_bound)
         normalized_health = normalized_health.clip(min=0,max=1)
 
-
     elif norm =='individual':
-        normalized_health = np.array([])
+        normalized_health = []
         health_bounds = []
         for worm_health, days_remaining in zip(df_health, combined_days_remaining):
             # Get min/max bounds for assigning full and exhausted health
@@ -1306,8 +1305,11 @@ def normalize_health_trajectories(df,health_var,norm='population',health_bounds=
 
             norm_worm_health = (worm_health - exhausted_bound)/(full_bound - exhausted_bound)
             norm_worm_health = norm_worm_health.clip(min=0,max=1)
-            normalized_health = np.append(normalized_health, norm_worm_health)
+            normalized_health.append(norm_worm_health)
             health_bounds.append([exhausted_bound, full_bound])
+        normalized_health = np.array(normalized_health)
+    else:
+        raise ValueError("Bad normalization specification given. Use 'population' or 'individual'")
 
     if return_bounds:
         return (normalized_health, health_bounds)
