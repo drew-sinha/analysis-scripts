@@ -150,12 +150,18 @@ def plot_expt_ls(*expt_dirs, ax_h=None,import_from_timecourse=True,calc_adultspa
                 timepoints = list(timepoint_annotations.keys())
                 life_stages = [timepoint_info.get('stage') for timepoint_info in timepoint_annotations.values()]
 
-                if calc_adultspan:
-                    birth_timepoint = timepoints[life_stages.index('adult')]
-                else:
-                    birth_timepoint = timepoints[life_stages.index('larva')]
-                death_timepoint = timepoints[life_stages.index('dead')]
-                lifespans = np.append(lifespans, (utilities.extract_datetime_fromstr(death_timepoint) - utilities.extract_datetime_fromstr(birth_timepoint)).total_seconds()/(3600*24))
+                if 'dead' in life_stages:
+                    if calc_adultspan:
+                        birth_timepoint = timepoints[life_stages.index('adult')]
+                    else:
+                        birth_timepoint = timepoints[life_stages.index('larva')]
+
+                    death_timepoint = timepoints[life_stages.index('dead')]
+                    lifespans = np.append(lifespans, (utilities.extract_datetime_fromstr(death_timepoint) - utilities.extract_datetime_fromstr(birth_timepoint)).total_seconds()/(3600*24))
+                else: # Catch animals that are still alive....
+                    lifespans = np.append(lifespans, np.nan)
+            if any(np.isnan(lifespans)):
+                print(f'Warning! Some worms in {expt_name} still alive.')
         data_series = plot_spanseries(lifespans,ax_h=ax_h,**plot_kws)
         expt_metadata = {'n':len(lifespans),
             'mean': np.nanmean(lifespans),
