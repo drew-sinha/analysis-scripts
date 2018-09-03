@@ -1275,7 +1275,8 @@ def normalize_health_trajectories(df,health_var,norm='population',health_bounds=
     if health_bounds is not None or norm == 'population':
         if health_bounds is None:
             # Assign full health to average observed health on day 1
-            full_bound = np.median(df_health[:,early_life_points])
+            earlylife_health = df_health[:,early_life_points]
+            full_bound = np.median(earlylife_health[~np.isnan(earlylife_health)])
 
             # Assign exhausted health to average of health on last day of life
             lastday_health = np.array([])
