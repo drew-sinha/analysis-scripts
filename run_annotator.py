@@ -7,6 +7,8 @@ from ris_widget import ris_widget
 from elegant import load_data
 from elegant.gui import experiment_annotator, stage_field, pose_annotation
 
+import measurement_pipeline
+
 def check_stage_annotations(annotations, stages):
     """Check that a set of annotations are complete
 
@@ -56,21 +58,38 @@ def check_for_alive(expt_dir):
 
 if __name__ == "__main__":
     '''Call as python run_annotator.py EXPT_DIR [MODE]'''
+    import elegant_filters
+
+
+    show_poses = False
+    adult_only = True
+    # additional_filters = [elegant_filters.filter_by_age(9,10)]
+    additional_filters = [load_data.filter_excluded]
+    channels = ['bf', 'green_yellow_excitation_autofluorescence']
 
     try:
         rw
     except NameError:
         rw = ris_widget.RisWidget()
-        rw.show()
+    expt_dir = pathlib.Path(sys.argv[1])
 
     if hasattr(rw, 'annotator'):
         rw.annotator.close()
         del(rw.annotator)
 
-    sf = stage_field.StageField()
+    measurement_pipeline.propagate_stages(expt_dir)
 
-    expt_dir = pathlib.Path(sys.argv[1])
-    expt_pos = load_data.scan_experiment_dir(expt_dir)
+    experiment_annotations = load_data.read_annotations(expt_dir)
+    # experiment_annotations = load_data.filter_annotations(experiment_annotations, load_data.filter_excluded)
+
+    if adult_only:
+        experiment_annotations = load_data.filter_annotations(experiment_annotations, elegant_filters.filter_adult_timepoints) #time_a.get('stage') == 'adult')
+
+    if additional_filters:
+        for position_filter in additional_filters:
+            experiment_annotations = load_data.filter_annotations(experiment_annotations, position_filter)
+
+    expt_pos = load_data.scan_experiment_dir(expt_dir,channels=channels,timepoint_filter = lambda position_name, timepoint_name: position_name in experiment_annotations and timepoint_name in experiment_annotations[position_name][1])
 
     # if (len(sys.argv) == 1) or (sys.argv[2] == 'adult'):
     #     sf = stage_field.StageField()
@@ -80,8 +99,12 @@ if __name__ == "__main__":
     #     shortcuts = ['h','1','2','3','4','v','d']
     #     sf = stage_field.StageField(stages=stages,transitions=transitions,shortcuts=shortcuts)
 
-    # width_estimator, width_pca_basis = pose_annotation.default_width_data(pixels_per_micron=1/1.3, experiment_temperature=20)
-    # pa = pose_annotation.PoseAnnotation(rw, mean_widths=width_estimator, width_pca_basis=width_pca_basis)
+    annotation_fields = []
+    annotation_fields.append(stage_field.StageField())
+    if show_poses:
+        width_estimator, width_pca_basis = pose_annotation.default_width_data(pixels_per_micron=1/1.3, experiment_temperature=20)
+        pa = pose_annotation.PoseAnnotation(rw, mean_widths=width_estimator, width_pca_basis=width_pca_basis)
+        annotation_fields.append(pa)
 
     ea = experiment_annotator.ExperimentAnnotator(rw, expt_dir.parts[-1],
-        expt_pos, [sf])
+            expt_pos, annotation_fields)
