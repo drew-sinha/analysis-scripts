@@ -5,7 +5,9 @@ import numpy as np
 import scipy.stats
 import pathlib
 
-from elegant import worm_data
+from elegant import worm_data, load_data
+
+from utilities import utilities
 
 def plot_spanseries(spans,ax_h = None,**plot_kws):
     """Helper function that plots a survival curve specified by a list
@@ -90,7 +92,7 @@ def plot_manual_individual_ls(*annotation_fns,ax_h=None):
     else:
         return (data_series, metadata)
 
-def plot_expt_ls(*expt_dirs, ax_h=None,**plot_kws):
+def plot_expt_ls(*expt_dirs, ax_h=None,import_from_timecourse=True,calc_adultspan=False,**plot_kws):
     """Plot survival curves for one or more separate experiments
 
         Parameters
@@ -98,6 +100,12 @@ def plot_expt_ls(*expt_dirs, ax_h=None,**plot_kws):
                 lifespan data (i.e. using the elegant pipeline to produce
                 timecourse files)
             ax_h - optional matplotlib axis objects to plot curves on
+            import_mode - bool flag that toggles how to import lifespan data;
+                if True, searches for a timecourse file to use; otherwise, read
+                directly from annotation files
+            calc_adultspan - bool flag that toggles whether to calculate lifespan as adultspan;
+                if True, uses the 'adult' timepoint as the starting timepoint of interest;
+                otherwise, uses the 'larva' timepoint
             plot_kws - optional kw parameters to pass to plt.plot
 
         Returns
@@ -120,16 +128,53 @@ def plot_expt_ls(*expt_dirs, ax_h=None,**plot_kws):
     if type(expt_dirs[0]) is str:
         expt_dirs = [pathlib.Path(expt_dir) for expt_dir in expt_dirs]
 
-    expt_names = [expt_dir.name for expt_dir in expt_dirs]
-    timecourse_files = [expt_dir / 'derived_data' / f'{expt_dir.name} timecourse.tsv' for expt_dir in expt_dirs]
     legend_entries = []
     metadata = []
-    for expt_name,timecourse_file in zip(expt_names,timecourse_files):
-        expt_worms = worm_data.read_worms(timecourse_file) #Convert to hours
-        data_series, expt_metadata = plot_spanseries(my_worms.get_feature('lifespan')/24,ax_h=ax_h,**plot_kws)
+    for expt_dir in expt_dirs:
+        expt_name = expt_dir.name
+
+        if import_from_timecourse:
+            timecourse_file = expt_dir / 'derived_data' / f'{expt_name} timecourse.tsv'
+            expt_worms = worm_data.read_worms(timecourse_file)
+            if calc_adultspan:
+                lifespans = expt_worms.get_feature('adultspan')/24
+            else:
+                lifespans = expt_worms.get_feature('lifespan')/24 #Convert to days
+        else:
+            experiment_annotations = load_data.read_annotations(expt_dir)
+            experiment_annotations = load_data.filter_annotations(experiment_annotations, load_data.filter_excluded)
+
+            lifespans = np.array([])
+            for position, position_annotations in experiment_annotations.items():
+                general_annotations, timepoint_annotations = position_annotations
+                timepoints = list(timepoint_annotations.keys())
+                life_stages = [timepoint_info.get('stage') for timepoint_info in timepoint_annotations.values()]
+
+                if 'dead' in life_stages:
+                    if calc_adultspan:
+                        birth_timepoint = timepoints[life_stages.index('adult')]
+                    else:
+                        birth_timepoint = timepoints[life_stages.index('larva')]
+
+                    death_timepoint = timepoints[life_stages.index('dead')]
+                    lifespans = np.append(lifespans, (utilities.extract_datetime_fromstr(death_timepoint) - utilities.extract_datetime_fromstr(birth_timepoint)).total_seconds()/(3600*24))
+                else: # Catch animals that are still alive....
+                    lifespans = np.append(lifespans, np.nan)
+            if any(np.isnan(lifespans)):
+                print(f'Warning! Some worms in {expt_name} still alive.')
+        data_series = plot_spanseries(lifespans,ax_h=ax_h,**plot_kws)
+        expt_metadata = {'n':len(lifespans),
+            'mean': np.nanmean(lifespans),
+            'median': np.nanmedian(lifespans),
+            'ls': lifespans,}
         metadata.append(expt_metadata)
-        legend_entries.append(f'{expt_name} (n={len(expt_worms)})')
+        legend_entries.append(f'{expt_name} (n={len(lifespans)})')
     ax_h.legend(legend_entries)
+    ax_h.set_ylabel('Proportion Surviving')
+    if calc_adultspan:
+        ax_h.set_xlabel('Days Adulthood')
+    else:
+        ax_h.set_xlabel('Days Post-Hatch')
 
     if not ax_provided:
         return (fig_h, ax_h, metadata)
