@@ -12,13 +12,15 @@ import scipy.optimize
 import scipy.stats as stats
 import scipy.integrate as integrate
 
+import zplib.scalar_stats.smoothing as smoothing
+import zplib.scalar_stats.kde
+
 import analyzeHealth
 import graphingFigures
 import plotting_tools
 import survival_plotting
 
-import zplib.scalar_stats.smoothing as smoothing
-import zplib.scalar_stats.kde
+from utilities import utilities
 
 plt.ion()
 plt.show()
@@ -138,7 +140,7 @@ def test_lifespan_replicates(strain_df,calc_adultspans=True,rep_labels=None):
         ax_h.set_xlabel('Days Post-Maturity')
     ax_h.set_ylim([0,1.1])
     ax_h.set_xlim([0,max_life])
-    ax_h.legend(plotting_tools.flatten_list(data_series),
+    ax_h.legend(utilities.flatten_list(data_series),
         [rep_label + ' (n={})'.format(np.count_nonzero(worm_assignments==num)) for num,rep_label in enumerate(rep_labels)],
         frameon=False)
     print('Intertrial variability across replicates for tested strain: {:.2f} +/- {:.2f}'.format(
@@ -1325,7 +1327,7 @@ def calc_integrated_health(strain_df, health_var, norm=None, **normalize_args):
         df_health = strain_df.display_variables(df_health,health_var)[0]
 
     return np.array(
-        [integrate.trapz(worm_health[~np.isnan(worm_health)],np.array(strain_df.ages)[~np.isnan(worm_health)]) for worm_health in df_health])
+        [integrate.trapz(worm_health[~np.isnan(worm_health)],np.array(strain_df.ages)[~np.isnan(worm_health)]*24) for worm_health in df_health])
 
 
 if __name__ is "__main__":
