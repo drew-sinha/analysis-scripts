@@ -1,4 +1,5 @@
 import datetime
+import collections
 
 # Take a list and unfold it all the way
 def flatten_list(my_list, to_level=-1, this_level=0):
