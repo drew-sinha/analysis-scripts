@@ -170,6 +170,11 @@ def plot_expt_ls(*expt_dirs, ax_h=None,import_from_timecourse=True,calc_adultspa
         metadata.append(expt_metadata)
         legend_entries.append(f'{expt_name} (n={len(lifespans)})')
     ax_h.legend(legend_entries)
+    ax_h.set_ylabel('Proportion Surviving')
+    if calc_adultspan:
+        ax_h.set_xlabel('Days Adulthood')
+    else:
+        ax_h.set_xlabel('Days Post-Hatch')
 
     if not ax_provided:
         return (fig_h, ax_h, metadata)
