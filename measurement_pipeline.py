@@ -82,6 +82,14 @@ def make_af_measurements(experiment_root):
     to_measure = load_data.filter_annotations(annotations, elegant_filters.filter_adult_timepoints)
     process_data.measure_worms(experiment_root, to_measure, measures, measurement_name)
 
+def remove_poses(experiment_root):
+    experiment_annotations = load_data.read_annotations(experiment_root)
+    for position, position_annotations in experiment_annotations.items():
+        timepoint_annotations = position_annotations[1]
+        for timepoint, timepoint_annotation in timepoint_annotations.items():
+            timepoint_annotation['pose'] = (None, None)
+    load_data.write_annotations(experiment_root, experiment_annotations)
+
 if __name__ == "__main__":
     # Call make_measurements EXPT_DIR
     expt_dir = pathlib.Path(sys.argv[1])
