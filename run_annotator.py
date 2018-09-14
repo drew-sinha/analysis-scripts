@@ -62,9 +62,9 @@ if __name__ == "__main__":
 
 
     show_poses = False
-    adult_only = True
+    adult_only = False
     # additional_filters = [elegant_filters.filter_by_age(9,10)]
-    additional_filters = [load_data.filter_excluded]
+    additional_filters = [elegant_filters.filter_adult_dead_timepoints]#load_data.filter_excluded]
     channels = ['bf', 'green_yellow_excitation_autofluorescence']
 
     try:
