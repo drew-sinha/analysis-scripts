@@ -19,7 +19,10 @@ def filter_by_age(min_age, max_age):
             for timepoint_annotation in timepoint_annotations.values()]
     return filter
 
-
+def filter_adult_dead_timepoints(position_name, position_annotations, timepoint_annotations):
+    # if not load_data.filter_excluded(position_name, position_annotations, timepoint_annotations):
+    #     return False
+    return [(tp.get('stage') == 'adult') or (tp.get('stage') == 'dead') for tp in timepoint_annotations.values()]
 
 #===================================
 # scan_experiment_dir filters
