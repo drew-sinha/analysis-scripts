@@ -95,6 +95,6 @@ if __name__ == "__main__":
     expt_dir = pathlib.Path(sys.argv[1])
     process_data.update_annotations(expt_dir)
     make_basic_measurements(expt_dir)
-    #make_movement_measurements(expt_dir)
-    #make_af_measurements(expt_dir)
+    make_movement_measurements(expt_dir)
+    make_af_measurements(expt_dir)
     process_data.collate_data(expt_dir)
