@@ -60,6 +60,8 @@ def process_experiment_with_filter(experiment_root, model, image_filter):
     print(f'annotation done after {(annotation_t - segment_t)} s') # ~3.5 hr
 
 if __name__ == "__main__":
+    '''Call signature %run segmentation_pipeline.py EXPERIMENT_ROOT MODEL_PATH'''
+
     experiment_root = sys.argv[1]
     if len(sys.argv) >= 2:
         model = sys.argv[2]
