@@ -1,3 +1,5 @@
+import json
+
 import numpy
 import freeimage
 from skimage import feature, filters
@@ -13,27 +15,34 @@ class LawnMeasurements:
 
     def measure(self, position_root, timepoint, annotations, before, after):
         measures = {}
+        print(f'Working on position {position_root.name} - {timepoint}')
+
+        # Load metadata.... TODO ask Zach if this can be a feature of the measurement signature
+        experiment_root, position_name = position_root.parent, position_root.name
+        with (experiment_root / 'experiment_metadata.json').open('r') as md_file:
+            metadata = json.load(md_file)
+
         timepoint_imagepath = position_root / (timepoint + ' bf.png')
-        timepoint_image = freeimage.read(str(timepoint_imagepath))
+        timepoint_image = freeimage.read(timepoint_imagepath)
         rescaled_image = process_images.pin_image_mode(timepoint_image, optocoupler=metadata['optocoupler'])
 
-        experiment_root, position_name = position_root.parent, position_root.name
-        lawn_mask = freeimage.read(experiment_root / 'derived_data' / 'lawn_masks' / f'{position_name}.png')
-        lawn_mask = lawn_mask.astype('bool')
+        lawn_mask = freeimage.read(experiment_root / 'derived_data' / 'lawn_masks' / f'{position_name}.png').astype('bool')
 
         # Remove the animal from the lawn if possible.
         center_tck, width_tck = annotations.get('pose', (None, None))
         if center_tck is None:
             animal_mask = numpy.zeros(timepoint_image.shape).astype('bool')   # Or should this just return Nones in the measures???
         else:
-            animal_mask = worm_spline.lab_frame_mask(center_tck, width_tck, timepoint_image.shape)
+            animal_mask = worm_spline.lab_frame_mask(center_tck, width_tck, timepoint_image.shape).astype('bool')
         lawn_mask = lawn_mask & ~animal_mask
 
-        vignette_mask = process_images.vignette_mask(optocoupler, timepoint_image.shape)
+        vignette_mask = process_images.vignette_mask(metadata['optocoupler'], timepoint_image.shape)
 
         measures['summed_lawn_intensity'] = numpy.sum(timepoint_image[lawn_mask])
         measures['median_lawn_intensity'] = numpy.median(timepoint_image[lawn_mask])
         measures['background_intensity'] = numpy.median(timepoint_image[~lawn_mask & vignette_mask])
+
+        return [measures[feature_name] for feature_name in self.feature_names]
 
 ##################
 # Annotate the lawn information with process_data.annotate
@@ -84,7 +93,7 @@ def edge_lawn_maker(image, optocoupler):
     '''
 
     #filtered_image = filters.median(image)  # Preliminary median filtering
-    
+
     #filtered_image=image
     #filtered_image = filters.rank.mean(image, numpy.ones((3,3)))
     import scipy.ndimage.filters as ndi_filters
@@ -134,14 +143,14 @@ def gmm_lawn_maker(image, optocoupler):
     #scaled_image = process_images.pin_image_mode(image, optocoupler=optocoupler)
     scaled_image = ndi_filters.median_filter(image, size=(3,3), mode='constant')
     vignette_mask = process_images.vignette_mask(optocoupler, image.shape)
-    
+
     img_data = scaled_image[vignette_mask]
     img_hist = numpy.bincount(img_data.flatten())
     img_hist = img_hist/img_hist.sum()
 
     gmm = mixture.GaussianMixture(n_components=2)
     gmm.fit(numpy.expand_dims(img_data,1))
-    
+
     # Calculate boundary point for label classification as intensity threshold
     gmm_support = numpy.linspace(0,2**16-1,2**16)
     labels = gmm.predict(numpy.reshape(gmm_support, (-1,1)))
