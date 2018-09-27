@@ -165,8 +165,9 @@ def gmm_lawn_maker(image, optocoupler):
     return lawn_mask
 
 if __name__ == "__main__":
-    import measurement_pipeline
+    import sys
     from elegant import process_data
+    import measurement_pipeline
 
     expt_dir = sys.argv[1]
 
