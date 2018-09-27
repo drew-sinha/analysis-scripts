@@ -28,7 +28,7 @@ class LawnMeasurements:
         rescaled_image = process_images.pin_image_mode(timepoint_image, optocoupler=metadata['optocoupler'])
 
         lawn_mask = freeimage.read(experiment_root / 'derived_data' / 'lawn_masks' / f'{position_name}.png').astype('bool')
-        with (experiment_root / 'derived_data'/ 'lawn_models' / f'{position_name}.png').open('rb') as lm_file:
+        with (experiment_root / 'derived_data'/ 'lawn_models' / f'{position_name}.pickle').open('rb') as lm_file:
             lawn_model = pickle.load(lm_file)
 
         vignette_mask = process_images.vignette_mask(metadata['optocoupler'], timepoint_image.shape)
@@ -44,7 +44,7 @@ class LawnMeasurements:
         # Remove debris from the mask (e.g. eggs, background junk in gel) defined by 3 stds below the lawn mean
         lawn_mean = numpy.round(lawn_model['lawn_mean']).astype('int')
         restricted_density = lawn_model['fitted_density'][:lawn_mean+1]
-        halfmax_pt = np.abs(restricted_density - restricted_density.max()/2).argmin()
+        halfmax_pt = numpy.abs(restricted_density - restricted_density.max()/2).argmin()
         sigma = (lawn_mean - halfmax_pt)/numpy.sqrt(2*numpy.log(2))
         debris_mask = rescaled_image < (lawn_mean - 3/2*sigma)
 
@@ -199,7 +199,7 @@ if __name__ == "__main__":
     expt_dir = sys.argv[1]
 
     def make_lawn_measurements(experiment_root):
-        measures = [lawn_measurements.LawnMeasurements()] #, process_data.PoseMeasurements(microns_per_pixel=5)]
+        measures = [LawnMeasurements()] #, process_data.PoseMeasurements(microns_per_pixel=5)]
         measurement_name = 'lawn_measures'
 
         #process_data.update_annotations(experiment_root)
