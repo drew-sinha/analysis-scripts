@@ -1,4 +1,5 @@
 import json
+import pickle
 
 import numpy
 import freeimage
@@ -42,15 +43,14 @@ class LawnMeasurements:
 
         # Remove debris from the mask (e.g. eggs, background junk in gel) defined by 3 stds below the lawn mean
         lawn_mean = numpy.round(lawn_model['lawn_mean']).astype('int')
-        lower_bound = 1000 #numpy.percentile(rescaled_image[~vignette_mask], 95)
-        restricted_density = lawn_model['fitted_density'][lower_bound:lawn_center+1]
-        halfmax_pt = np.abs(restricted_density - restricted_density[-1]/2).argmin() + lower_bound
-        sigma = (lawn_center - halfmax_pt)/numpy.sqrt(2*numpy.log(2))
-        debris_mask = rescaled_image < lawn_center - 3/2*sigma
+        restricted_density = lawn_model['fitted_density'][:lawn_mean+1]
+        halfmax_pt = np.abs(restricted_density - restricted_density.max()/2).argmin()
+        sigma = (lawn_mean - halfmax_pt)/numpy.sqrt(2*numpy.log(2))
+        debris_mask = rescaled_image < (lawn_mean - 3/2*sigma)
 
         measures['summed_lawn_intensity'] = numpy.sum(rescaled_image[lawn_mask & ~debris_mask])
         measures['median_lawn_intensity'] = numpy.median(rescaled_image[lawn_mask & ~debris_mask])
-        measures['background_intensity'] = numpy.median(rescaled_image[~lawn_mask & vignette_mask])
+        measures['background_intensity'] = numpy.median(rescaled_image[~lawn_mask & ~debris_mask & vignette_mask])
 
         return [measures[feature_name] for feature_name in self.feature_names]
 
@@ -87,7 +87,7 @@ def annotate_lawn(experiment_root, position, metadata, annotations):
     individual_lawns = [gmm_lawn_maker(image, metadata['optocoupler']) for image in first_images]
     lawn_mask = numpy.max(individual_lawns, axis=0)
 
-    median_lm, gmm_model = gmm_lawn_maker(median_first_images, metadata['optocoupler'], return_model=True)
+    median_lm, gmm_model = gmm_lawn_maker(median_first_images.astype('int'), metadata['optocoupler'], return_model=True)
 
     vignette_mask = process_images.vignette_mask(metadata['optocoupler'], lawn_mask.shape)
 
@@ -95,7 +95,7 @@ def annotate_lawn(experiment_root, position, metadata, annotations):
         gmm_means = numpy.sort(gmm_model.means_.flatten())    # First value is lawn (since darker)
         gmm_support = numpy.linspace(0,2**16-1,2**16)
         gmm_density = numpy.exp(gmm_model.score_samples(gmm_support.reshape(-1,1)))
-        model_features = {'lawn_mean':gmm_centers[0], 'background_mean':gmm_centers[1], 'fitted_density':gmm_density}
+        model_features = {'lawn_mean':gmm_means[0], 'background_mean':gmm_means[1], 'fitted_density':gmm_density}
         pickle.dump(model_features, lm_file)
     freeimage.write(lawn_mask.astype('uint8')*255, str(lawn_mask_root / f'{position}.png')) # Some better way to store this mask in the annotations?
     annotations['lawn_area'] = lawn_mask.sum() * microns_per_pixel**2
