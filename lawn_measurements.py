@@ -38,9 +38,9 @@ class LawnMeasurements:
 
         vignette_mask = process_images.vignette_mask(metadata['optocoupler'], timepoint_image.shape)
 
-        measures['summed_lawn_intensity'] = numpy.sum(timepoint_image[lawn_mask])
-        measures['median_lawn_intensity'] = numpy.median(timepoint_image[lawn_mask])
-        measures['background_intensity'] = numpy.median(timepoint_image[~lawn_mask & vignette_mask])
+        measures['summed_lawn_intensity'] = numpy.sum(rescaled_image[lawn_mask])
+        measures['median_lawn_intensity'] = numpy.median(rescaled_image[lawn_mask])
+        measures['background_intensity'] = numpy.median(rescaled_image[~lawn_mask & vignette_mask])
 
         return [measures[feature_name] for feature_name in self.feature_names]
 
@@ -73,10 +73,14 @@ def annotate_lawn(experiment_root, position, metadata, annotations):
 
     individual_lawns = [gmm_lawn_maker(image, metadata['optocoupler']) for image in first_images]
     lawn_mask = numpy.max(individual_lawns, axis=0)
+
+    median_lm, lawn_model = gmm_lawn_maker(median_first_images, metadata['optocoupler'], return_density=True)
+
     vignette_mask = process_images.vignette_mask(metadata['optocoupler'], lawn_mask.shape)
 
     freeimage.write(lawn_mask.astype('uint8')*255, str(lawn_mask_root / f'{position}.png')) # Some better way to store this mask in the annotations?
     annotations['lawn_area'] = lawn_mask.sum() * microns_per_pixel**2
+    annotations['lawn_model'] = lawn_model
 
 
 def edge_lawn_maker(image, optocoupler):
@@ -127,8 +131,8 @@ def thr_lawn_maker(image, optocoupler):
     lawn_mask = zpl_mask.get_largest_object(lawn_mask).astype('bool')
     return lawn_mask
 
-def gmm_lawn_maker(image, optocoupler):
-    '''Find a lawn in an image use Gaussian mixture modeling
+def gmm_lawn_maker(image, optocoupler, return_density=False):
+    '''Find a lawn in an image use Gaussian mixture modeling (GMM)
 
     This lawn maker models an image (i.e. its pixel intensities) as as mixture
         of two Gaussian densities. Each corresponds to either the background & lawn.
@@ -139,6 +143,7 @@ def gmm_lawn_maker(image, optocoupler):
 
     Returns:
         lawn mask as a bool ndarray
+        density corresponding to the fitted GMM
     '''
     #scaled_image = process_images.pin_image_mode(image, optocoupler=optocoupler)
     scaled_image = ndi_filters.median_filter(image, size=(3,3), mode='constant')
@@ -153,6 +158,7 @@ def gmm_lawn_maker(image, optocoupler):
 
     # Calculate boundary point for label classification as intensity threshold
     gmm_support = numpy.linspace(0,2**16-1,2**16)
+
     labels = gmm.predict(numpy.reshape(gmm_support, (-1,1)))
     thr = numpy.argmax(numpy.abs(numpy.diff(labels)))
     lawn_mask = (scaled_image < thr) & vignette_mask
@@ -162,7 +168,11 @@ def gmm_lawn_maker(image, optocoupler):
     lawn_mask = morphology.binary_fill_holes(lawn_mask)
     lawn_mask = morphology.binary_dilation(lawn_mask, iterations=10)
 
-    return lawn_mask
+    if return_density:
+        gmm_density = numpy.exp(gmm.score_samples(gmm_support.reshape(-1,1)))
+        return lawn_mask, gmm_density
+    else:
+        return lawn_mask
 
 if __name__ == "__main__":
     import measurement_pipeline
