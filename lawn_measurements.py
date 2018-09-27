@@ -164,6 +164,27 @@ def gmm_lawn_maker(image, optocoupler):
 
     return lawn_mask
 
+if __name__ == "__main__":
+    import measurement_pipeline
+    from elegant import process_data
+
+    expt_dir = sys.argv[1]
+
+    def make_lawn_measurements(experiment_root):
+        measures = [lawn_measurements.LawnMeasurements()] #, process_data.PoseMeasurements(microns_per_pixel=5)]
+        measurement_name = 'lawn_measures'
+
+        #process_data.update_annotations(experiment_root)
+        measurement_pipeline.propagate_stages(experiment_root,verbose=True)
+        positions = load_data.read_annotations(experiment_root)
+        # to_measure = load_data.filter_annotations(positions, load_data.filter_living_timepoints)
+        to_measure = load_data.filter_annotations(positions, measurement_pipeline.filter_living_timepoints)
+        process_data.measure_worms(experiment_root, to_measure, measures, measurement_name)
+
+    process_data.annotate(expt_dir, position_annotators=[annotate_lawn])
+    make_lawn_measurements(expt_dir)
+    process_data.collate_data(expt_dir)
+
 '''
 Scratch
 
