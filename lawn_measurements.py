@@ -14,7 +14,7 @@ from elegant import load_data, process_images, worm_spline
 class LawnMeasurements:
     feature_names = ['summed_lawn_intensity', 'median_lawn_intensity', 'background_intensity']
 
-    def measure(self, position_root, timepoint, annotations, before, after, remove_debris=False):
+    def measure(self, position_root, timepoint, annotations, before, after):
         measures = {}
         print(f'Working on position {position_root.name} - {timepoint}')
 
@@ -42,15 +42,9 @@ class LawnMeasurements:
         lawn_mask = lawn_mask & ~animal_mask
 
         # Remove debris from the mask (e.g. eggs, background junk in gel) defined by 3 stds below the lawn mean
-        if remove_debris:
-            lawn_mean, lawn_std = lawn_model['lawn_mean'], lawn_model['lawn_std']
-            debris_mask = rescaled_image < (lawn_mean - 3*lawn_std)
-        else:
-            debris_mask = numpy.zeros_like(timepoint_image).astype('bool')
-
-        measures['summed_lawn_intensity'] = numpy.sum(rescaled_image[lawn_mask & ~debris_mask])
-        measures['median_lawn_intensity'] = numpy.median(rescaled_image[lawn_mask & ~debris_mask])
-        measures['background_intensity'] = numpy.median(rescaled_image[~lawn_mask & ~debris_mask & vignette_mask])
+        measures['summed_lawn_intensity'] = numpy.sum(rescaled_image[lawn_mask])
+        measures['median_lawn_intensity'] = numpy.median(rescaled_image[lawn_mask])
+        measures['background_intensity'] = numpy.median(rescaled_image[~lawn_mask & vignette_mask])
 
         return [measures[feature_name] for feature_name in self.feature_names]
 
