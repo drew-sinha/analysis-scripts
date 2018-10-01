@@ -47,6 +47,7 @@ class LawnMeasurements:
         halfmax_pt = numpy.abs(restricted_density - restricted_density.max()/2).argmin()
         sigma = (lawn_mean - halfmax_pt)/numpy.sqrt(2*numpy.log(2))
         debris_mask = rescaled_image < (lawn_mean - 3/2*sigma)
+        debris_mask = numpy.zeros_like(timepoint_image).astype('bool')
 
         measures['summed_lawn_intensity'] = numpy.sum(rescaled_image[lawn_mask & ~debris_mask])
         measures['median_lawn_intensity'] = numpy.median(rescaled_image[lawn_mask & ~debris_mask])
@@ -59,6 +60,7 @@ class LawnMeasurements:
 
 def annotate_lawn(experiment_root, position, metadata, annotations):
     '''Position annotator used to find the lawn and associated metadata about it'''
+    num_images_for_lawn = 3
 
     print(f'Working on position {position}')
     position_root = experiment_root / position
@@ -69,7 +71,6 @@ def annotate_lawn(experiment_root, position, metadata, annotations):
     lawn_model_root.mkdir(parents=True, exist_ok=True)
 
     microns_per_pixel = process_images.microns_per_pixel(metadata['objective'],metadata['optocoupler'])
-    num_images_for_lawn = 10
 
     position_images = load_data.scan_experiment_dir(experiment_root)[position]
     first_imagepaths = []
