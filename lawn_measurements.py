@@ -28,9 +28,6 @@ class LawnMeasurements:
         rescaled_image = process_images.pin_image_mode(timepoint_image, optocoupler=metadata['optocoupler'])
 
         lawn_mask = freeimage.read(experiment_root / 'derived_data' / 'lawn_masks' / f'{position_name}.png').astype('bool')
-        with (experiment_root / 'derived_data'/ 'lawn_models' / f'{position_name}.pickle').open('rb') as lm_file:
-            lawn_model = pickle.load(lm_file)
-
         vignette_mask = process_images.vignette_mask(metadata['optocoupler'], timepoint_image.shape)
 
         # Remove the animal from the lawn if possible.
@@ -41,7 +38,6 @@ class LawnMeasurements:
             animal_mask = worm_spline.lab_frame_mask(center_tck, width_tck, timepoint_image.shape).astype('bool')
         lawn_mask = lawn_mask & ~animal_mask
 
-        # Remove debris from the mask (e.g. eggs, background junk in gel) defined by 3 stds below the lawn mean
         measures['summed_lawn_intensity'] = numpy.sum(rescaled_image[lawn_mask])
         measures['median_lawn_intensity'] = numpy.median(rescaled_image[lawn_mask])
         measures['background_intensity'] = numpy.median(rescaled_image[~lawn_mask & vignette_mask])
