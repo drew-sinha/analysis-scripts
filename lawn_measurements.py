@@ -93,55 +93,6 @@ def annotate_lawn(experiment_root, position, metadata, annotations):
     freeimage.write(lawn_mask.astype('uint8')*255, str(lawn_mask_root / f'{position}.png')) # Some better way to store this mask in the annotations?
     annotations['lawn_area'] = lawn_mask.sum() * microns_per_pixel**2
 
-
-def edge_lawn_maker(image, optocoupler):
-    '''Find a lawn in an image using Canny edge detection
-
-    Parameters:
-        image - numpy ndarray of the image to find the lawn from
-        optocoupler - optocoupler magnification (as a float) used for the specified image
-
-    Returns:
-        lawn mask as a bool ndarray
-
-    THIS ONE DOESN'T WORK AS ADVERTISED.... USE GMM_lawn_maker
-    '''
-
-    #filtered_image = filters.median(image)  # Preliminary median filtering
-
-    #filtered_image=image
-    #filtered_image = filters.rank.mean(image, numpy.ones((3,3)))
-    import scipy.ndimage.filters as ndi_filters
-    filtered_image = ndi_filters.median_filter(image, size=(3,3), mode='constant')
-    image_edges = feature.canny(filtered_image, sigma=0.02)
-    vignette_mask = process_images.vignette_mask(optocoupler, image.shape)
-    image_edges[~vignette_mask] = False
-
-    image_edges = morphology.binary_dilation(image_edges, iterations = 10)
-    lawn_mask = morphology.binary_fill_holes(image_edges)
-    try:
-        lawn_mask = zpl_mask.get_largest_object(lawn_mask)
-        lawn_mask = morphology.binary_erosion(lawn_mask, iterations = 10)
-    except:
-        lawn_mask = numpy.zeros(lawn_mask.shape).astype('bool')
-
-    return lawn_mask
-
-def thr_lawn_maker(image, optocoupler):
-    '''
-       This one doesn't work particularly well either... use gmm_lawn_maker
-    '''
-    lawn_cutoff = numpy.percentile(image, 5)
-    lawn_mask = image < lawn_cutoff
-    vignette_mask = process_images.vignette_mask(optocoupler, image.shape)
-    lawn_mask[~(morphology.binary_erosion(vignette_mask, iterations=10))] = False
-    lawn_mask = morphology.binary_dilation(lawn_mask, iterations=3)
-    lawn_mask = morphology.binary_fill_holes(lawn_mask)
-    lawn_mask = zpl_mask.get_largest_object(lawn_mask)
-    lawn_mask = morphology.binary_erosion(lawn_mask, iterations=3)
-    lawn_mask = zpl_mask.get_largest_object(lawn_mask).astype('bool')
-    return lawn_mask
-
 def gmm_lawn_maker(image, optocoupler, return_model=False):
     '''Find a lawn in an image use Gaussian mixture modeling (GMM)
 
@@ -156,7 +107,6 @@ def gmm_lawn_maker(image, optocoupler, return_model=False):
         lawn mask as a bool ndarray
         fitted GMM model
     '''
-    #scaled_image = process_images.pin_image_mode(image, optocoupler=optocoupler)
     scaled_image = ndi_filters.median_filter(image, size=(3,3), mode='constant')
     vignette_mask = process_images.vignette_mask(optocoupler, image.shape)
 
@@ -205,40 +155,3 @@ if __name__ == "__main__":
     process_data.annotate(expt_dir, position_annotators=[annotate_lawn])
     make_lawn_measurements(expt_dir)
     process_data.collate_data(expt_dir)
-
-'''
-Scratch
-
-        # initial_lawn_intensity = #FILL IN from annotations....
-        # background_intensity = process_images._image_mode_numpy(rescaled_image) # Or get from original lawn during annotations
-        #measures['background_diff'] = background_intensity - lawn_intensity
-        #measures['relative_intensity'] = measures['background_diff']/(background_intensity - initial_lawn_intensity)
-
-import numpy
-from elegant import worm_spline, process_images
-import celiagg
-
-def circle_mask(cx, cy, r, shape):
-    cx, cy, r = int(cx * shape[0]), int(cy * shape[1]), int(r * shape[0])
-    path = celiagg.Path()
-    path.ellipse(cx, cy, r, r)
-    return worm_spline._celiagg_draw_mask(shape, path, antialias=False)
-#image = rw.flipbook_pages[0][0].data
-image = freeimage.read('/mnt/9karray/Sinha_Drew/20180816_spe-9_Control/087/2018-08-19t0703 bf00.png')
-image = process_images.pin_image_mode(image)
-mask = circle_mask(0.5,0.5,0.4,image.shape)
-mask = mask > 0
-#rw.flipbook_pages[0].append(mask)
-
-image2 = image.copy()
-image2[mask] = 2**16-1
-#rw.flipbook_pages[0].append(image2)
-
-nonlawn_hist = numpy.bincount(image2.flatten())
-nonlawn_hist[-1] = 0
-lawn_hist = numpy.bincount(image[mask].flatten())
-
-    # annotations['initial_summed_lawn_intensity'] = numpy.sum(median_first_images[lawn_mask])    # Need to multiply by microns_per_pixel**2?
-    # annotations['initial_median_lawn_intensity'] = numpy.median(median_first_images[lawn_mask])
-    # annotations['initial_background_intensity'] = numpy.median(median_first_images[~lawn_mask & vignette_mask])
-'''
