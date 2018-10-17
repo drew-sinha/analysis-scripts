@@ -1,7 +1,7 @@
 import pathlib
 import sys
 
-from elegant import load_data, process_data,worm_data
+from elegant import load_data, process_data,worm_data, segment_images
 import elegant_filters
 
 def filter_living_timepoints(position_name, position_annotations, timepoint_annotations):
@@ -64,13 +64,21 @@ def make_basic_measurements(experiment_root):
     to_measure = load_data.filter_annotations(positions, filter_living_timepoints)
     process_data.measure_worms(experiment_root, to_measure, measures, measurement_name)
 
-def make_movement_measurements(experiment_root):
+def make_movement_measurements(experiment_root, update_poses=True, adult_only=True):
     measures = [process_data.PoseMeasurements(microns_per_pixel=1.3)]
     measurement_name = 'pose_measures'
 
-    #process_data.update_annotations(experiment_root)
     annotations = load_data.read_annotations(experiment_root)
-    to_measure = load_data.filter_annotations(annotations, elegant_filters.filter_adult_timepoints)
+    if adult_only:
+        to_measure = load_data.filter_annotations(annotations, elegant_filters.filter_adult_timepoints)
+    else:
+        to_measure = load_data.filter_annotations(annotations, elegant_filters.filter_excluded)
+
+    if update_poses:
+        images = load_data.scan_experiment_dir(experiment_root, 
+            timepoint_filter=lambda position_n, timepoint_n: position_n in to_measure and timepoint_n in to_measure[position_n][1])
+    	segment_images.annotate_poses_from_masks(images, pathlib.Path(experiment_root) / 'derived_data' / 'mask', to_measure)
+
     process_data.measure_worms(experiment_root, to_measure, measures, measurement_name)
 
 def make_af_measurements(experiment_root):
