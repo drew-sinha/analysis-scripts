@@ -1,7 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 
-def plot_trajectories(strain_df, 
+def plot_trajectories(strain_df,
     health_var='health', worms_to_plot=None, num_worms=20, worm_subset = None, ax_h=None,
     **plot_args):
     if worms_to_plot is None:
@@ -9,7 +9,7 @@ def plot_trajectories(strain_df,
             worms_to_plot = np.random.permutation(strain_df.worms)[worm_subset][:num_worms]
         else:
             worms_to_plot = np.random.permutation(strain_df.worms)[:num_worms]
-    elif type(worms_to_plot[0]) in [int, bool]:
+    elif isinstance(worms_to_plot[0], (int, bool, np.integer)):
         worms_to_plot = np.array(strain_df.worms)[worms_to_plot]
 
     ax_provided = ax_h is not None
@@ -29,8 +29,8 @@ def plot_trajectories(strain_df,
     else:
         ax_h.set_ylabel('{} across life'.format(health_var))
     ax_h.set_xlabel('Time Post-Adulthood (days)')
-    
+
     if not ax_provided:
         return fig_h, ax_h
     else:
-        return ax_h 
+        return ax_h
