@@ -1,5 +1,9 @@
 import numpy as np
 
+from zplib.scalar_stats import kde
+
+import survival_plotting
+
 def get_featurespan(worms, feature, cutoff, dwell_time=2*24, return_crossings=False):
     '''Get amount of time feature is remains above/below a prescribed cutoff value;
         assumes that all ages are in *hours*.
@@ -66,3 +70,60 @@ def get_featurespan(worms, feature, cutoff, dwell_time=2*24, return_crossings=Fa
         return featurespans, crossing_vals
     else:
         return featurespans
+
+def plot_expt_hs(worms, feature, cutoff, dwell_time=2*24, ax_h=None,mode='cdf',**plot_kws):
+    """Plot survival curves of falling into poor health for one or more separate experiments
+
+        Parameters
+            worms
+            feature
+            cutoff
+            dwell_time
+            expt_dirs - one or more experiment root directories with collated
+                lifespan data (i.e. using the elegant pipeline to produce
+                timecourse files)
+            ax_h - optional matplotlib axis objects to plot curves on
+            import_mode - bool flag that toggles how to import lifespan data;
+                if True, searches for a timecourse file to use; otherwise, read
+                directly from annotation files
+            calc_adultspan - bool flag that toggles whether to calculate lifespan as adultspan;
+                if True, uses the 'adult' timepoint as the starting timepoint of interest;
+                otherwise, uses the 'larva' timepoint
+            plot_kws - optional kw parameters to pass to plt.plot
+
+        Returns
+            metadata - list of dicts where each entry corresponds to
+                derived metadata about the plotted experiment; this
+                includes:
+                    n - number of animals
+                    mean - mean lifespan of animals
+                    median - median lifespan
+                    good_ls - numpy array of good lifespans
+            (fig_h) - matplotlib figure object if supplied ax_h is None
+            (ax_h) - matplotlib axis object if supplied ax_h is None
+    """
+
+    if ax_h is None:
+        fig_h, ax_h = plt.subplots()
+        ax_provided = False
+    else: ax_provided = True
+
+    healthspans = get_featurespan(worms,feature, cutoff,dwell_time=dwell_time)/24
+    metadata = {'n':len(healthspans),
+        'mean': np.nanmean(healthspans),
+        'median': np.nanmedian(healthspans),
+        'hs': healthspans,}
+
+    if mode == 'cdf':
+        survival_plotting.plot_spanseries(healthspans, ax_h=ax_h, **plot_kws)
+        ax_h.set_ylabel('Proportion Remaining in Good Health')
+    elif mode in ['density']:
+        support, density, estimator = kde.kd_distribution(healthspans)
+        ax_h.plot(support, density)
+        ax_h.set_ylabel('Density')
+    ax_h.set_xlabel('Days Adulthood')
+
+    if not ax_provided:
+        return (fig_h, ax_h, metadata)
+    else:
+        return metadata
