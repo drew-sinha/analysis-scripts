@@ -1,4 +1,4 @@
-import numpy 
+import numpy
 from elegant import load_data
 
 #==============================
@@ -24,6 +24,11 @@ def filter_adult_dead_timepoints(position_name, position_annotations, timepoint_
     # if not load_data.filter_excluded(position_name, position_annotations, timepoint_annotations):
     #     return False
     return [(tp.get('stage') == 'adult') or (tp.get('stage') == 'dead') for tp in timepoint_annotations.values()]
+
+def filter_before_timepoint(timepoint):
+    def annotation_filter(position_name, position_annotations, timepoint_annotations):
+        return [ann_timepoint <= timepoint for ann_timepoint in timepoint_annotations]
+    return annotation_filter
 
 def filter_subsample_timepoints(experiment_dir, interval=3):
     '''
