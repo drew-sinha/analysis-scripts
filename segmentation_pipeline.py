@@ -48,7 +48,7 @@ def process_experiment_with_filter(experiment_root, model, image_filter):
     segment_images.segment_positions(positions, model, use_gpu=True,
         overwrite_existing=False)
     segment_t = time.time()
-    print(f'scanning done after {(segment_t-scan_t)} s')
+    print(f'segmenting done after {(segment_t-scan_t)} s')
 
 
     mask_root = pathlib.Path(experiment_root) / 'derived_data' / 'mask'
