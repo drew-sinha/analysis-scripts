@@ -6,36 +6,14 @@ import time
 
 from elegant import process_experiment, load_data, segment_images, process_data
 
+import elegant_hacks
+
 def filter_adult_images(experiment_root):
     '''Filter for only adult timepoints from non-excluded animals'''
     experiment_annotations = load_data.read_annotations(experiment_root)
     def scan_filter(position_name, timepoint_name):
         return not experiment_annotations[position_name][0]['exclude'] and experiment_annotations[position_name][1][timepoint_name].get('stage') == 'adult'
     return scan_filter
-
-def propagate_stages(experiment_root,verbose=False):
-    '''
-        Modifies experiment annotations by propagating stage information forward
-            in time across annotated timepoints.
-    '''
-    annotations = load_data.read_annotations(experiment_root)
-    # annotations = load_data.filter_annotations(annotations,load_data.filter_excluded)
-    for position_name, (position_annotations, timepoint_annotations) in annotations.items():
-        running_stage = None
-        changed = []
-        for timepoint,timepoint_info in timepoint_annotations.items():
-            if running_stage is None: # Either first timepoint or all the annotations up to now are null
-                running_stage = timepoint_info.get('stage')
-            elif timepoint_info.get('stage') != running_stage and timepoint_info.get('stage') is not None:
-                running_stage = timepoint_info.get('stage')
-
-            if timepoint_info.get('stage') is None and running_stage is not None: # Also handles the case that we are working with an excluded position
-                timepoint_info['stage'] = running_stage
-                changed.append(timepoint)
-
-        if verbose and changed: print(f'{position_name}: {changed}')
-    annotations = load_data.write_annotations(experiment_root, annotations)
-
 
 def process_experiment_with_filter(experiment_root, model, image_filter, mask_root=None):
     '''
@@ -45,7 +23,7 @@ def process_experiment_with_filter(experiment_root, model, image_filter, mask_ro
     if mask_root is None:
         mask_root = pathlib.Path(experiment_root) / 'derived_data' / 'mask'
 
-    propagate_stages(experiment_root)
+    elegant_hacks.propagate_stages(experiment_root)
 
     start_t = time.time()
     positions = load_data.scan_experiment_dir(experiment_root,

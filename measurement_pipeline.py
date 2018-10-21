@@ -30,35 +30,12 @@ def filter_living_timepoints(position_name, position_annotations, timepoint_anno
     all_good = [good_stage and not exclude for good_stage, exclude in zip(good_stages, excludes)]
     return all_good
 
-def propagate_stages(experiment_root,verbose=False):
-    '''
-        Modifies experiment annotations by propagating stage information forward
-            in time across annotated timepoints.
-    '''
-    annotations = load_data.read_annotations(experiment_root)
-    # annotations = load_data.filter_annotations(annotations,load_data.filter_excluded)
-    for position_name, (position_annotations, timepoint_annotations) in annotations.items():
-        running_stage = None
-        changed = []
-        for timepoint,timepoint_info in timepoint_annotations.items():
-            if running_stage is None: # Either first timepoint or all the annotations up to now are null
-                running_stage = timepoint_info.get('stage')
-            elif timepoint_info.get('stage') != running_stage and timepoint_info.get('stage') is not None:
-                running_stage = timepoint_info.get('stage')
-
-            if timepoint_info.get('stage') is None and running_stage is not None: # Also handles the case that we are working with an excluded position
-                timepoint_info['stage'] = running_stage
-                changed.append(timepoint)
-
-        if verbose and changed: print(f'{position_name}: {changed}')
-    annotations = load_data.write_annotations(experiment_root, annotations)
-
 def make_basic_measurements(experiment_root):
     measures = [process_data.BasicMeasurements()] #, process_data.PoseMeasurements(microns_per_pixel=5)]
     measurement_name = 'core_measures'
 
     #process_data.update_annotations(experiment_root)
-    propagate_stages(experiment_root,verbose=True)
+    elegant_hacks.propagate_stages(experiment_root,verbose=True)
     positions = load_data.read_annotations(experiment_root)
     # to_measure = load_data.filter_annotations(positions, load_data.filter_living_timepoints)
     to_measure = load_data.filter_annotations(positions, filter_living_timepoints)
