@@ -3,7 +3,7 @@ import numpy
 import matplotlib.pyplot as plt; plt.ion(); plt.show()
 import matplotlib.cm
 
-from elegant import worm_data
+from elegant import worm_data, load_data
 from zplib.image import colorize
 
 import plotting_tools
@@ -18,22 +18,52 @@ def propagate_stages(experiment_root,verbose=False):
             in time across annotated timepoints.
     '''
     annotations = load_data.read_annotations(experiment_root)
-    # annotations = load_data.filter_annotations(annotations,load_data.filter_excluded)
     for position_name, (position_annotations, timepoint_annotations) in annotations.items():
         running_stage = None
         changed = []
+        encountered_stages = []
+
         for timepoint,timepoint_info in timepoint_annotations.items():
+            already_encountered = timepoint_info.get('stage') in encountered_stage
+            stage_set = timepoint_info.get('stage') is not None
+
             if running_stage is None: # Either first timepoint or all the annotations up to now are null
                 running_stage = timepoint_info.get('stage')
-            elif timepoint_info.get('stage') != running_stage and timepoint_info.get('stage') is not None:
-                running_stage = timepoint_info.get('stage')
+            elif timepoint_info.get('stage') != running_stage and stage_set and not already_encountered:
+                running_stage = timepoint_info['stage']
 
-            if timepoint_info.get('stage') is None and running_stage is not None: # Also handles the case that we are working with an excluded positi$
+            if stage_set and not already_encountered:
+                encountered_stages.append(timepoint_info['stage'])
+
+            if not stage_set and running_stage is not None: # Also handles the case that we are working with an excluded position
+                timepoint_info['stage'] = running_stage
+                changed.append(timepoint)
+            elif stage_set and timepoint_info['stage'] != running_stage and already_encountered:
                 timepoint_info['stage'] = running_stage
                 changed.append(timepoint)
 
         if verbose and changed: print(f'{position_name}: {changed}')
     annotations = load_data.write_annotations(experiment_root, annotations)
+
+def order_stages(experiment_root, stage_order, verbose=False):
+    '''Uses predefined stage ordering to order stages appropriately'''
+    experiment_annotations = load_data.read_annotations(experiment_root)
+
+    for position, position_annotations in experiment_annotations:
+        position_annotations, timepoint_annotations = experiment_annotations
+        timepoints = list(timepoint_annotations.keys())
+        timepoint_stages = [annotation.get('stage') for annotation in timepoint_annotations.values()]
+
+        first_stage_timepoints = []
+        for stage in stage_order:
+            first_stage_idx = timepoint_stages.index(stage)
+            first_stage_timepoints.append(timepoints[first_stage_idx])
+
+        for timepoint, annotation in timepoint_annotations.items():
+            for stage, stage_timepoint in zip(stage_order[::-1], first_stage_timepoints[::-1]):
+                if time
+
+
 
 
 #==================================
