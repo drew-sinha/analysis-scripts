@@ -37,7 +37,14 @@ def propagate_stages(experiment_root,verbose=False):
     annotations = load_data.write_annotations(experiment_root, annotations)
 
 
-def process_experiment_with_filter(experiment_root, model, image_filter):
+def process_experiment_with_filter(experiment_root, model, image_filter, mask_root=None):
+    '''
+         image_filter - filter for scan_experiment_dir
+    '''
+
+    if mask_root is None:
+        mask_root = pathlib.Path(experiment_root) / 'derived_data' / 'mask'
+
     propagate_stages(experiment_root)
 
     start_t = time.time()
@@ -45,8 +52,9 @@ def process_experiment_with_filter(experiment_root, model, image_filter):
         timepoint_filter=image_filter)
     scan_t = time.time()
     print(f'scanning done after {(scan_t-start_t)} s') #3 s once, 80s another, taking a while to load up the segmenter....
-    segment_images.segment_positions(positions, model, use_gpu=True,
+    process = segment_images.segment_positions(positions, model, mask_root, use_gpu=True,
         overwrite_existing=False)
+    print(f'segmenting errors: {process.stderr}')
     segment_t = time.time()
     print(f'segmenting done after {(segment_t-scan_t)} s')
 
