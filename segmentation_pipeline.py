@@ -26,10 +26,10 @@ def propagate_stages(experiment_root,verbose=False):
         for timepoint,timepoint_info in timepoint_annotations.items():
             if running_stage is None: # Either first timepoint or all the annotations up to now are null
                 running_stage = timepoint_info.get('stage')
-            elif timepoint_info.get('stage') != running_stage:
+            elif timepoint_info.get('stage') != running_stage and timepoint_info.get('stage') is not None:
                 running_stage = timepoint_info.get('stage')
 
-            if timepoint_info.get('stage') is None: # Also handles the case that we are working with an excluded position
+            if timepoint_info.get('stage') is None and running_stage is not None: # Also handles the case that we are working with an excluded position
                 timepoint_info['stage'] = running_stage
                 changed.append(timepoint)
 
