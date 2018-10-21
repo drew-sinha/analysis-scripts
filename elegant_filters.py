@@ -107,3 +107,14 @@ def filter_excluded_images(experiment_root):
     def scan_filter(position_name, timepoint_name):
         return not experiment_annotations[position_name][0]['exclude']
     return scan_filter
+
+def filter_from_elegant_dict(annotation_dict):
+    '''Use an annotation dictionary to select specific images for further analysis
+
+        annotation_dict - elegant style (ordered)dict which maps positions to
+            tuples of position and timepoint annotations
+    '''
+    
+    def scan_filter(position_name, timepoint_name):
+        return position_name in annotation_dict[1] and timepoint_name in annotation_dict[1][position_name]
+    return scan_filter
