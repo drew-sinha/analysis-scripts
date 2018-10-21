@@ -33,3 +33,9 @@ def filter_adult_images(experiment_root):
     def scan_filter(position_name, timepoint_name):
         return experiment_annotations[position_name][1][timepoint_name].get('stage') == 'adult'
     return scan_filter
+
+def filter_excluded_images(experiment_root):
+    experiment_annotations = load_data.read_annotations(experiment_root)
+    def scan_filter(position_name, timepoint_name):
+        return not experiment_annotations[position_name][0]['exclude']
+    return scan_filter
