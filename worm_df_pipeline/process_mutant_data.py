@@ -14,6 +14,7 @@ import scipy.integrate as integrate
 
 import zplib.scalar_stats.smoothing as smoothing
 import zplib.scalar_stats.kde
+from zplib.scalar_stats import moving_mean_std, regress
 
 import analyzeHealth
 import graphingFigures
@@ -148,14 +149,17 @@ def test_lifespan_replicates(strain_df,calc_adultspans=True,rep_labels=None):
 
     return (survival_fig,ax_h)
 
-def test_healthspan_replicates(strain_df,rep_labels=None):
+def test_healthspan_replicates(strain_df,measure, cutoff_value, dwell_time=2, rep_labels=None,plot_cdf=True):
     if rep_labels is None:
         rep_labels = unique_items([(' '.join(worm_label.split(' ')[:-1])) for worm_label in strain_df.worms])
         rep_labels = unique_items([rep_label if rep_label[-1].isnumeric() else rep_label[:-1] for rep_label in rep_labels])
     print(rep_labels)
     worm_assignments = np.array(
         [num for worm_label in strain_df.worms for num,rep_label in enumerate(rep_labels) if rep_label in ' '.join(worm_label.split(' ')[:-1])])
-    healthspans = get_healthspans(strain_df)/24
+
+    healthspans = get_healthspans_unconfusing(
+        strain_df,a_variable=measure,cutoff_value=cutoff_value,dwell_time=dwell_time)/24
+
 
     survival_fig, ax_h = plt.subplots(1,1)
     max_health = max(healthspans)//1 + 1
@@ -163,16 +167,26 @@ def test_healthspan_replicates(strain_df,rep_labels=None):
     stats = []
 
     for num,rep_label in enumerate(rep_labels):
-        data_series.append(
-            survival_plotting.plot_spanseries(healthspans[worm_assignments==num],ax_h=ax_h,linewidth=2.0))
+        if plot_cdf:
+            data_series.append(
+                survival_plotting.plot_spanseries(healthspans[worm_assignments==num],ax_h=ax_h,linewidth=2.0))
+        else:
+            support, density, estimator = zplib.scalar_stats.kde.kd_distribution(healthspans[worm_assignments==num])
+            data_series.append(
+                ax_h.plot(support, density, linewidth=2.0)
+            )
         stats.append([np.mean(healthspans[worm_assignments==num]),np.std(healthspans[worm_assignments==num])])
         print('Stats for rep '+rep_label+': ({:.2f}+/-{:.2f})'.format(stats[-1][0],stats[-1][1]))
 
-    ax_h.set_ylabel('Percent in Good Health')
-    ax_h.set_xlabel('Days Post-Maturity')
+    if plot_cdf:
+        ax_h.set_ylabel('Percent in Good Health')
+    else:
+        ax_h.set_ylabel('Density')
+
+    ax_h.set_xlabel('Days Adulthood')
     ax_h.set_ylim([0,1.1])
     ax_h.set_xlim([0,max_health])
-    ax_h.legend(plotting_tools.flatten_list(data_series),
+    ax_h.legend(utilities.flatten_list(data_series),
         [rep_label + ' (n={})'.format(np.count_nonzero(worm_assignments==num)) for num,rep_label in enumerate(rep_labels)],
         frameon=False)
     print('Intertrial variability across replicates for tested strain: {:.2f} +/- {:.2f}'.format(
@@ -1328,6 +1342,90 @@ def calc_integrated_health(strain_df, health_var, norm=None, **normalize_args):
 
     return np.array(
         [integrate.trapz(worm_health[~np.isnan(worm_health)],np.array(strain_df.ages)[~np.isnan(worm_health)]*24) for worm_health in df_health])
+
+# From 20180711_LabMeeting
+# From 20180623 nb
+
+def trend(x, y):
+    l, h = np.percentile(x, [.5, 99.5])
+    m = (x >= l) & (x <= h)
+    x = x[m]
+    y = y[m]
+#     return moving_mean_std.moving_mean(x, y, points_out=100, smooth=0.32, iters=4, outlier_threshold=6)
+#     return moving_mean_std.moving_mean(x, y, points_out=100, smooth=0.27, iters=6, outlier_threshold=2)
+    return moving_mean_std.moving_mean(x, y, points_out=100, smooth=0.27, iters=4, outlier_threshold=2)
+
+def plot_HSvsLS(strain_df,measure,cutoff_value,
+                ax_h=None,return_corrs=False,draw_scatter=False,draw_trend=True,draw_quart=False,
+                dwell_time=1,**plot_kws):
+    '''
+        cutoff_value - absolute value for measurement (to pass to get_healthspans_unconfusing)
+    '''
+    ax_provided = ax_h is not None
+    if not ax_provided: fig_h, ax_h = plt.subplots()
+
+    strain_ls = analyzeHealth.selectData.get_adultspans(strain_df)/24
+    sl_cohort = (strain_ls <= np.percentile(strain_ls,25)) #& (strain_ls > np.percentile(strain_ls,1))
+    ll_cohort = (strain_ls >= np.percentile(strain_ls,75)) #& (strain_ls < np.percentile(strain_ls,97))
+
+    if measure == 'cumulative_eggs':
+        raise Warning('span-comparison for cumulative_eggs not done.')
+
+    strain_hs = get_healthspans_unconfusing(strain_df,a_variable=measure,cutoff_value=cutoff_value,dwell_time=dwell_time)/24
+
+    corr_data = scipy.stats.linregress(strain_ls,strain_hs)
+    corr_data_sl = scipy.stats.linregress(strain_ls[sl_cohort],strain_hs[sl_cohort])
+    corr_data_ll = scipy.stats.linregress(strain_ls[ll_cohort],strain_hs[ll_cohort])
+
+    fraction_LSlimited = ((strain_ls-strain_hs) <= 1).sum()/len(strain_ls)
+    fraction_HSnull = (strain_hs<=1).sum()/len(strain_hs)
+    print(("{} - {} (cutoff = {:.3f})\n"
+                    "WP: Beta={:.3f},R^2={:.3f} (p={:.3f})\n"
+                    "SL: Beta={:.3f},R^2={:.3f} (p={:.3f}) (mean={:.3f})\n"
+                    "LL: Beta={:.3f},R^2={:.3f} (p={:.3f}) (mean={:.3f})\n"
+                    "LS-limited = {:.3f}, HS-null = {:.3f}\n").format(
+        strain_df.worms[0],measure, cutoff_value, #Cutoff in absolute units!
+        corr_data[0],corr_data[2]**2, corr_data[3],
+        corr_data_sl[0],corr_data_sl[2]**2, corr_data_sl[3], strain_hs[sl_cohort].mean(),
+        corr_data_ll[0],corr_data_ll[2]**2, corr_data_ll[3], strain_hs[ll_cohort].mean(),
+        fraction_LSlimited, fraction_HSnull))
+
+    if draw_trend:
+        x_vals, y_vals = trend(strain_ls,strain_hs)
+        ax_h.plot(x_vals,y_vals,**plot_kws)
+
+    if draw_quart:
+        sl_reg = regress.regress(strain_ls[sl_cohort],strain_hs[sl_cohort])
+        ll_reg = regress.regress(strain_ls[ll_cohort],strain_hs[ll_cohort])
+        ax_h.plot(sl_reg[-1],sl_reg[0],**plot_kws)
+        ax_h.plot(ll_reg[-1],ll_reg[0],**plot_kws)
+
+    if draw_scatter and (draw_trend or draw_quart):
+        if 'color' in plot_kws:
+            s_pkws = plot_kws.copy()
+            my_color = np.array(s_pkws.pop('color'))
+            if (my_color==0).all():
+                s_pkws['color'] = (1-my_color)*0.6
+            else:
+                s_pkws['color'] = my_color*0.6
+            ax_h.scatter(strain_ls,strain_hs,**s_pkws)
+    elif draw_scatter:
+        ax_h.scatter(strain_ls,strain_hs,**plot_kws)
+
+    ax_h.set_xlabel('Lifespan (Days Adulthood)')
+    ax_h.set_ylabel('Healthspan (Days Adulthood)')
+    ax_h.set_title(("{} (cutoff = {:.3f})\n").format(
+        measure, cutoff_value,measure, #Cutoff in absolute units!
+        ))
+#     ax_h.plot(ax_h.get_xlim(),ax_h.get_xlim(),'--k')
+
+    to_return = []
+    if ax_provided:
+        to_return.extend([ax_h])
+    else:
+        to_return.extend([fig_h,ax_h])
+    if return_corrs: to_return.extend([[corr_data,corr_data_sl,corr_data_ll]])
+    return to_return
 
 
 if __name__ is "__main__":
