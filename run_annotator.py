@@ -3,6 +3,8 @@ import sys
 
 from collections import OrderedDict
 
+import numpy
+
 from ris_widget import ris_widget
 from elegant import load_data, worm_widths
 from elegant.gui import experiment_annotator, stage_field, pose_annotation
@@ -64,15 +66,9 @@ if __name__ == "__main__":
     show_poses = False
     adult_only = False
 
-    def select_worms(experiment_dir):
-        def annotation_filter(position_name, position_annotations, timepoint_annotations):
-            worm_selection = {'20180810_age-1_spe-9_Run_3': ['016'],
-                '20180816_age-1_spe-9_Run_4': ['017','037','080','009','087', '057']}
-            return position_name in worm_selection[pathlib.Path(experiment_dir).name]
-        return annotation_filter
 
     # additional_filters = [elegant_filters.filter_by_age(9,10)]
-    additional_filters = [] #[select_worms(expt_dir)] # [elegant_filters.filter_adult_dead_timepoints]#load_data.filter_excluded]
+    additional_filters = [elegant_filters.filter_subsample_timepoints(expt_dir)]#elegant_filters.filter_range_before_stage(expt_dir, 3)] #load_data.filter_excluded] #[select_worms(expt_dir)] # [elegant_filters.filter_adult_dead_timepoints]#load_data.filter_excluded]
     channels = ['bf'] #, 'green_yellow_excitation_autofluorescence']
 
     try:
@@ -109,10 +105,8 @@ if __name__ == "__main__":
     annotation_fields = []
     annotation_fields.append(stage_field.StageField())
     if show_poses:
-        #width_estimator, width_pca_basis = pose_annotation.default_width_data(pixels_per_micron=1/1.3, experiment_temperature=20)
-        #width_estimator, width_pca_basis = pose_annotation.default_width_data(pixels_per_micron=1/1.3, experiment_temperature=20)
-        width_estimator = worm_widths.default_estimator(pixels_per_micron=1/1.3, experiment_temperature=20)
-        pa = pose_annotation.PoseAnnotation(rw, width_estimator=width_estimator)
+        metadata = load_data.read_metadata(expt_dir)
+        pa = pose_annotation.PoseAnnotation.from_experiment_metadata(metadata, rw)
         annotation_fields.append(pa)
 
     ea = experiment_annotator.ExperimentAnnotator(rw, expt_dir.parts[-1],
