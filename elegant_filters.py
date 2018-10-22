@@ -90,6 +90,11 @@ def select_worms(experiment_dir):
             '20180816_age-1_spe-9_Run_4': ['017','037','080','009','087', '057']}
         return position_name in worm_selection[pathlib.Path(experiment_dir).name]
     return annotation_filter
+
+def filter_from_elegant_worms(worms):
+    def annotation_filter(position_name, position_annotations, timepoint_annotations):
+        return position_name in [worm.name.split()[1] for worm in worms]
+    return annotation_filter
 '''
 
 #===================================
@@ -114,7 +119,7 @@ def filter_from_elegant_dict(annotation_dict):
         annotation_dict - elegant style (ordered)dict which maps positions to
             tuples of position and timepoint annotations
     '''
-    
+
     def scan_filter(position_name, timepoint_name):
         return position_name in annotation_dict[1] and timepoint_name in annotation_dict[1][position_name]
     return scan_filter
