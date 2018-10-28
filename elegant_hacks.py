@@ -75,7 +75,7 @@ def propagate_stages(experiment_root,verbose=False):
 # Worm stuff
 #==================================
 
-def calculate_ages_and_spans(self):
+def calculate_ages_and_spans(w):
         """Calculate ages and spans (in hours) from annotated stage data.
 
         Requires 'stage' and 'timestamp' timecourse data fields. Calculates the
@@ -88,8 +88,8 @@ def calculate_ages_and_spans(self):
             lifespan
             [xxx]_span for each non-egg, non-dead stage
         """
-        hours = (self.td.timestamp - self.td.timestamp[0]) / 3600
-        stages, indices = numpy.unique(self.td.stage, return_index=True)
+        hours = (w.td.timestamp - w.td.timestamp[0]) / 3600
+        stages, indices = numpy.unique(w.td.stage, return_index=True)
         order = indices.argsort()
         stages = stages[order]
         indices = indices[order]
@@ -103,16 +103,16 @@ def calculate_ages_and_spans(self):
         else:
             # no egg timepoint. Best guess for hatch time is the first larva-seen time.
             hatch_time = hours[0]
-        self.td.age = hours - hatch_time
+        w.td.age = hours - hatch_time
         transition_times = [hatch_time] + [hours[i-1:i+1].mean() for i in indices[1:]]
         transition_times = numpy.array(transition_times)
         spans = transition_times[1:] - transition_times[:-1]
         for stage, span in zip(stages[:-1], spans):
-            setattr(self, f'{stage}span', span)
+            setattr(w, f'{stage}span', span)
         try:
             adult_i = list(stages).index('adult')
             adult_time = transition_times[adult_i]
-            self.td.adult_age = hours - adult_time
+            w.td.adult_age = hours - adult_time
         except ValueError:
             # raise ValueError('No timepoint with "adult" label is present; cannot calculate adult_age.')
             pass
@@ -120,8 +120,8 @@ def calculate_ages_and_spans(self):
         if stages[-1] == 'dead':
             # raise ValueError('No timepoint with "dead" label is present; cannot calculate lifespan.')
             death_time = transition_times[-1]
-            self.td.ghost_age = hours - death_time
-            self.lifespan = death_time - hatch_time
+            w.td.ghost_age = hours - death_time
+            w.lifespan = death_time - hatch_time
 
 def collate_data(experiment_root, position_features=('stage_x', 'stage_y', 'starting_stage_z')):
     """Gather all .tsv files produced by measurement runs into a single file.
@@ -180,7 +180,7 @@ def _timecourse_plot_data(worms, feature, min_age=-numpy.inf, max_age=numpy.inf,
 
     time_ranges = worms.get_time_range(feature, min_age, max_age, age_feature)
     if color_by is None:
-        color_vals = [0]*len(times_range)
+        color_vals = [0]*len(time_ranges)
     else:
         color_vals = colorize.scale(worms.get_feature(color_by), output_max=1)
     colors = color_map(color_vals)
