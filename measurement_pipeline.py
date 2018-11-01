@@ -52,9 +52,9 @@ def make_movement_measurements(experiment_root, update_poses=True, adult_only=Tr
         to_measure = load_data.filter_annotations(annotations, elegant_filters.filter_excluded)
 
     if update_poses:
-        images = load_data.scan_experiment_dir(experiment_root, 
+        images = load_data.scan_experiment_dir(experiment_root,
             timepoint_filter=lambda position_n, timepoint_n: position_n in to_measure and timepoint_n in to_measure[position_n][1])
-    	segment_images.annotate_poses_from_masks(images, pathlib.Path(experiment_root) / 'derived_data' / 'mask', to_measure)
+        segment_images.annotate_poses_from_masks(images, pathlib.Path(experiment_root) / 'derived_data' / 'mask', to_measure)
 
     process_data.measure_worms(experiment_root, to_measure, measures, measurement_name)
 
