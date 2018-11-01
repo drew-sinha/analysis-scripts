@@ -14,9 +14,21 @@ def filter_by_kw(kw):
         return kw in position_annotations.get('notes')
     return filter
 
-def filter_by_age(min_age, max_age):
+def filter_by_age(min_age, max_age,adult_age=False):
+    '''
+        min_age, max_age - age in hours
+    '''
     def filter(position_name, position_annotations, timepoint_annotations):
-        return [timepoint_annotation.get('age')/24 >= min_age and timepoint_annotation.get('age')/24 <= max_age
+        ages = [info['age'] for info in timepoint_annotations.values()]
+        stages = [info['stage'] for info in timepoint_annotations.values()]
+        if adult_age:
+            starting_timestamp = ages[stages.index('adult')]
+            starting_age = starting_timestamp + min_age
+            stopping_age = starting_timestamp + max_age
+        else:
+            starting_age, stopping_age = min_age, max_age
+
+        return [timepoint_annotation.get('age') >= starting_age and timepoint_annotation.get('age') <= stopping_age
             for timepoint_annotation in timepoint_annotations.values()]
     return filter
 
@@ -121,5 +133,5 @@ def filter_from_elegant_dict(annotation_dict):
     '''
 
     def scan_filter(position_name, timepoint_name):
-        return position_name in annotation_dict[1] and timepoint_name in annotation_dict[1][position_name]
+        return position_name in annotation_dict and timepoint_name in annotation_dict[position_name][1]
     return scan_filter
