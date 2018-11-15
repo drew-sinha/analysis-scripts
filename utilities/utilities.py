@@ -2,7 +2,11 @@ import datetime
 import collections
 
 from IPython import display
-import pandas
+
+try:
+    import pandas
+except:
+    print('pandas not found; skipping loading')
 
 # Take a list and unfold it all the way
 def flatten_list(my_list, to_level=-1, this_level=0):
