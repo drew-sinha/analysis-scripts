@@ -1,13 +1,18 @@
 import multiprocessing
 import pathlib
 import collections
+import platform
 
 import numpy
 
 from elegant import load_data, segment_images
 
-import elegant_filters, elegant_hacks
-
+try:
+    import elegant_filters, elegant_hacks
+except:
+    import sys
+    sys.path.append(str(pathlib.Path(__file__).parent.parent))
+    import elegant_filters, elegant_hacks
 
 def annotate_poses(experiment_root, to_measure):
     images = load_data.scan_experiment_dir(experiment_root,
@@ -38,16 +43,29 @@ def update_poses(experiment_root):
 #===============================================
 # Faster acquisition code (201811 - experiment)
 
-def segment_faster_acquisition(experiment_root):
+def segment_faster_acquisition(experiment_root, multiprocess_mode=True):
     elegant_hacks.propagate_stages(experiment_root)
-
     experiment_annotations = load_data.read_annotations(experiment_root)
+
+    def host_filter(position_name, position_annotations, timepoint_annotations):
+        num_positions = len(experiment_annotations)
+        position_keys = list(experiment_annotations.keys())
+        if 'purple' in platform.node():
+            return position_name in position_keys[:int(num_positions/3)]
+        elif 'lugia' in platform.node():
+            return position_name in position_keys[int(num_positions/3):int(2*num_positions/3)]
+        else:
+            return position_name in position_keys[int(2*num_positions/3):]
+
     filters = [load_data.filter_excluded, elegant_filters.filter_adult_timepoints]
+    if multiprocess_mode: filters.append(host_filter)
     for filter in filters:
         experiment_annotations = load_data.filter_annotations(experiment_annotations, filter)
     timepoint_filter = elegant_filters.filter_from_elegant_dict(experiment_annotations)
 
     mask_root = pathlib.Path(experiment_root) / 'derived_data' / 'mask'
+    model = 'ZPL001_adultmodel.mat'
+
 
     positions = load_data.scan_all_images(experiment_root)
     filtered_positions = collections.OrderedDict()
