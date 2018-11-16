@@ -45,6 +45,11 @@ def filter_before_timepoint(timepoint):
         return [ann_timepoint <= timepoint for ann_timepoint in timepoint_annotations]
     return annotation_filter
 
+def filter_after_timepoint(timepoint):
+    def annotation_filter(position_name, position_annotations, timepoint_annotations):
+        return [ann_timepoint >= timepoint for ann_timepoint in timepoint_annotations]
+    return annotation_filter
+
 def filter_subsample_timepoints(experiment_dir, interval=3):
     '''
         interval - subsampling interval in hours
