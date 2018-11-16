@@ -1,11 +1,12 @@
 import multiprocessing
 import pathlib
+import collections
 
 import numpy
 
 from elegant import load_data, segment_images
 
-import elegant_filters
+import elegant_filters, elegant_hacks
 
 
 def annotate_poses(experiment_root, to_measure):
@@ -31,3 +32,43 @@ def update_poses(experiment_root):
         load_data.merge_annotations(experiment_annotations, annotations)
     load_data.write_annotations(experiment_root, experiment_annotations)
     raise Exception() # Keep this state around in case something doesn't work as advertised
+
+
+
+#===============================================
+# Faster acquisition code (201811 - experiment)
+
+def segment_faster_acquisition(experiment_root):
+    elegant_hacks.propagate_stages(experiment_root)
+
+    experiment_annotations = load_data.read_annotations(experiment_root)
+    filters = [load_data.filter_excluded, elegant_filters.filter_adult_timepoints]
+    for filter in filters:
+        experiment_annotations = load_data.filter_annotations(experiment_annotations, filter)
+    timepoint_filter = elegant_filters.filter_from_elegant_dict(experiment_annotations)
+
+    mask_root = pathlib.Path(experiment_root) / 'derived_data' / 'mask'
+
+    positions = load_data.scan_all_images(experiment_root)
+    filtered_positions = collections.OrderedDict()
+    for position_name, timepoints in positions.items():
+        filtered_timepoints = collections.OrderedDict()
+        for timepoint_name, timepoint_images in timepoints.items():
+            if timepoint_filter is None or timepoint_filter(position_name, timepoint_name):
+                channel_images = [image_path for channel, image_path in sorted(timepoint_images.items())]
+                if len(channel_images) > 0:
+                    filtered_timepoints[timepoint_name] = channel_images
+        if len(filtered_timepoints) > 0:
+            filtered_positions[position_name] = filtered_timepoints
+    positions = filtered_positions
+    print('done scanning')
+
+    process = segment_images.segment_positions(positions, model, mask_root, use_gpu=True,
+        overwrite_existing=False)
+    print('done segmenting')
+    print(f'segmenting errors: {process.stderr}')
+
+
+    mask_root = pathlib.Path(experiment_root) / 'derived_data' / 'mask'
+    with (mask_root / 'notes.txt').open('w') as notes_file:
+        notes_file.write(f'These masks were segmented with model {model}\n')
