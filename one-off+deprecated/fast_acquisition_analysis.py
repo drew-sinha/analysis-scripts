@@ -47,7 +47,7 @@ def update_poses(experiment_root):
 #==============================================
 # Make some movies
 def fast_acquisition_movie(position_root, output_filename, shrink_factor=4, framerate=5):
-    assert experiment_root.exists()
+    assert position_root.exists()
 
     image_paths = position_root.glob('*bf.png')
     experiment_annotations = load_data.read_annotations(position_root.parent)
