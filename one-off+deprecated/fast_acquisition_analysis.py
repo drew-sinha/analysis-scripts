@@ -6,13 +6,17 @@ import platform
 import numpy
 
 from elegant import load_data, segment_images
-
 try:
     import elegant_filters, elegant_hacks
+    from utilities import make_movie
 except:
     import sys
     sys.path.append(str(pathlib.Path(__file__).parent.parent))
+
     import elegant_filters, elegant_hacks
+    from utilities import make_movie
+from zplib.image import write_movie
+
 
 def annotate_poses(experiment_root, to_measure):
     images = load_data.scan_experiment_dir(experiment_root,
@@ -39,6 +43,23 @@ def update_poses(experiment_root):
     raise Exception() # Keep this state around in case something doesn't work as advertised
 
 
+
+#==============================================
+# Make some movies
+def fast_acquisition_movie(position_root, output_filename, shrink_factor=4, framerate=5):
+    assert experiment_root.exists()
+
+    image_paths = position_root.glob('*bf.png')
+    experiment_annotations = load_data.read_annotations(position_root.parent)
+    position_annotations, timepoint_annotations = experiment_annotations[position_root.name]
+    adult_timepoint = [timepoint
+        for timepoint, timepoint_info in timepoint_annotations.items()
+        if timepoint_info.get('stage') == 'adult'][0]
+
+    image_paths = [path for path in image_paths if path.name.split()[0] >= adult_timepoint]
+    image_generator = write_movie.generate_images_from_files(image_paths)
+    image_generator = write_movie.shrink(make_movie.yield_rgb(image_generator), factor=shrink_factor)
+    write_movie.write_movie(image_generator, output_file, framerate=framerate)
 
 #===============================================
 # Faster acquisition code (201811 - experiment)
