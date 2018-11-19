@@ -5,7 +5,7 @@ import platform
 
 import numpy
 
-from elegant import load_data, segment_images
+from elegant import load_data, segment_images, process_images
 try:
     import elegant_filters, elegant_hacks
     from utilities import make_movie
@@ -49,7 +49,7 @@ def update_poses(experiment_root):
 def fast_acquisition_movie(position_root, output_file, shrink_factor=4, framerate=5):
     assert position_root.exists()
 
-    image_paths = position_root.glob('*bf.png')
+    image_paths = sorted(position_root.glob('*bf.png'))
     experiment_annotations = load_data.read_annotations(position_root.parent)
     position_annotations, timepoint_annotations = experiment_annotations[position_root.name]
     adult_timepoint = [timepoint
@@ -58,8 +58,18 @@ def fast_acquisition_movie(position_root, output_file, shrink_factor=4, framerat
 
     image_paths = [path for path in image_paths if path.name.split()[0] >= adult_timepoint]
     image_generator = write_movie.generate_images_from_files(image_paths)
-    image_generator = write_movie.shrink(make_movie.yield_rgb(image_generator), factor=shrink_factor)
+    #bob = image_generator.copy()
+    #raise Exception()
+    #rgb_generator = make_movie.yield_rgb(image_generator)
+    #image_generator = write_movie.shrink(make_movie.yield_rgb(image_generator), factor=shrink_factor)
+    image_generator = write_movie.shrink(image_generator, factor=shrink_factor, fast=True)
+    #raise Exception()
+    #image_generator = make_movie.shrink(image_generator, factor=shrink_factor)
+    #image_generator = (process_images.pin_image_mode(image[:,:,0]) for image in image_generator)
+    #raise Exception()
+    #image_generator = make_movie.yield_rgb(image_generator)
     write_movie.write_movie(image_generator, output_file, framerate=framerate)
+    raise Exception()
 
 #===============================================
 # Faster acquisition code (201811 - experiment)
