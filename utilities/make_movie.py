@@ -6,24 +6,31 @@ import freeimage
 
 def yield_rgb(image_generator):
     for image in image_generator:
+        if image.ndim == 2:
+            image = image[:,:,np.newaxis]
         yield np.repeat(image, 3, axis=2)
 
-#def shrink(image_generator, factor=2, fast=False):
-    #"""Shrink images produced by a generator by the specified factor.
+def shrink(image_generator, factor=2, fast=False):
+    from zplib.image import pyramid
+    """Shrink images produced by a generator by the specified factor.
+    Parameters:
+        factor: amount to shrink the image by (fold-change)
+        fast: if True and if factor is an integer, perform no smoothing.
+            If False, smooth the image before downsampling to avoid aliasing.
+    """
+    # can only do fast downsampling if fast was requested AND the factor is integral
+    fast = fast and int(factor) == factor
+    for image in image_generator:
+        if fast:
+            if image.ndims == 3:
+                yield image[::int(factor), ::int(factor),:]
+            else:
+                yield image[::int(factor), ::int(factor)]
+        else:
+            # TODO handle 3D images/ change color tint to properly handle 3d images
+            yield pyramid.pyr_down(image, factor).astype(np.uint8)
 
-    #Parameters:
-        #factor: amount to shrink the image by (fold-change)
-        #fast: if True and if factor is an integer, perform no smoothing.
-            #If False, smooth the image before downsampling to avoid aliasing.
-    #"""
-    #if fast:
-        #fast = factor = int(factor) # Need this....?
-    #go_fast = fast and int_factor == factor
-    #for image in image_generator:
-        #if go_fast:
-            #yield image[::int(factor), ::int(factor)]
-        #else:
-            #yield pyramid.pyr_down(image, factor).astype(numpy.uint8)
+
 
 def double_image_layout(image_generator1, image_generator2):
     for image1, image2 in zip(image_generator1, image_generator2):
