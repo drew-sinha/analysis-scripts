@@ -46,10 +46,10 @@ def update_poses(experiment_root):
 
 #==============================================
 # Make some movies
-def fast_acquisition_movie(position_root, output_file, shrink_factor=4, framerate=5):
+def fast_acquisition_movie(position_root, output_file, shrink_factor=4, framerate=5,glob_str='*bf.png'):
     assert position_root.exists()
 
-    image_paths = sorted(position_root.glob('*bf.png'))
+    image_paths = sorted(position_root.glob(glob_str))
     experiment_annotations = load_data.read_annotations(position_root.parent)
     position_annotations, timepoint_annotations = experiment_annotations[position_root.name]
     adult_timepoint = [timepoint
