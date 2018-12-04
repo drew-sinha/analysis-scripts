@@ -9,7 +9,7 @@ from ris_widget import ris_widget
 from elegant import load_data, worm_widths
 from elegant.gui import experiment_annotator, stage_field, pose_annotation
 
-import measurement_pipeline
+import elegant_hacks
 
 def check_stage_annotations(annotations, stages):
     """Check that a set of annotations are complete
@@ -65,11 +65,12 @@ if __name__ == "__main__":
 
     show_poses = False
     adult_only = False
+    annotation_dir = 'annotations'
 
 
     # additional_filters = [elegant_filters.filter_by_age(9,10)]
-    additional_filters = [elegant_filters.filter_subsample_timepoints(expt_dir)]#elegant_filters.filter_range_before_stage(expt_dir, 3)] #load_data.filter_excluded] #[select_worms(expt_dir)] # [elegant_filters.filter_adult_dead_timepoints]#load_data.filter_excluded]
-    channels = ['bf'] #, 'green_yellow_excitation_autofluorescence']
+    additional_filters = [] #load_data.filter_excluded, elegant_filters.filter_adult_dead_timepoints] #, elegant_filters.filter_live_animals, elegant_filters.filter_after_timepoint('2018-10-10t1529')] #, , elegant_filters.filter_after_timepoint('2018-11-12t1200')  #[elegant_filters.filter_subsample_timepoints(expt_dir)]#elegant_filters.filter_range_before_stage(expt_dir, 3)] #load_data.filter_excluded] #[select_worms(expt_dir)] # [elegant_filters.filter_adult_dead_timepoints]#load_data.filter_excluded]
+    channels = ['bf', 'gfp', 'autofluorescence'] #, 'green_yellow_excitation_autofluorescence']
 
     try:
         rw
@@ -80,9 +81,9 @@ if __name__ == "__main__":
         rw.annotator.close()
         del(rw.annotator)
 
-    measurement_pipeline.propagate_stages(expt_dir)
+    elegant_hacks.propagate_stages(expt_dir)
 
-    experiment_annotations = load_data.read_annotations(expt_dir)
+    experiment_annotations = load_data.read_annotations(expt_dir, annotation_dir=annotation_dir)
     # experiment_annotations = load_data.filter_annotations(experiment_annotations, load_data.filter_excluded)
 
     if adult_only:
@@ -110,4 +111,4 @@ if __name__ == "__main__":
         annotation_fields.append(pa)
 
     ea = experiment_annotator.ExperimentAnnotator(rw, expt_dir.parts[-1],
-            expt_pos, annotation_fields)
+            expt_pos, annotation_fields,annotation_dir=annotation_dir)
