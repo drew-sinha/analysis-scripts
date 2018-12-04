@@ -14,29 +14,18 @@ import plotting_tools
 # Preprocessing and reading data
 #==================================
 
-def read_annotations(experiment_root, annotation_subdir='annotations'):
-    """Read annotation data from an experiment directory.
-    Parameters:
-        experiment_root: the path to an experimental directory.
-        annotation_subdir: subdirectory containing annotations of interest
-    Returns: an ordered dictionary mapping position names to annotations,
-        where each annotation is a (position_annotations, timepoint_annotations)
-        pair. In this, position_annotations is a dict of "global" per-position
-        annotation information, while timepoint_annotations is an ordered dict
-        mapping timepoint names to annotation dictionaries (which themselves map
-        strings to annotation data).
-    Example:
-        positions = read_annotations('my_experiment')
-        position_annotations, timepoint_annotations = positions['009']
-        life_stage = timepoint_annotations['2017-04-23t0122']['stage']
-    """
-    experiment_root = pathlib.Path(experiment_root)
-    annotation_root = experiment_root / annotation_subdir
-    positions = collections.OrderedDict()
-    for annotation_file in sorted(annotation_root.glob('*.pickle')):
-        worm_name = annotation_file.stem
-        positions[worm_name] = load_data.read_annotation_file(annotation_file)
-    return positions
+def replace_annotation(experiment_root, annotation_type, old_annotation_values, new_annotation_value, annotation_dir='annotations'):
+    if not isinstance(old_annotation_values, collections.Iterable):
+        old_annotation_values = list(old_annotation_values)
+    if isinstance(old_annotation_values, str):
+        old_annotation_values = [old_annotation_values]
+
+    experiment_annotations = load_data.read_annotations(experiment_root, annotation_dir=annotation_dir)
+    for position, position_annotations in experiment_annotations.items():
+        for timepoint, timepoint_annotations in position_annotations[1].items():
+            if annotation_type in timepoint_annotations and timepoint_annotations[annotation_type] in old_annotation_values:
+                timepoint_annotations[annotation_type] = new_annotation_value
+    load_data.write_annotations(experiment_root, experiment_annotations, annotation_dir=annotation_dir)
 
 def propagate_stages(experiment_root,verbose=False):
     '''
