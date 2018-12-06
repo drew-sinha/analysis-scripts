@@ -7,7 +7,8 @@ from ris_widget.ris_widget import RisWidget
 from ris_widget.qwidgets.flipbook import ImageList, Image
 from ris_widget.point_list_picker import PointListPicker
 #from ris_widget.examples import SimplePointPicker
-from simple_point_picker import SimplePointPicker
+# from simple_point_picker import SimplePointPicker
+from ris_widget.overlay import point_set
 
 from skimage.morphology import binary_erosion,label
 from skimage.measure import find_contours
@@ -101,17 +102,21 @@ def perform_alignment(scope,expt_dir,rw):
     #rw.layers[0].tint=[255,232,185,0.5]
     #rw.layers[1].tint = [270,70,255,0.5]
     # my_ptpicker = PointListPicker(rw.main_view,rw.main_scene.layer_stack_item)
-    my_ptpicker = SimplePointPicker(rw.main_view,rw.main_scene.layer_stack_item)
+    # my_ptpicker = SimplePointPicker(rw.main_view,rw.main_scene.layer_stack_item)
+    my_ptpicker = point_set.PointSet(rw)
 
     ip_input('Click on first landmark in old and new images; press Enter when done.')
     before_first_pos, after_first_pos = [np.array(point) for point in my_ptpicker.points]   # IN PIXELS
     print('Acquired first landmark')
-    my_ptpicker.points = []
+    # my_ptpicker.points = []
+    for point in my_ptpicker.points: point.remove()
 
     ip_input('Click on second landmark in old and new images; press Enter when done.')
     before_next_pos, after_next_pos = [np.array(point) for point in my_ptpicker.points]
     print('Acquired second landmark')
-    my_ptpicker.points = []
+    # my_ptpicker.points = []
+    for point in my_ptpicker.points: point.remove()
+
 
     xy_offset = after_scope_pos[:2]+after_first_pos*px_conversion - (before_scope_pos[:2]+before_first_pos*px_conversion)
     xy_offset = xy_offset*[-1,1]    #Correct for directionality of stage on ISCOPE    CHECK THIS ON SCOPE!!!!!!!!!!!
