@@ -1,11 +1,24 @@
 import pathlib
-from elegant import load_data
+from elegant import load_data, segment_images
 from zplib import datafile
 
 import json
 import time
 
-def reset_positions(scope, experiment_dir, *annotation_filters):
+def poll_positions(scope, experiment_metadata, positions):
+    new_positions = {}
+    for position_name in positions:
+        scope.stage.x = experiment_metadata[position_name][0]
+        scope.stage.y = experiment_metadata[position_name][1]
+        
+        try:
+            input(f'Press enter for position to replace {position_name} ; ctrl-c to finish')
+            new_positions[position_name] = scope.stage.position
+        except KeyboardInterrupt:
+            break
+    return new_positions
+
+def reset_positions(scope, experiment_dir, *annotation_filters, positions=None):
     '''
     Call with annotation filters like so:
     reset_position.reset_positions(scope, experiment_dir, elegant_filters.filter_excluded, elegant_filters.filter_live_animals)
@@ -14,22 +27,13 @@ def reset_positions(scope, experiment_dir, *annotation_filters):
     experiment_dir = pathlib.Path(experiment_dir)
     print(f'Traversing {experiment_dir.name}')
     metadata = load_data.read_metadata(experiment_dir)
-    new_positions = {}
     if annotation_filters:
         experiment_annotations = load_data.read_annotations(experiment_dir)
         for filter in annotation_filters:
             experiment_annotations = load_data.filter_annotations(experiment_annotations, filter)
-    
-    for position_name, position in metadata['positions'].items():
-        if annotation_filters and position_name not in experiment_annotations: continue
-        
-        scope.stage.x = position[0]
-        scope.stage.y = position[1]
-        try:
-            input(f'Press enter for position to replace {position_name} ; ctrl-c to finish')
-            new_positions[position_name] = scope.stage.position
-        except KeyboardInterrupt:
-            break
+        positions = experiment_annotations.keys()
+
+    new_positions = poll_positions(scope, metadata, positions)
 
     if new_positions:
         try:
@@ -45,3 +49,32 @@ def reset_positions(scope, experiment_dir, *annotation_filters):
             pass
     else:
         print('No positions found to reset')
+
+def automatic_reset_positions(scope, experiment_dir):
+    experiment_dir = pathlib.Path(experiment_dir)
+    print(f'Automatically reseting positions for {experiment_dir.name}')
+    
+    metadata = load_data.read_metadata(experiment_dir)
+    experiment_annotations = load_data.read_annotations(experiment_dir)
+    experiment_annotations = load_data.filter_annotations(experiment_annotations, load_data.filter_excluded)
+    experiment_annotations = load_data.filter_annotations(experiment_annotations, elegant_filters.filter_live_animals)
+    base_position = list(experiment_annotation.keys())[0]
+
+    farthest_position, max_distance = base_position, 0
+    for position in experiment_annotations:
+        distance = ((numpy.array(metadata['positions'][base_position][:-1]) - numpy.array(metadata['positions'][position][:-1]))**2).sum()**0.5
+        if distance > max_distance:
+            max_distance = distance
+            farthest_position = position
+    positions = [base_position, farthest_position]
+    
+    old_coordinates = {position: metadata['positions'][position] for position in positions}
+    new_coordinates = poll_positions(scope, metadata, positions)
+    
+    offset = numpy.array(new_coordinates[base_position][:-1]) - numpy.array(old_coordinates[base_position][:-1])
+    
+    adjusted_coordinates = {position: list(numpy.array(old_coordinates[position]) + offset) for position in old_coordinates}
+
+    adjusted_coordinates = experiment_metadata['positions'].copy()
+    adjusted_coordinates = {position_coordinates[0] + offset[0]
+
