@@ -9,6 +9,7 @@ from elegant import worm_data, load_data
 from zplib.image import colorize
 
 import plotting_tools
+import elegant_filters
 
 #=================================
 # Preprocessing and reading data
@@ -60,7 +61,27 @@ def propagate_stages(experiment_root,verbose=False):
         if verbose and changed: print(f'{position_name}: {changed}')
     annotations = load_data.write_annotations(experiment_root, annotations)
 
-#====================
+#==================================
+# Image loading
+#==================================
+def load_derived_images(experiment_root, derived_dir, *additional_filters):
+    experiment_root = pathlib.Path(experiment_root)
+    experiment_annotations = load_data.read_annotations(experiment_root)
+    experiment_annotations = load_data.filter_annotations(experiment_annotations, load_data.filter_excluded)
+
+    for filter in additional_filters:
+        experiment_annotations = load_data.filter_annotations(experiment_annotations, filter)
+    image_filter = elegant_filters.filter_from_elegant_dict(experiment_annotations)
+
+    experiment_images = load_data.scan_experiment_dir(experiment_root, timepoint_filter=image_filter)
+    for position, position_images in experiment_images.items():
+        for timepoint, timepoint_images in position_images.items():
+            timepoint_images.append(experiment_root / 'derived_data' / derived_dir / position / f'{timepoint} bf.png')
+
+    return experiment_images
+
+
+#==================================
 # Worm stuff
 #==================================
 
