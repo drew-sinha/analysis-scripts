@@ -2,10 +2,11 @@ import pathlib
 import numpy as np
 import freeimage
 import json
-import zplib.util
+#import zplib.util
 from ris_widget.ris_widget import RisWidget
-from ris_widget.qwidgets.flipbook import ImageList, Image
-from ris_widget.point_list_picker import PointListPicker
+from ris_widget.image import Image
+from ris_widget.qwidgets.flipbook import ImageList
+#from ris_widget.point_list_picker import PointListPicker
 #from ris_widget.examples import SimplePointPicker
 # from simple_point_picker import SimplePointPicker
 from ris_widget.overlay import point_set
@@ -14,7 +15,8 @@ from skimage.morphology import binary_erosion,label
 from skimage.measure import find_contours
 import skimage.filters
 
-from zplib.util import json_encode_legible_to_file
+#from zplib.util import json_encode_legible_to_file
+from zplib import datafile
 
 import matplotlib.pyplot as plt
 
@@ -48,7 +50,8 @@ def add_event_to_metadata(expt_dir,event):
 def take_img(scope,expt_dir,poll=True):
     if poll:
         try:
-            ip_input('Press enter when position acquired; press ctrl-c to abort.')
+            #ip_input('Press enter when position acquired; press ctrl-c to abort.')
+            input('Press enter when position acquired; press ctrl-c to abort.')
         except KeyboardInterrupt:
             raise
     position = scope.stage.position
@@ -71,11 +74,12 @@ def make_align_img(scope,expt_dir):
     with (expt_dir/'experiment_metadata.json').open('r') as mdata_file:
         metadata = json.load(mdata_file)
     with (expt_dir/f'experiment_metadata_noalign_{time_label}.json').open('w') as mdata_file:
-        json_encode_legible_to_file(metadata,mdata_file)
+        datafile.json_encode_legible_to_file(metadata,mdata_file)
 
     metadata['align_position'] = scope_pos
     with (expt_dir/'experiment_metadata.json').open('w') as mdata_file:
-        json_encode_legible_to_file(metadata, mdata_file)
+        datafile.json_encode_legible_to_file(metadata, mdata_file)
+    (expt_dir / 'calibrations').mkdir(exist_ok=True)
     freeimage.write(my_image,
         expt_dir/'calibrations'/'align_image.png')
 
@@ -105,7 +109,8 @@ def perform_alignment(scope,expt_dir,rw):
     # my_ptpicker = SimplePointPicker(rw.main_view,rw.main_scene.layer_stack_item)
     my_ptpicker = point_set.PointSet(rw)
 
-    ip_input('Click on first landmark in old and new images; press Enter when done.')
+    #ip_input('Click on first landmark in old and new images; press Enter when done.')
+    input('Click on first landmark in old and new images; press Enter when done.')
     before_first_pos, after_first_pos = [np.array(point) for point in my_ptpicker.points]   # IN PIXELS
     print('Acquired first landmark')
     # my_ptpicker.points = []
@@ -170,9 +175,9 @@ def perform_alignment(scope,expt_dir,rw):
     ip_input('Press anything if last well looks aligned; ctrl-c to abort')
 
     with (expt_dir/'experiment_metadata_oldprealignment.json').open('w') as mdata_file:
-        json_encode_legible_to_file(old_metadata, mdata_file)
+        datafile.json_encode_legible_to_file(old_metadata, mdata_file)
     with (expt_dir/'experiment_metadata.json').open('w') as mdata_file:
-        json_encode_legible_to_file(metadata, mdata_file)
+        datafile.json_encode_legible_to_file(metadata, mdata_file)
     freeimage.write(before_img,
         str(expt_dir/'calibrations'/'old_align_image.png'))
     freeimage.write(after_img,
