@@ -4,7 +4,7 @@ import pickle
 import pathlib
 import time
 
-from elegant import process_experiment, load_data, segment_images, process_data
+from elegant import process_experiment, load_data, segment_images, process_data, worm_widths
 
 import elegant_hacks
 
@@ -15,7 +15,7 @@ def filter_adult_images(experiment_root):
         return not experiment_annotations[position_name][0]['exclude'] and experiment_annotations[position_name][1][timepoint_name].get('stage') == 'adult'
     return scan_filter
 
-def process_experiment_with_filter(experiment_root, model, image_filter, mask_root=None):
+def process_experiment_with_filter(experiment_root, model, image_filter, mask_root=None, overwrite_existing=False):
     '''
          image_filter - filter for scan_experiment_dir
     '''
@@ -32,16 +32,23 @@ def process_experiment_with_filter(experiment_root, model, image_filter, mask_ro
     print(f'scanning done after {(scan_t-start_t)} s') #3 s once, 80s another, taking a while to load up the segmenter....
     process = segment_images.segment_positions(positions, model, mask_root, use_gpu=True,
         overwrite_existing=False)
-    print(f'segmenting errors: {process.stderr}')
+    if process.stderr:
+        raise Exception(f'Errors during segmentation: {process.stderr}')
     segment_t = time.time()
     print(f'segmenting done after {(segment_t-scan_t)} s')
-
 
     mask_root = pathlib.Path(experiment_root) / 'derived_data' / 'mask'
     with (mask_root / 'notes.txt').open('w') as notes_file:
         notes_file.write(f'These masks were segmented with model {model}\n')
 
-    process_data.annotate(experiment_root, [process_data.annotate_poses]) # ~5-6 hr for single bf
+    annotations = load_data.read_annotations(experiment_root)
+    metadata = load_data.read_metadata(experiment_root)
+    age_factor = metadata.get('age_factor', 1)
+    width_estimator = worm_widths.WidthEstimator.from_experiment_metadata(metadata, age_factor)
+    segment_images.annotate_poses_from_masks(positions, mask_root, annotations,
+        overwrite_existing, width_estimator)
+    load_data.write_annotations(experiment_root, annotations)
+
     annotation_t = time.time()
     print(f'annotation done after {(annotation_t - segment_t)} s') # ~3.5 hr
 
@@ -54,5 +61,4 @@ if __name__ == "__main__":
     else:
         model = 'default_CF.mat'
 
-    #process_experiment.segment_images(experiment_root,segmenter_path,overwrite_existing=True) # If you stop the job early, the largest component does get pulled out
     process_experiment.segment_experiment(experiment_root,model,overwrite_existing=False) # New elegant no longer finds largest components during segmentation; instead this now happens when annotations are updated.
