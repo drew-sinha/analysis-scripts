@@ -35,20 +35,6 @@ def check_stage_annotations(annotations, stages):
         annotations,
         select_by_stage_annotation) # Get positions whose stages are not all annotated
 
-def scan_late_life(expt_dir, datestr):
-    annotations = load_data.read_annotations(expt_dir)
-    good_annotations = load_data.filter_positions(annotations, load_data.filter_excluded)
-    def latelife_filter(position_name, timepoint_name):
-        return timepoint_name > datestr and position_name in good_annotations
-    return load_data.scan_experiment_dir(expt_dir, timepoint_filter=latelife_filter)
-
-def scan_latest(expt_dir):
-    annotations = load_data.read_annotations(expt_dir)
-    good_annotations = load_data.filter_annotations(annotations, load_data.filter_excluded)
-    def latelife_filter(position_name, timepoint_name):
-        return position_name in good_annotations and timepoint_name > good_annotations[position_name][0]['__last_timepoint_annotated__']
-    return load_data.scan_experiment_dir(expt_dir, timepoint_filter=latelife_filter)
-
 def check_for_alive(expt_dir):
     annotations = load_data.read_annotations(expt_dir)
     good_annotations = load_data.filter_annotations(annotations, load_data.filter_excluded)
@@ -69,8 +55,8 @@ if __name__ == "__main__":
 
 
     # additional_filters = [elegant_filters.filter_by_age(9,10)]
-    additional_filters = [] #load_data.filter_excluded, elegant_filters.filter_adult_dead_timepoints] #, elegant_filters.filter_live_animals, elegant_filters.filter_after_timepoint('2018-10-10t1529')] #, , elegant_filters.filter_after_timepoint('2018-11-12t1200')  #[elegant_filters.filter_subsample_timepoints(expt_dir)]#elegant_filters.filter_range_before_stage(expt_dir, 3)] #load_data.filter_excluded] #[select_worms(expt_dir)] # [elegant_filters.filter_adult_dead_timepoints]#load_data.filter_excluded]
-    channels = ['bf', 'gfp', 'autofluorescence'] #, 'green_yellow_excitation_autofluorescence']
+    additional_filters = [load_data.filter_excluded,elegant_filters.filter_live_animals, elegant_filters.filter_adult_timepoints] #, , elegant_filters.filter_after_timepoint('2018-10-10t1529')] #, , elegant_filters.filter_after_timepoint('2018-11-12t1200')  #[elegant_filters.filter_subsample_timepoints(expt_dir)]#elegant_filters.filter_range_before_stage(expt_dir, 3)] #load_data.filter_excluded] #[select_worms(expt_dir)] # [elegant_filters.filter_adult_dead_timepoints]#load_data.filter_excluded]
+    channels = ['bf'] #, 'gfp', 'autofluorescence'] #, 'green_yellow_excitation_autofluorescence']
 
     try:
         rw

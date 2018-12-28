@@ -100,7 +100,19 @@ def filter_range_before_stage(experiment_dir, time_radius,stage='adult'):
         return [timepoint in timepoints_to_load[position_name] for timepoint in timepoint_annotations]
     return filter
 
+def compose_timepoint_filters(*filters):
+    """Creates a overall timepoint filter that is the composition of AND'ing multiple individual timepoint filters.
 
+    Parameters:
+        filters: Iterable of timepoint filters (with standard load_data.filter_annotations signature)
+    """
+
+    def composed_filter(position_name, position_annotations, timepoint_annotations):
+        return_val = True
+        for filter in filters:
+            return_val &= filter(position_name, position_annotations, timepoint_annotations)
+        return return_val
+    return composed_filter
 
 '''
 Examples for custom misc. filtering
@@ -120,6 +132,13 @@ def filter_from_elegant_worms(worms):
 #===================================
 # scan_experiment_dir filters
 #==================================
+
+def filter_latest_images(experiment_root):
+    annotations = load_data.read_annotations(experiment_root)
+    good_annotations = load_data.filter_annotations(annotations, load_data.filter_excluded)
+    def latelife_filter(position_name, timepoint_name):
+        return position_name in good_annotations and timepoint_name > good_annotations[position_name][0]['__last_timepoint_annotated__']
+    return load_data.scan_experiment_dir(expt_dir, timepoint_filter=latelife_filter)
 
 def filter_adult_images(experiment_root):
     experiment_annotations = load_data.read_annotations(experiment_root)
