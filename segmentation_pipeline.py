@@ -15,7 +15,7 @@ def filter_adult_images(experiment_root):
         return not experiment_annotations[position_name][0]['exclude'] and experiment_annotations[position_name][1][timepoint_name].get('stage') == 'adult'
     return scan_filter
 
-def process_experiment_with_filter(experiment_root, model, image_filter, mask_root=None, overwrite_existing=False):
+def process_experiment_with_filter(experiment_root, model, image_filter, mask_root=None, overwrite_existing=False, channels='bf'):
     '''
          image_filter - filter for scan_experiment_dir
     '''
@@ -27,13 +27,13 @@ def process_experiment_with_filter(experiment_root, model, image_filter, mask_ro
 
     start_t = time.time()
     positions = load_data.scan_experiment_dir(experiment_root,
-        timepoint_filter=image_filter)
+        timepoint_filter=image_filter, channels=channels)
     scan_t = time.time()
     print(f'scanning done after {(scan_t-start_t)} s') #3 s once, 80s another, taking a while to load up the segmenter....
     process = segment_images.segment_positions(positions, model, mask_root, use_gpu=True,
         overwrite_existing=False)
     if process.stderr:
-        raise Exception(f'Errors during segmentation: {process.stderr}')
+        print(f'Errors during segmentation: {process.stderr}') #raise Exception)
     segment_t = time.time()
     print(f'segmenting done after {(segment_t-scan_t)} s')
 
