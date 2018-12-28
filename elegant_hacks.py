@@ -61,6 +61,40 @@ def propagate_stages(experiment_root,verbose=False):
         if verbose and changed: print(f'{position_name}: {changed}')
     annotations = load_data.write_annotations(experiment_root, annotations)
 
+
+def check_stage_annotations(annotations, stages):
+    """Check that a set of annotations are complete
+
+        Parameters
+            annotations - An OrderedDict mapping position names to corresponding
+                annotations (returned by load_data.read_annotations)
+            stages - A iterable containing the stages that should be annotated
+                for this experiment (e.g. could be ('larva','adult','dead')
+                for a complete experiment, but only ('larva', 'adult') for
+                an ongoing experiment)
+        Returns
+            bad_positions - a list of positions with incomplete annotations
+    """
+
+    # Create a suitable function to use with filter_positions using a closure
+    def select_by_stage_annotation(position_name,position_annotations, timepoint_annotations):
+        stage_annotations = [timepoint_annotation.get('stage','')
+            for timepoint_annotation in timepoint_annotations.values()]
+        return all([stage in stage_annotations for stage in stages])
+
+    return load_data.filter_annotations(
+        annotations,
+        select_by_stage_annotation) # Get positions whose stages are not all annotated
+
+def check_for_alive(expt_dir):
+    annotations = load_data.read_annotations(expt_dir)
+    good_annotations = load_data.filter_annotations(annotations, load_data.filter_excluded)
+    dead_annotations = check_stage_annotations(good_annotations, ['dead'])
+
+    print(f'{len(good_annotations)-len(dead_annotations)}/{len(good_annotations)} still alive')
+
+    return set(good_annotations.keys()).difference(set(dead_annotations.keys()))
+
 #==================================
 # Image loading
 #==================================
