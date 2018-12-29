@@ -4,15 +4,14 @@ from elegant import load_data
 #==============================
 # annotation filters
 #=============================
-def filter_adult_timepoints(position_name, position_annotations, timepoint_annotations):
-    # if not load_data.filter_excluded(position_name, position_annotations, timepoint_annotations):
-    #     return False
-    return [tp.get('stage') == 'adult' for tp in timepoint_annotations.values()]
 
 def filter_by_kw(kw):
     def filter(position_name, position_annotations, timepoint_annotations):
         return kw in position_annotations.get('notes')
     return filter
+
+def filter_live_animals(position_name, position_annotations, timepoint_annotations):
+    return not any([tp.get('stage') == 'dead' for tp in timepoint_annotations.values()])
 
 def filter_by_age(min_age, max_age,adult_age=False):
     '''
@@ -32,13 +31,19 @@ def filter_by_age(min_age, max_age,adult_age=False):
             for timepoint_annotation in timepoint_annotations.values()]
     return filter
 
-def filter_adult_dead_timepoints(position_name, position_annotations, timepoint_annotations):
-    # if not load_data.filter_excluded(position_name, position_annotations, timepoint_annotations):
-    #     return False
-    return [(tp.get('stage') == 'adult') or (tp.get('stage') == 'dead') for tp in timepoint_annotations.values()]
+def filter_by_stage(stages):
+    if type(stages) is str:
+        stages = [stages]
 
-def filter_live_animals(position_name, position_annotations, timepoint_annotations):
-    return not any([tp.get('stage') == 'dead' for tp in timepoint_annotations.values()])
+    def stage_filter(position_name, position_annotations, timepoint_annotations):
+        return [tp.get('stage') in stages for tp in timepoint_annotations.values()]
+    return stage_filter
+
+def filter_living_timepoints(position_name, position_annotations, timepoint_annotations):
+    return (
+        not load_data.filter_excluded(position_name, position_annotations, timepoint_annotations) or
+        [tp.get('stage') not in ['egg', 'dead'] for tp in timepoint_annotations.values()]
+    )
 
 def filter_before_timepoint(timepoint):
     def annotation_filter(position_name, position_annotations, timepoint_annotations):

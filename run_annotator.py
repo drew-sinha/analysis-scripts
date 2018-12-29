@@ -14,7 +14,7 @@ if __name__ == "__main__":
     show_poses = False
     annotation_dir = 'annotations'
 
-    timepoint_filters = [load_data.filter_excluded,elegant_filters.filter_live_animals, elegant_filters.filter_adult_timepoints] #, , elegant_filters.filter_after_timepoint('2018-10-10t1529')] #, , elegant_filters.filter_after_timepoint('2018-11-12t1200')  #[elegant_filters.filter_subsample_timepoints(expt_dir)]#elegant_filters.filter_range_before_stage(expt_dir, 3)] #load_data.filter_excluded] #[select_worms(expt_dir)] # [elegant_filters.filter_adult_dead_timepoints]#load_data.filter_excluded]
+    timepoint_filters = [load_data.filter_excluded,elegant_filters.filter_live_animals, elegant_filters.filter_by_stage('adult')] #, , elegant_filters.filter_after_timepoint('2018-10-10t1529')] #, , elegant_filters.filter_after_timepoint('2018-11-12t1200')  #[elegant_filters.filter_subsample_timepoints(expt_dir)]#elegant_filters.filter_range_before_stage(expt_dir, 3)] #load_data.filter_excluded] #[select_worms(expt_dir)] # [elegant_filters.filter_adult_dead_timepoints]#load_data.filter_excluded]
     channels = ['bf'] #, 'gfp', 'autofluorescence'] #, 'green_yellow_excitation_autofluorescence'] # First one is the one used to load poses when specified.
 
     try:
