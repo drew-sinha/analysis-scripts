@@ -115,7 +115,7 @@ def compose_timepoint_filters(*filters):
     def composed_filter(position_name, position_annotations, timepoint_annotations):
         return_val = True
         for filter in filters:
-            return_val &= filter(position_name, position_annotations, timepoint_annotations)
+            return_val &= numpy.array(filter(position_name, position_annotations, timepoint_annotations)) # Takes care of single boolean and boolean array return values
         return return_val
     return composed_filter
 
