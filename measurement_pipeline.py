@@ -2,7 +2,7 @@ import pathlib
 import sys
 
 from elegant import load_data, process_data,worm_data, segment_images
-import elegant_filters
+import elegant_filters, elegant_hacks
 
 def make_basic_measurements(experiment_root):
     measures = [process_data.BasicMeasurements()] #, process_data.PoseMeasurements(microns_per_pixel=5)]
@@ -18,10 +18,10 @@ def make_movement_measurements(experiment_root, update_poses=True, adult_only=Tr
     measurement_name = 'pose_measures'
 
     annotations = load_data.read_annotations(experiment_root)
-    to_measure = load_data.filter_annotations(annotations, elegant_filters.filter_excluded)
+    to_measure = load_data.filter_annotations(annotations, load_data.filter_excluded)
 
     if adult_only:
-        to_measure = load_data.filter_annotations(annotations, elegant_filters.filter_by_stage('adult'))
+        to_measure = load_data.filter_annotations(to_measure, elegant_filters.filter_by_stage('adult'))
 
     if update_poses:
         images = load_data.scan_experiment_dir(experiment_root,
@@ -35,6 +35,7 @@ def make_af_measurements(experiment_root, fl_measurement_name='green_yellow_exci
     measurement_name = 'autofluorescence_measures'
 
     annotations = load_data.read_annotations(experiment_root)
+    annotations = load_data.filter_excluded(annotations)
     to_measure = load_data.filter_annotations(annotations, elegant_filters.filter_by_stage('adult'))
     process_data.measure_worms(experiment_root, to_measure, measures, measurement_name)
 
@@ -64,10 +65,7 @@ def make_multipass_movement_measurements(experiment_root, update_poses=True, adu
     measurement_name = 'multipass_measures'
 
     annotations = load_data.read_annotations(experiment_root)
-    to_measure = load_data.filter_annotations(annotations, elegant_filters.filter_excluded)
-
-    if adult_only:
-        to_measure = load_data.filter_annotations(annotations, elegant_filters.filter_by_stage('adult'))
+    to_measure = load_data.filter_annotations(annotations, load_data.filter_excluded)
 
     if update_poses:
         images = load_data.scan_experiment_dir(experiment_root,
@@ -84,5 +82,5 @@ if __name__ == "__main__":
     make_basic_measurements(expt_dir)
     make_movement_measurements(expt_dir)
     make_af_measurements(expt_dir)
-    make_multipass_movement_measurements(expt_dir)
+    make_multipass_movement_measurements(expt_dir, update_poses=False)
     process_data.collate_data(expt_dir)
