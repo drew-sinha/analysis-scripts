@@ -10,7 +10,7 @@ def make_basic_measurements(experiment_root):
 
     elegant_hacks.propagate_stages(experiment_root,verbose=True)
     positions = load_data.read_annotations(experiment_root)
-    to_measure = load_data.filter_annotations(positions, elegant_filters.filter_living_timepoints)
+    to_measure = load_data.filter_annotations(positions, load_data.filter_excluded)
     process_data.measure_worms(experiment_root, to_measure, measures, measurement_name)
 
 def make_movement_measurements(experiment_root, update_poses=True, adult_only=True):
@@ -35,7 +35,7 @@ def make_af_measurements(experiment_root, fl_measurement_name='green_yellow_exci
     measurement_name = 'autofluorescence_measures'
 
     annotations = load_data.read_annotations(experiment_root)
-    annotations = load_data.filter_excluded(annotations)
+    annotations = load_data.filter_annotations(annotations, load_data.filter_excluded)
     to_measure = load_data.filter_annotations(annotations, elegant_filters.filter_by_stage('adult'))
     process_data.measure_worms(experiment_root, to_measure, measures, measurement_name)
 
