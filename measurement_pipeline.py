@@ -1,7 +1,7 @@
 import pathlib
 import sys
 
-from elegant import load_data, process_data,worm_data, segment_images
+from elegant import load_data, process_data, worm_data, segment_images
 import elegant_filters, elegant_hacks
 
 def make_basic_measurements(experiment_root):
@@ -13,7 +13,7 @@ def make_basic_measurements(experiment_root):
     to_measure = load_data.filter_annotations(positions, load_data.filter_excluded)
     process_data.measure_worms(experiment_root, to_measure, measures, measurement_name)
 
-def make_movement_measurements(experiment_root, update_poses=True, adult_only=True):
+def make_pose_measurements(experiment_root, update_poses=True, adult_only=True):
     measures = [process_data.PoseMeasurements(microns_per_pixel=1.3)]
     measurement_name = 'pose_measures'
 
@@ -89,7 +89,19 @@ if __name__ == "__main__":
     expt_dir = pathlib.Path(sys.argv[1])
     process_data.update_annotations(expt_dir)
     make_basic_measurements(expt_dir)
-    make_movement_measurements(expt_dir)
-    make_af_measurements(expt_dir)
-    make_multipass_movement_measurements(expt_dir, update_poses=False)
+    make_pose_measurements(expt_dir)
+
+    annotations = load_data.read_annotations(expt_dir)
+    annotations = load_data.filter_annotations(annotations, load_data.filter_excluded)
+
+    image_channels = {[image_file.stem.split()[1]
+        for image_file in (expt_dir / list(positions.keys())[0]).iterdir()
+        if image_file.suffix[1:] in ['png', 'tif']]}
+
+    if 'green_yellow_excitation_autofluorescence' in image_channels or 'autofluorescence' in image_channels:
+        make_af_measurements(expt_dir)
+
+    if 'bf_1' in image_channels:
+        make_multipass_movement_measurements(expt_dir, update_poses=False)
+
     process_data.collate_data(expt_dir)
