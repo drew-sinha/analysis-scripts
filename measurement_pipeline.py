@@ -39,6 +39,15 @@ def make_af_measurements(experiment_root, fl_measurement_name='green_yellow_exci
     to_measure = load_data.filter_annotations(annotations, elegant_filters.filter_by_stage('adult'))
     process_data.measure_worms(experiment_root, to_measure, measures, measurement_name)
 
+def make_gfp_measurements(experiment_root, fl_measurement_name='gfp'):
+    measures = [process_data.FluorMeasurements(fl_measurement_name)]
+    measurement_name = 'fluorescence_measures'
+
+    annotations = load_data.read_annotations(experiment_root)
+    annotations = load_data.filter_annotations(annotations, load_data.filter_excluded)
+    to_measure = load_data.filter_annotations(annotations, elegant_filters.filter_by_stage('adult'))
+    process_data.measure_worms(experiment_root, to_measure, measures, measurement_name)
+
 class MultipassMovementMeasurements:
     feature_names = ['summed_multipass_centroid_dist']
     POSE_ANNOTATIONS = ['pose'] + [f'bf_{i+1} pose' for i in range(7)]
