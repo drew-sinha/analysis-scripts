@@ -8,8 +8,7 @@ import matplotlib.cm
 from elegant import worm_data, load_data
 from zplib.image import colorize
 
-import plotting_tools
-import elegant_filters
+from . import plotting_tools, elegant_filters
 
 #=================================
 # Preprocessing and reading data

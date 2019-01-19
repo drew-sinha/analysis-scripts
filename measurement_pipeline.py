@@ -2,7 +2,7 @@ import pathlib
 import sys
 
 from elegant import load_data, process_data, worm_data, segment_images
-import elegant_filters, elegant_hacks
+from . import elegant_filters, elegant_hacks
 
 def make_basic_measurements(experiment_root):
     measures = [process_data.BasicMeasurements()] #, process_data.PoseMeasurements(microns_per_pixel=5)]
@@ -83,15 +83,13 @@ def make_multipass_movement_measurements(experiment_root, update_poses=True, adu
 
     process_data.measure_worms(experiment_root, to_measure, measures, measurement_name)
 
+def run_canonical_measurements(experiment_dir):
+    '''Run standard measurements on the specified experiment directory'''
+    process_data.update_annotations(experiment_dir)
+    make_basic_measurements(experiment_dir)
+    make_pose_measurements(experiment_dir)
 
-if __name__ == "__main__":
-    # Call make_measurements EXPT_DIR
-    expt_dir = pathlib.Path(sys.argv[1])
-    process_data.update_annotations(expt_dir)
-    make_basic_measurements(expt_dir)
-    make_pose_measurements(expt_dir)
-
-    annotations = load_data.read_annotations(expt_dir)
+    annotations = load_data.read_annotations(experiment_dir)
     annotations = load_data.filter_annotations(annotations, load_data.filter_excluded)
 
     image_channels = {[image_file.stem.split()[1]
@@ -99,9 +97,17 @@ if __name__ == "__main__":
         if image_file.suffix[1:] in ['png', 'tif']]}
 
     if 'green_yellow_excitation_autofluorescence' in image_channels or 'autofluorescence' in image_channels:
-        make_af_measurements(expt_dir)
+        print('Found autofluorescence channel; making measurements')
+        make_af_measurements(experiment_dir)
 
     if 'bf_1' in image_channels:
-        make_multipass_movement_measurements(expt_dir, update_poses=False)
+        print('Found multipass movement channel bf_1; making measurements')
+        make_multipass_movement_measurements(experiment_dir, update_poses=False)
 
-    process_data.collate_data(expt_dir)
+    process_data.collate_data(experiment_dir)
+
+
+if __name__ == "__main__":
+    # Call make_measurements EXPT_DIR
+    expt_dir = pathlib.Path(sys.argv[1])
+    run_canonical_measurements(expt_dir)
