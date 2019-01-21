@@ -91,10 +91,12 @@ def run_canonical_measurements(experiment_dir):
 
     annotations = load_data.read_annotations(experiment_dir)
     annotations = load_data.filter_annotations(annotations, load_data.filter_excluded)
+    positions = list(annotations.keys())
 
-    image_channels = {[image_file.stem.split()[1]
-        for image_file in (expt_dir / list(positions.keys())[0]).iterdir()
-        if image_file.suffix[1:] in ['png', 'tif']]}
+    image_channels = {image_file.stem.split()[1]
+        for image_file in (expt_dir / positions[0]).iterdir()
+        if image_file.suffix[1:] in ['png', 'tif']}
+    print(f'Image channels: {image_channels}')
 
     if 'green_yellow_excitation_autofluorescence' in image_channels or 'autofluorescence' in image_channels:
         print('Found autofluorescence channel; making measurements')
