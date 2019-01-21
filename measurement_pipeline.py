@@ -1,6 +1,9 @@
 import pathlib
 import sys
 
+import numpy
+
+from zplib.curve import spline_geometry
 from elegant import load_data, process_data, worm_data, segment_images
 from . import elegant_filters, elegant_hacks
 
@@ -60,14 +63,14 @@ class MultipassMovementMeasurements:
         centroid_distances = []
         for initial_pose_annotation, next_pose_annotation in zip(self.POSE_ANNOTATIONS[:-1],self.POSE_ANNOTATIONS[1:]):
             initial_center_tck, initial_width_tck = annotations.get(initial_pose_annotation, (None, None))
-            next_center_tck, next_width_tck = annotations.get(next_initial_pose_annotation, (None, None))
+            next_center_tck, next_width_tck = annotations.get(next_pose_annotation, (None, None))
             if initial_center_tck is None or next_center_tck is None:
                 centroid_distances.append(numpy.nan)
                 break
             else:
                 centroid_distances.append(spline_geometry.centroid_distance(initial_center_tck, next_center_tck, num_points=300))
         measures['summed_multipass_centroid_dist'] = numpy.sum(centroid_distances) * self.microns_per_pixel
-        return [measures.get(feature, numpy.nan) for feature in feature_names]
+        return [measures.get(feature, numpy.nan) for feature in self.feature_names]
 
 def make_multipass_movement_measurements(experiment_root, update_poses=True, adult_only=True):
     measures = [MultipassMovementMeasurements(microns_per_pixel=1.3)]
@@ -85,6 +88,8 @@ def make_multipass_movement_measurements(experiment_root, update_poses=True, adu
 
 def run_canonical_measurements(experiment_dir):
     '''Run standard measurements on the specified experiment directory'''
+    experiment_dir = pathlib.Path(experiment_dir)
+
     process_data.update_annotations(experiment_dir)
     make_basic_measurements(experiment_dir)
     make_pose_measurements(experiment_dir)
@@ -94,17 +99,19 @@ def run_canonical_measurements(experiment_dir):
     positions = list(annotations.keys())
 
     image_channels = {image_file.stem.split()[1]
-        for image_file in (expt_dir / positions[0]).iterdir()
+        for image_file in (experiment_dir / positions[0]).iterdir()
         if image_file.suffix[1:] in ['png', 'tif']}
     print(f'Image channels: {image_channels}')
-
-    if 'green_yellow_excitation_autofluorescence' in image_channels or 'autofluorescence' in image_channels:
-        print('Found autofluorescence channel; making measurements')
-        make_af_measurements(experiment_dir)
 
     if 'bf_1' in image_channels:
         print('Found multipass movement channel bf_1; making measurements')
         make_multipass_movement_measurements(experiment_dir, update_poses=False)
+
+    if 'green_yellow_excitation_autofluorescence' in image_channels or 'autofluorescence' in image_channels:
+        fl_measurement_name = 'autofluorescence' if 'autofluorescence' in image_channels else 'green_yellow_excitation_autofluorescence'
+        print(f'Found autofluorescence channel {fl_measurement_name}; making measurements')
+
+        make_af_measurements(experiment_dir, fl_measurement_name=fl_measurement_name)
 
     process_data.collate_data(experiment_dir)
 
