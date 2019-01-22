@@ -6,7 +6,7 @@ import time
 
 from elegant import process_experiment, load_data, segment_images, process_data, worm_widths
 
-import elegant_hacks
+from . import elegant_hacks
 
 def filter_adult_images(experiment_root):
     '''Filter for only adult timepoints from non-excluded animals'''
@@ -34,6 +34,7 @@ def process_experiment_with_filter(experiment_root, model, image_filter, mask_ro
         overwrite_existing=False)
     if process.stderr:
         print(f'Errors during segmentation: {process.stderr}') #raise Exception)
+        #raise Exception()
     segment_t = time.time()
     print(f'segmenting done after {(segment_t-scan_t)} s')
 

@@ -4,7 +4,7 @@ import os
 import zplib.scalar_stats.kde
 import skimage.color
 
-from utilities import utilities
+from .utilities import utilities
 
 #~ import annotation_file
 
