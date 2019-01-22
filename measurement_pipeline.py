@@ -12,8 +12,9 @@ def make_basic_measurements(experiment_root):
     measurement_name = 'core_measures'
 
     elegant_hacks.propagate_stages(experiment_root,verbose=True)
-    positions = load_data.read_annotations(experiment_root)
-    to_measure = load_data.filter_annotations(positions, load_data.filter_excluded)
+    annotations = load_data.read_annotations(experiment_root)
+    to_measure = load_data.filter_annotations(annotations, load_data.filter_excluded)
+    to_measure = load_data.filter_annotations(to_measure, load_data.filter_living_timepoints)
     process_data.measure_worms(experiment_root, to_measure, measures, measurement_name)
 
 def make_pose_measurements(experiment_root, update_poses=False, adult_only=True):
