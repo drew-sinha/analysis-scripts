@@ -8,13 +8,13 @@ from elegant import load_data, process_data, worm_data, segment_images
 from . import elegant_filters, elegant_hacks
 
 def make_basic_measurements(experiment_root):
-    measures = [process_data.BasicMeasurements()] #, process_data.PoseMeasurements(microns_per_pixel=5)]
+    measures = [process_data.BasicMeasurements()]
     measurement_name = 'core_measures'
 
     elegant_hacks.propagate_stages(experiment_root,verbose=True)
     annotations = load_data.read_annotations(experiment_root)
     to_measure = load_data.filter_annotations(annotations, load_data.filter_excluded)
-    to_measure = load_data.filter_annotations(to_measure, load_data.filter_living_timepoints)
+    #to_measure = load_data.filter_annotations(to_measure, load_data.filter_living_timepoints)
     process_data.measure_worms(experiment_root, to_measure, measures, measurement_name)
 
 def make_pose_measurements(experiment_root, update_poses=False, adult_only=True):
@@ -107,6 +107,8 @@ def run_canonical_measurements(experiment_dir):
     if 'bf_1' in image_channels:
         print('Found multipass movement channel bf_1; making measurements')
         make_multipass_movement_measurements(experiment_dir, update_poses=False)
+
+    process_data.collate_data(experiment_dir) # For convenience since autofluorescence can take a little while....
 
     if 'green_yellow_excitation_autofluorescence' in image_channels or 'autofluorescence' in image_channels:
         fl_measurement_name = 'autofluorescence' if 'autofluorescence' in image_channels else 'green_yellow_excitation_autofluorescence'
