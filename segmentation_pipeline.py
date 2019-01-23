@@ -6,7 +6,7 @@ import time
 
 from elegant import process_experiment, load_data, segment_images, process_data, worm_widths
 
-from . import elegant_hacks
+import elegant_hacks
 
 def filter_adult_images(experiment_root):
     '''Filter for only adult timepoints from non-excluded animals'''

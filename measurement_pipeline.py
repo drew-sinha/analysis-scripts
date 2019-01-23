@@ -5,7 +5,7 @@ import numpy
 
 from zplib.curve import spline_geometry
 from elegant import load_data, process_data, worm_data, segment_images
-from . import elegant_filters, elegant_hacks
+import elegant_filters, elegant_hacks
 
 def make_basic_measurements(experiment_root):
     measures = [process_data.BasicMeasurements()]
