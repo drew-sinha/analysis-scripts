@@ -3,6 +3,7 @@ import sys
 import pickle
 import pathlib
 import time
+import datetime
 
 from elegant import process_experiment, load_data, segment_images, process_data, worm_widths
 
@@ -38,9 +39,8 @@ def process_experiment_with_filter(experiment_root, model, image_filter, mask_ro
     segment_t = time.time()
     print(f'segmenting done after {(segment_t-scan_t)} s')
 
-    mask_root = pathlib.Path(experiment_root) / 'derived_data' / 'mask'
-    with (mask_root / 'notes.txt').open('w') as notes_file:
-        notes_file.write(f'These masks were segmented with model {model}\n')
+    with (mask_root / 'notes.txt').open('a+') as notes_file:
+        notes_file.write(f'{datetime.datetime.today().strftime("%Y-%m-%dt%H%M")} These masks were segmented with model {model}\n')
 
     annotations = load_data.read_annotations(experiment_root)
     metadata = load_data.read_metadata(experiment_root)
