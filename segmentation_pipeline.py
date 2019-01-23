@@ -16,7 +16,7 @@ def filter_adult_images(experiment_root):
         return not experiment_annotations[position_name][0]['exclude'] and experiment_annotations[position_name][1][timepoint_name].get('stage') == 'adult'
     return scan_filter
 
-def process_experiment_with_filter(experiment_root, model, image_filter, mask_root=None, overwrite_existing=False, channels='bf'):
+def process_experiment_with_filter(experiment_root, model, image_filter, mask_root=None, overwrite_existing=False, channels='bf', remake_masks=True):
     '''
          image_filter - filter for scan_experiment_dir
     '''
@@ -32,15 +32,18 @@ def process_experiment_with_filter(experiment_root, model, image_filter, mask_ro
     scan_t = time.time()
     print(f'scanning done after {(scan_t-start_t)} s') #3 s once, 80s another, taking a while to load up the segmenter....
 
-    process = segment_images.segment_positions(positions, model, mask_root, use_gpu=True,
-        overwrite_existing=False)
-    if process.stderr:
-        print(f'Errors during segmentation: {process.stderr}') #raise Exception)
-        #raise Exception()
-    segment_t = time.time()
-    print(f'segmenting done after {(segment_t-scan_t)} s')
-    with (mask_root / 'notes.txt').open('a+') as notes_file:
-        notes_file.write(f'{datetime.datetime.today().strftime("%Y-%m-%dt%H%M")} These masks were segmented with model {model}\n')
+    if remake_masks:
+        process = segment_images.segment_positions(positions, model, mask_root, use_gpu=True,
+            overwrite_existing=False)
+        if process.stderr:
+            print(f'Errors during segmentation: {process.stderr}') #raise Exception)
+            #raise Exception()
+        segment_t = time.time()
+        print(f'segmenting done after {(segment_t-scan_t)} s')
+        with (mask_root / 'notes.txt').open('a+') as notes_file:
+            notes_file.write(f'{datetime.datetime.today().strftime("%Y-%m-%dt%H%M")} These masks were segmented with model {model}\n')
+    else:
+        print(f'No segmenting performed')
 
     annotations = load_data.read_annotations(experiment_root)
     metadata = load_data.read_metadata(experiment_root)
@@ -63,7 +66,7 @@ if __name__ == "__main__":
         model = 'ZPL001_adultmodel.mat'
 
     image_filter = filter_adult_images(experiment_root)
-    
+
     image_channels = elegant_hacks.get_image_channels(experiment_root)
     channels = ['bf']
     if 'bf_1' in image_channels:
