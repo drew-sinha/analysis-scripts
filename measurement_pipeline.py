@@ -95,13 +95,7 @@ def run_canonical_measurements(experiment_dir):
     make_basic_measurements(experiment_dir)
     make_pose_measurements(experiment_dir)
 
-    annotations = load_data.read_annotations(experiment_dir)
-    annotations = load_data.filter_annotations(annotations, load_data.filter_excluded)
-    positions = list(annotations.keys())
-
-    image_channels = {image_file.stem.split()[1]
-        for image_file in (experiment_dir / positions[0]).iterdir()
-        if image_file.suffix[1:] in ['png', 'tif']}
+    image_channels = elegant_hacks.get_image_channels(experiment_dir)
     print(f'Image channels: {image_channels}')
 
     if 'bf_1' in image_channels:

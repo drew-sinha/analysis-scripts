@@ -60,6 +60,14 @@ if __name__ == "__main__":
     if len(sys.argv) >= 2:
         model = sys.argv[2]
     else:
-        model = 'default_CF.mat'
+        model = 'ZPL001_adultmodel.mat'
 
-    process_experiment.segment_experiment(experiment_root,model,overwrite_existing=False) # New elegant no longer finds largest components during segmentation; instead this now happens when annotations are updated.
+    image_filter = filter_adult_images(experiment_root)
+    
+    image_channels = elegant_hacks.get_image_channels(experiment_root)
+    channels = ['bf']
+    if 'bf_1' in image_channels:
+        [channels.append(f'bf_{i+1}') for i in range(7)]
+    print(f'Image channels: {channels}')
+
+    process_experiment.segment_experiment(experiment_root,model,overwrite_existing=False,channels=channels) # New elegant no longer finds largest components during segmentation; instead this now happens when annotations are updated.

@@ -120,6 +120,16 @@ def load_derived_images(experiment_root, derived_dir, *additional_filters):
 
     return experiment_images
 
+def get_image_channels(experiment_root):
+    experiment_root = pathlib.Path(experiment_root)
+    annotations = load_data.read_annotations(experiment_root)
+    annotations = load_data.filter_annotations(annotations, load_data.filter_excluded)
+    positions = list(annotations.keys())
+
+    image_channels = {image_file.stem.split()[1]
+        for image_file in (experiment_root / positions[0]).iterdir()
+        if image_file.suffix[1:] in ['png', 'tif']}
+    return image_channels
 
 #==================================
 # Worm stuff
