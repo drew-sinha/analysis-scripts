@@ -57,7 +57,7 @@ if __name__ == "__main__":
     '''Call signature %run segmentation_pipeline.py EXPERIMENT_ROOT MODEL_PATH'''
 
     experiment_root = sys.argv[1]
-    if len(sys.argv) >= 2:
+    if len(sys.argv) >= 3:
         model = sys.argv[2]
     else:
         model = 'ZPL001_adultmodel.mat'
@@ -70,4 +70,11 @@ if __name__ == "__main__":
         [channels.append(f'bf_{i+1}') for i in range(7)]
     print(f'Image channels: {channels}')
 
-    process_experiment.segment_experiment(experiment_root,model,overwrite_existing=False,channels=channels) # New elegant no longer finds largest components during segmentation; instead this now happens when annotations are updated.
+    #process_experiment.segment_experiment(experiment_root,model,overwrite_existing=False,channels=channels) # New elegant no longer finds largest components during segmentation; instead this now happens when annotations are updated.
+    process_experiment_with_filter(experiment_root, model, image_filter, overwrite_existing=False, channels=channels)
+
+    ''' To run things the old way:
+        experiment_root = # something
+        model = 'default_CF.mat' # or %run segmentation_pipeline 'default_CF.mat'
+        process_experiment.segment_experiment(experiment_root, model, overwrite_existing=False)
+    '''
