@@ -32,18 +32,15 @@ def process_experiment_with_filter(experiment_root, model, image_filter, mask_ro
     scan_t = time.time()
     print(f'scanning done after {(scan_t-start_t)} s') #3 s once, 80s another, taking a while to load up the segmenter....
 
-    if any(positions):
-        process = segment_images.segment_positions(positions, model, mask_root, use_gpu=True,
-            overwrite_existing=False)
-        if process.stderr:
-            print(f'Errors during segmentation: {process.stderr}') #raise Exception)
-            #raise Exception()
-        segment_t = time.time()
-        print(f'segmenting done after {(segment_t-scan_t)} s')
-        with (mask_root / 'notes.txt').open('a+') as notes_file:
-            notes_file.write(f'{datetime.datetime.today().strftime("%Y-%m-%dt%H%M")} These masks were segmented with model {model}\n')
-    else:
-        print(f'No images found to segment; skipping segmentation')
+    process = segment_images.segment_positions(positions, model, mask_root, use_gpu=True,
+        overwrite_existing=False)
+    if process.stderr:
+        print(f'Errors during segmentation: {process.stderr}') #raise Exception)
+        #raise Exception()
+    segment_t = time.time()
+    print(f'segmenting done after {(segment_t-scan_t)} s')
+    with (mask_root / 'notes.txt').open('a+') as notes_file:
+        notes_file.write(f'{datetime.datetime.today().strftime("%Y-%m-%dt%H%M")} These masks were segmented with model {model}\n')
 
     annotations = load_data.read_annotations(experiment_root)
     metadata = load_data.read_metadata(experiment_root)
