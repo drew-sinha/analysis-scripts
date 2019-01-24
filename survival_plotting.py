@@ -27,7 +27,7 @@ def plot_spanseries(spans,ax_h = None,**plot_kws):
     else:
         ax_provided = True
     sorted_s = np.sort(spans[~np.isnan(spans)]) #handling the nan eliminates potential leak-through of alive animals when used with annotation code
-    prop_alive = (1 - (np.arange(start=0,stop=np.size(spans[~np.isnan(spans)])))/(np.size(spans[~np.isnan(spans)])-1))
+    prop_alive = (1 - (np.arange(start=0,stop=np.size(sorted_s)))/(np.size(spans)-1))
 
     # Generate all the points needed for plotting
     # Plot the first point (0,1), then a straight line across and down for each event/death
@@ -35,6 +35,7 @@ def plot_spanseries(spans,ax_h = None,**plot_kws):
     y_vals = np.sort(np.concatenate(([1,1],prop_alive[:-1],prop_alive[:-1],[prop_alive[-1]])))[::-1] # Reverse this.
 
     data = ax_h.plot(x_vals,y_vals,**plot_kws)
+    ax_h.set_ylim([0,1])
 
     if not ax_provided:
         return [fig_h,ax_h,data]

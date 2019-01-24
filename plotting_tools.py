@@ -229,4 +229,3 @@ def force_same_plot_attributes(my_axes, *args):
             min_y = min([ax.get_ylim()[0] for ax in my_axes])
             max_y = max([ax.get_ylim()[1] for ax in my_axes])
             [ax.set_ylim([min_y,max_y]) for ax in my_axes]
-

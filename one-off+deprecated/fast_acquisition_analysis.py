@@ -15,7 +15,7 @@ except:
 
     import elegant_filters, elegant_hacks
     from utilities import make_movie
-from zplib.image import write_movie
+from zplib.image import write_movie, colorize
 
 
 def annotate_poses(experiment_root, to_measure):
@@ -111,3 +111,15 @@ def segment_faster_acquisition(experiment_root, multiprocess_mode=True):
     mask_root = pathlib.Path(experiment_root) / 'derived_data' / 'mask'
     with (mask_root / 'notes.txt').open('w') as notes_file:
         notes_file.write(f'These masks were segmented with model {model}\n')
+
+def faster_acquisition_movie(position, output_file, shrink_factor=4, framerate=5,glob_str='*bf_*.png',num_frames=-1,**scale_params):
+    experiment_root = '/mnt/purplearray/Sinha_Drew/20181109_spe-9_faster_acquisition/'
+    position_root = pathlib.Path(experiment_root) / position
+    assert position_root.exists()
+
+    image_paths = sorted(position_root.glob(glob_str))
+    if num_frames != -1: image_paths = image_paths[:num_frames]
+
+    image_generator = write_movie.generate_images_from_files(image_paths,**scale_params)
+    image_generator = write_movie.shrink(image_generator, factor=shrink_factor, fast=True)
+    write_movie.write_movie(image_generator, output_file, framerate=framerate)

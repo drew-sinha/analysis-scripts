@@ -3,6 +3,7 @@ import sys
 import pickle
 import pathlib
 import time
+import datetime
 
 from elegant import process_experiment, load_data, segment_images, process_data, worm_widths
 
@@ -15,7 +16,7 @@ def filter_adult_images(experiment_root):
         return not experiment_annotations[position_name][0]['exclude'] and experiment_annotations[position_name][1][timepoint_name].get('stage') == 'adult'
     return scan_filter
 
-def process_experiment_with_filter(experiment_root, model, image_filter, mask_root=None, overwrite_existing=False):
+def process_experiment_with_filter(experiment_root, model, image_filter, mask_root=None, overwrite_existing=False, channels='bf', remake_masks=True):
     '''
          image_filter - filter for scan_experiment_dir
     '''
@@ -27,19 +28,22 @@ def process_experiment_with_filter(experiment_root, model, image_filter, mask_ro
 
     start_t = time.time()
     positions = load_data.scan_experiment_dir(experiment_root,
-        timepoint_filter=image_filter)
+        timepoint_filter=image_filter, channels=channels)
     scan_t = time.time()
     print(f'scanning done after {(scan_t-start_t)} s') #3 s once, 80s another, taking a while to load up the segmenter....
-    process = segment_images.segment_positions(positions, model, mask_root, use_gpu=True,
-        overwrite_existing=False)
-    if process.stderr:
-        raise Exception(f'Errors during segmentation: {process.stderr}')
-    segment_t = time.time()
-    print(f'segmenting done after {(segment_t-scan_t)} s')
 
-    mask_root = pathlib.Path(experiment_root) / 'derived_data' / 'mask'
-    with (mask_root / 'notes.txt').open('w') as notes_file:
-        notes_file.write(f'These masks were segmented with model {model}\n')
+    if remake_masks:
+        process = segment_images.segment_positions(positions, model, mask_root, use_gpu=True,
+            overwrite_existing=False)
+        if process.stderr:
+            print(f'Errors during segmentation: {process.stderr}') #raise Exception)
+            #raise Exception()
+        segment_t = time.time()
+        print(f'segmenting done after {(segment_t-scan_t)} s')
+        with (mask_root / 'notes.txt').open('a+') as notes_file:
+            notes_file.write(f'{datetime.datetime.today().strftime("%Y-%m-%dt%H%M")} These masks were segmented with model {model}\n')
+    else:
+        print(f'No segmenting performed')
 
     annotations = load_data.read_annotations(experiment_root)
     metadata = load_data.read_metadata(experiment_root)
@@ -52,13 +56,24 @@ def process_experiment_with_filter(experiment_root, model, image_filter, mask_ro
     annotation_t = time.time()
     print(f'annotation done after {(annotation_t - segment_t)} s') # ~3.5 hr
 
+def minimal_segmentation(experiment_root, model='default_CF.mat'):
+    process_experiment.segment_experiment(experiment_root, model, overwrite_existing=False)
+
 if __name__ == "__main__":
     '''Call signature %run segmentation_pipeline.py EXPERIMENT_ROOT MODEL_PATH'''
 
     experiment_root = sys.argv[1]
-    if len(sys.argv) >= 2:
+    if len(sys.argv) >= 3:
         model = sys.argv[2]
     else:
-        model = 'default_CF.mat'
+        model = 'ZPL001_adultmodel.mat'
 
-    process_experiment.segment_experiment(experiment_root,model,overwrite_existing=False) # New elegant no longer finds largest components during segmentation; instead this now happens when annotations are updated.
+    image_filter = filter_adult_images(experiment_root)
+
+    image_channels = elegant_hacks.get_image_channels(experiment_root)
+    channels = ['bf']
+    if 'bf_1' in image_channels:
+        [channels.append(f'bf_{i+1}') for i in range(7)]
+    print(f'Image channels: {channels}')
+
+    process_experiment_with_filter(experiment_root, model, image_filter, overwrite_existing=False, channels=channels)

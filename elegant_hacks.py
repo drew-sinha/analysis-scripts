@@ -8,12 +8,44 @@ import matplotlib.cm
 from elegant import worm_data, load_data
 from zplib.image import colorize
 
-import plotting_tools
-import elegant_filters
+import plotting_tools, elegant_filters
 
 #=================================
 # Preprocessing and reading data
 #==================================
+
+def check_stage_annotations(annotations, stages):
+    """Check that a set of annotations are complete
+
+        Parameters
+            annotations - An OrderedDict mapping position names to corresponding
+                annotations (returned by load_data.read_annotations)
+            stages - A iterable containing the stages that should be annotated
+                for this experiment (e.g. could be ('larva','adult','dead')
+                for a complete experiment, but only ('larva', 'adult') for
+                an ongoing experiment)
+        Returns
+            bad_positions - a list of positions with incomplete annotations
+    """
+
+    # Create a suitable function to use with filter_positions using a closure
+    def select_by_stage_annotation(position_name,position_annotations, timepoint_annotations):
+        stage_annotations = [timepoint_annotation.get('stage','')
+            for timepoint_annotation in timepoint_annotations.values()]
+        return all([stage in stage_annotations for stage in stages])
+
+    return load_data.filter_annotations(
+        annotations,
+        select_by_stage_annotation) # Get positions whose stages are not all annotated
+
+def check_for_alive(expt_dir):
+    annotations = load_data.read_annotations(expt_dir)
+    good_annotations = load_data.filter_annotations(annotations, load_data.filter_excluded)
+    dead_annotations = check_stage_annotations(good_annotations, ['dead'])
+
+    print(f'{len(good_annotations)-len(dead_annotations)}/{len(good_annotations)} still alive')
+
+    return set(good_annotations.keys()).difference(set(dead_annotations.keys()))
 
 def replace_annotation(experiment_root, annotation_type, old_annotation_values, new_annotation_value, annotation_dir='annotations'):
     if not isinstance(old_annotation_values, collections.Iterable):
@@ -27,6 +59,14 @@ def replace_annotation(experiment_root, annotation_type, old_annotation_values, 
             if annotation_type in timepoint_annotations and timepoint_annotations[annotation_type] in old_annotation_values:
                 timepoint_annotations[annotation_type] = new_annotation_value
     load_data.write_annotations(experiment_root, experiment_annotations, annotation_dir=annotation_dir)
+
+def remove_poses(experiment_root):
+    experiment_annotations = load_data.read_annotations(experiment_root)
+    for position, position_annotations in experiment_annotations.items():
+        timepoint_annotations = position_annotations[1]
+        for timepoint, timepoint_annotation in timepoint_annotations.items():
+            timepoint_annotation['pose'] = (None, None)
+    load_data.write_annotations(experiment_root, experiment_annotations)
 
 def propagate_stages(experiment_root,verbose=False):
     '''
@@ -80,6 +120,16 @@ def load_derived_images(experiment_root, derived_dir, *additional_filters):
 
     return experiment_images
 
+def get_image_channels(experiment_root):
+    experiment_root = pathlib.Path(experiment_root)
+    annotations = load_data.read_annotations(experiment_root)
+    annotations = load_data.filter_annotations(annotations, load_data.filter_excluded)
+    positions = list(annotations.keys())
+
+    image_channels = {image_file.stem.split()[1]
+        for image_file in (experiment_root / positions[0]).iterdir()
+        if image_file.suffix[1:] in ['png', 'tif']}
+    return image_channels
 
 #==================================
 # Worm stuff

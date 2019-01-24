@@ -4,15 +4,14 @@ from elegant import load_data
 #==============================
 # annotation filters
 #=============================
-def filter_adult_timepoints(position_name, position_annotations, timepoint_annotations):
-    # if not load_data.filter_excluded(position_name, position_annotations, timepoint_annotations):
-    #     return False
-    return [tp.get('stage') == 'adult' for tp in timepoint_annotations.values()]
 
 def filter_by_kw(kw):
     def filter(position_name, position_annotations, timepoint_annotations):
         return kw in position_annotations.get('notes')
     return filter
+
+def filter_live_animals(position_name, position_annotations, timepoint_annotations):
+    return not any([tp.get('stage') == 'dead' for tp in timepoint_annotations.values()])
 
 def filter_by_age(min_age, max_age,adult_age=False):
     '''
@@ -32,13 +31,19 @@ def filter_by_age(min_age, max_age,adult_age=False):
             for timepoint_annotation in timepoint_annotations.values()]
     return filter
 
-def filter_adult_dead_timepoints(position_name, position_annotations, timepoint_annotations):
-    # if not load_data.filter_excluded(position_name, position_annotations, timepoint_annotations):
-    #     return False
-    return [(tp.get('stage') == 'adult') or (tp.get('stage') == 'dead') for tp in timepoint_annotations.values()]
+def filter_by_stage(stages):
+    if type(stages) is str:
+        stages = [stages]
 
-def filter_live_animals(position_name, position_annotations, timepoint_annotations):
-    return not any([tp.get('stage') == 'dead' for tp in timepoint_annotations.values()])
+    def stage_filter(position_name, position_annotations, timepoint_annotations):
+        return [tp.get('stage') in stages for tp in timepoint_annotations.values()]
+    return stage_filter
+
+def filter_living_timepoints(position_name, position_annotations, timepoint_annotations):
+    return (
+        not load_data.filter_excluded(position_name, position_annotations, timepoint_annotations) or
+        [tp.get('stage') not in ['egg', 'dead'] for tp in timepoint_annotations.values()]
+    )
 
 def filter_before_timepoint(timepoint):
     def annotation_filter(position_name, position_annotations, timepoint_annotations):
@@ -100,7 +105,19 @@ def filter_range_before_stage(experiment_dir, time_radius,stage='adult'):
         return [timepoint in timepoints_to_load[position_name] for timepoint in timepoint_annotations]
     return filter
 
+def compose_timepoint_filters(*filters):
+    """Creates a overall timepoint filter that is the composition of AND'ing multiple individual timepoint filters.
 
+    Parameters:
+        filters: Iterable of timepoint filters (with standard load_data.filter_annotations signature)
+    """
+
+    def composed_filter(position_name, position_annotations, timepoint_annotations):
+        return_val = True
+        for filter in filters:
+            return_val &= numpy.array(filter(position_name, position_annotations, timepoint_annotations)) # Takes care of single boolean and boolean array return values
+        return return_val
+    return composed_filter
 
 '''
 Examples for custom misc. filtering
@@ -120,6 +137,13 @@ def filter_from_elegant_worms(worms):
 #===================================
 # scan_experiment_dir filters
 #==================================
+
+def filter_latest_images(experiment_root):
+    annotations = load_data.read_annotations(experiment_root)
+    good_annotations = load_data.filter_annotations(annotations, load_data.filter_excluded)
+    def latelife_filter(position_name, timepoint_name):
+        return position_name in good_annotations and timepoint_name > good_annotations[position_name][0]['__last_timepoint_annotated__']
+    return load_data.scan_experiment_dir(expt_dir, timepoint_filter=latelife_filter)
 
 def filter_adult_images(experiment_root):
     experiment_annotations = load_data.read_annotations(experiment_root)
