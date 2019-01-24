@@ -74,6 +74,6 @@ if __name__ == "__main__":
     channels = ['bf']
     if 'bf_1' in image_channels:
         [channels.append(f'bf_{i+1}') for i in range(7)]
-    print(f'Image channels: {channels}')
+    print(f'Image channels to be segmented: {channels}')
 
     process_experiment_with_filter(experiment_root, model, image_filter, overwrite_existing=False, channels=channels)
