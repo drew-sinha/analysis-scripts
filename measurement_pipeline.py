@@ -52,8 +52,8 @@ def make_gfp_measurements(experiment_root, fl_measurement_name='gfp'):
     to_measure = load_data.filter_annotations(annotations, elegant_filters.filter_by_stage('adult'))
     process_data.measure_worms(experiment_root, to_measure, measures, measurement_name)
 
-class MultipassMovementMeasurements:
-    feature_names = ['summed_multipass_centroid_dist']
+class MultipassPoseMeasurements:
+    feature_names = ['summed_multipass_centroid_dist', 'multipass_length', 'multipass_max_width', 'multipass_area', 'multipass_volume']
     POSE_ANNOTATIONS = ['pose'] + [f'bf_{i+1} pose' for i in range(7)]
 
     def __init__(self, microns_per_pixel):
@@ -62,19 +62,56 @@ class MultipassMovementMeasurements:
     def measure(self, position_root, timepoint, annotations, before, after):
         measures = {}
         centroid_distances = []
-        for initial_pose_annotation, next_pose_annotation in zip(self.POSE_ANNOTATIONS[:-1],self.POSE_ANNOTATIONS[1:]):
-            initial_center_tck, initial_width_tck = annotations.get(initial_pose_annotation, (None, None))
-            next_center_tck, next_width_tck = annotations.get(next_pose_annotation, (None, None))
-            if initial_center_tck is None or next_center_tck is None:
-                centroid_distances.append(numpy.nan)
-                break
-            else:
-                centroid_distances.append(spline_geometry.centroid_distance(initial_center_tck, next_center_tck, num_points=300))
+        lengths, widths, areas, volumes = [], [], [], []
+
+        first_center_tck, first_width_tck = annotations.get(self.POSE_ANNOTATIONS[:-1], (None, None))
+        if first_center_tck is None or first_width_tck is None:
+            lengths.append(numpy.nan)
+            widths.append(numpy.nan)
+            areas.append(numpy.nan)
+            volumes.append(numpy.nan)
+            centroid_distances.append(numpy.nan)
+        else:
+            volume, surface_area = spline_geometry.volume_and_surface_area(first_center_tck, first_width_tck)
+            area = spline_geometry.area(first_center_tck, first_width_tck)
+            length, max_width = spline_geometry.length_and_max_width(first_center_tck, first_width_tck)
+
+            lengths.append(length * self.microns_per_pixel)
+            widths.append(max_width * 2 * self.microns_per_pixel)
+            areas.append(area * self.microns_per_pixel**2)
+            volumes.append(volume * self.microns_per_pixel**3)
+
+            for initial_pose_annotation, next_pose_annotation in zip(self.POSE_ANNOTATIONS[:-1],self.POSE_ANNOTATIONS[1:]):
+                initial_center_tck, initial_width_tck = annotations.get(initial_pose_annotation, (None, None))
+                next_center_tck, next_width_tck = annotations.get(next_pose_annotation, (None, None))
+
+                if initial_center_tck is None or next_center_tck is None:
+                    lengths.append(numpy.nan)
+                    widths.append(numpy.nan)
+                    areas.append(numpy.nan)
+                    volumes.append(numpy.nan)
+                    centroid_distances.append(numpy.nan)
+                    break
+                else:
+                    volume, surface_area = spline_geometry.volume_and_surface_area(next_center_tck, next_width_tck)
+                    length, max_width = spline_geometry.length_and_max_width(next_center_tck, next_width_tck)
+                    area = spline_geometry.area(next_center_tck, next_width_tck)
+
+                    lengths.append(length * self.microns_per_pixel)
+                    widths.append(max_width * 2 * self.microns_per_pixel)
+                    areas.append(area * self.microns_per_pixel**2)
+                    volumes.append(volume * self.microns_per_pixel**3)
+                    centroid_distances.append(spline_geometry.centroid_distance(initial_center_tck, next_center_tck, num_points=300))
         measures['summed_multipass_centroid_dist'] = numpy.sum(centroid_distances) * self.microns_per_pixel
+        measures['multipass_length'] = numpy.median(lengths)
+        measures['multpass_max_width'] = numpy.median(widths)
+        measures['multipass_area'] = numpy.median(areas)
+        measures['multipass_volume'] = numpy.median(volumes)
+
         return [measures.get(feature, numpy.nan) for feature in self.feature_names]
 
-def make_multipass_movement_measurements(experiment_root, update_poses=True, adult_only=True):
-    measures = [MultipassMovementMeasurements(microns_per_pixel=1.3)]
+def make_multipass_measurements(experiment_root, update_poses=True, adult_only=True):
+    measures = [MultipassPoseMeasurements(microns_per_pixel=1.3)]
     measurement_name = 'multipass_measures'
 
     annotations = load_data.read_annotations(experiment_root)
@@ -100,7 +137,7 @@ def run_canonical_measurements(experiment_dir):
 
     if 'bf_1' in image_channels:
         print('Found multipass movement channel bf_1; making measurements')
-        make_multipass_movement_measurements(experiment_dir, update_poses=False)
+        make_multipass_measurements(experiment_dir, update_poses=False)
 
     process_data.collate_data(experiment_dir) # For convenience since autofluorescence can take a little while....
 
