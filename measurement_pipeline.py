@@ -64,7 +64,7 @@ class MultipassPoseMeasurements:
         centroid_distances = []
         lengths, widths, areas, volumes = [], [], [], []
 
-        first_center_tck, first_width_tck = annotations.get(self.POSE_ANNOTATIONS[:-1], (None, None))
+        first_center_tck, first_width_tck = annotations.get(self.POSE_ANNOTATIONS[0], (None, None))
         if first_center_tck is None or first_width_tck is None:
             lengths.append(numpy.nan)
             widths.append(numpy.nan)
@@ -104,7 +104,7 @@ class MultipassPoseMeasurements:
                     centroid_distances.append(spline_geometry.centroid_distance(initial_center_tck, next_center_tck, num_points=300))
         measures['summed_multipass_centroid_dist'] = numpy.sum(centroid_distances) * self.microns_per_pixel
         measures['multipass_length'] = numpy.median(lengths)
-        measures['multpass_max_width'] = numpy.median(widths)
+        measures['multipass_max_width'] = numpy.median(widths)
         measures['multipass_area'] = numpy.median(areas)
         measures['multipass_volume'] = numpy.median(volumes)
 
