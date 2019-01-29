@@ -26,7 +26,7 @@ def get_featurespan(worms, feature, cutoff, dwell_time=2*24, return_crossings=Fa
 
     # Ensure that feature decreases with time
     # TODO: Make the features to negate a little less hardcoded?
-    if any([label in feature for label in ['af', 'intensity']]):
+    if any([label in feature for label in ['af', 'intensity', 'autofluorescence']]):
         negate = True
     else: negate = False
 
