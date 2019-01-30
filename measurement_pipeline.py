@@ -181,12 +181,13 @@ class MaskPoseMeasurements:
         measures['mask_centroid_dist'] = numpy.sum(centroid_distances) * self.microns_per_pixel
         return [measures[feature] for feature in self.feature_names]
 
-def make_mask_measurements(experiment_root, update_poses=False, adult_only=True):
+def make_mask_measurements(experiment_root, update_poses=False):
     measures = [MaskPoseMeasurements(microns_per_pixel=1.3)]
     measurement_name = 'mask_measures'
 
     annotations = load_data.read_annotations(experiment_root)
     to_measure = load_data.filter_annotations(annotations, load_data.filter_excluded)
+    to_measure = load_data.filter_annotations(to_measure, elegant_filters.filter_by_stage('adult'))
 
     if update_poses:
         images = load_data.scan_experiment_dir(experiment_root,
