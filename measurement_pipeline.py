@@ -149,7 +149,7 @@ class MaskPoseMeasurements:
     def get_mask(self, position_root, derived_root, timepoint, annotations):
         mask_file = derived_root / 'mask' / position_root.name / f'{timepoint} {self.mask_name}.png'
         if not mask_file.exists():
-            raise Exception()
+            #raise Exception()
             print(f'No mask file found for {position_root.name} at {timepoint}.')
             return None
         else:
@@ -178,7 +178,7 @@ class MaskPoseMeasurements:
         centroid_distances = []
         for adjacent in (before, after):
             if adjacent is not None:
-                adj_mask = self.get_mask(position_root.parent / adjacent, derived_root, timepoint, annotations)
+                adj_mask = self.get_mask(position_root, derived_root, adjacent['timepoint'], annotations)
                 if adj_mask is None:
                     centroid_distances.append(numpy.nan)
                     break
@@ -189,7 +189,12 @@ class MaskPoseMeasurements:
         measures['mask_centroid_dist'] = numpy.sum(centroid_distances) * self.microns_per_pixel
         return [measures[feature] for feature in self.feature_names]
 
+def annotate_timepoints(experiment_root, position, timepoint, metadata, annotations):
+    annotations['timepoint'] = metadata['timepoint']
+
 def make_mask_measurements(experiment_root, update_poses=False):
+    process_data.annotate(experiment_root, annotators=[annotate_timepoints])
+
     measures = [MaskPoseMeasurements(microns_per_pixel=1.3)]
     measurement_name = 'mask_measures'
 
