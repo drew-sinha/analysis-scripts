@@ -60,7 +60,7 @@ def check_for_null_poses(experiment_root, annotation_dir='annotations'):
 
             for pose_tag in poses:
                 if timepoint_annotations.get(pose_tag, (None, None))[0] is None:
-                    print(f"Position {position}, timepoint {timepoint} doesn't have a vaild pose")
+                    print(f"Position {position}, timepoint {timepoint} doesn't have a vaild {pose} pose")
 
 def replace_annotation(experiment_root, annotation_type, old_annotation_values, new_annotation_value, annotation_dir='annotations'):
     if not isinstance(old_annotation_values, collections.Iterable):
