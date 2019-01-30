@@ -2,7 +2,10 @@ import pathlib
 import sys
 
 import numpy
+import skimage.measure as ski_measure
 
+import freeimage
+import zplib.image.mask as zpl_mask
 from zplib.curve import spline_geometry
 from elegant import load_data, process_data, worm_data, segment_images
 import elegant_filters, elegant_hacks
@@ -141,10 +144,12 @@ class MaskPoseMeasurements:
     def __init__(self, microns_per_pixel, pose_annotation='pose'):
         self.microns_per_pixel = microns_per_pixel
         self.pose_annotation = pose_annotation
+        self.mask_name = 'bf'
 
     def get_mask(self, position_root, derived_root, timepoint, annotations):
         mask_file = derived_root / 'mask' / position_root.name / f'{timepoint} {self.mask_name}.png'
         if not mask_file.exists():
+            raise Exception()
             print(f'No mask file found for {position_root.name} at {timepoint}.')
             return None
         else:
@@ -153,10 +158,13 @@ class MaskPoseMeasurements:
                 print(f'No worm region defined for {position_root.name} at {timepoint}')
                 return None
             else:
+                mask = zpl_mask.get_largest_object(mask, structure=numpy.ones((3,3)))
                 return mask
 
     def measure(self, position_root, timepoint, annotations, before, after):
+        print(f'Measuring position {position_root.name} - {timepoint}')
         measures = {}
+        derived_root = position_root.parent / 'derived_data'
 
         mask = self.get_mask(position_root, derived_root, timepoint, annotations)
         if mask is None:
@@ -187,6 +195,7 @@ def make_mask_measurements(experiment_root, update_poses=False):
 
     annotations = load_data.read_annotations(experiment_root)
     to_measure = load_data.filter_annotations(annotations, load_data.filter_excluded)
+    to_measure = load_data.filter_annotations(annotations, load_data.filter_living_timepoints)
     to_measure = load_data.filter_annotations(to_measure, elegant_filters.filter_by_stage('adult'))
 
     if update_poses:
