@@ -110,9 +110,80 @@ class MultipassPoseMeasurements:
 
         return [measures.get(feature, numpy.nan) for feature in self.feature_names]
 
-def make_multipass_measurements(experiment_root, update_poses=True, adult_only=True):
+def make_multipass_measurements(experiment_root, update_poses=False, adult_only=True):
     measures = [MultipassPoseMeasurements(microns_per_pixel=1.3)]
     measurement_name = 'multipass_measures'
+
+    annotations = load_data.read_annotations(experiment_root)
+    to_measure = load_data.filter_annotations(annotations, load_data.filter_excluded)
+
+    if update_poses:
+        images = load_data.scan_experiment_dir(experiment_root,
+            timepoint_filter=lambda position_n, timepoint_n: position_n in to_measure and timepoint_n in to_measure[position_n][1])
+        segment_images.annotate_poses_from_masks(images, pathlib.Path(experiment_root) / 'derived_data' / 'mask', to_measure)
+
+    process_data.measure_worms(experiment_root, to_measure, measures, measurement_name)
+
+class MaskPoseMeasurements:
+    """Provide data columns based on annotated worm pose information.
+
+    Given the pose data, each worm's length, volume, surface_area, and maximum
+    width, plus the area of the 2D projection of the worm into the image plane
+    (i.e. the area of the worm region in the image).
+
+    If no pose annotation is present, Nones are returned.
+
+    Note: the correct microns_per_pixel conversion factor MUST passed to the
+    constructor of this class.
+    """
+    feature_names = ['mask_area', 'mask_centroid_dist']
+
+    def __init__(self, microns_per_pixel, pose_annotation='pose'):
+        self.microns_per_pixel = microns_per_pixel
+        self.pose_annotation = pose_annotation
+
+    def get_mask(self, position_root, derived_root, timepoint, annotations):
+        mask_file = derived_root / 'mask' / position_root.name / f'{timepoint} {self.mask_name}.png'
+        if not mask_file.exists():
+            print(f'No mask file found for {position_root.name} at {timepoint}.')
+            return None
+        else:
+            mask = freeimage.read(mask_file)
+            if mask.sum() == 0:
+                print(f'No worm region defined for {position_root.name} at {timepoint}')
+                return None
+            else:
+                return mask
+
+    def measure(self, position_root, timepoint, annotations, before, after):
+        measures = {}
+
+        mask = self.get_mask(position_root, derived_root, timepoint, annotations)
+        if mask is None:
+            return [numpy.nan] * len(self.feature_names)
+
+        measures['mask_area'] = mask.sum() * self.microns_per_pixel**2
+
+        moments = ski_measure.moments(mask, order=1)
+        centroid = numpy.array([moments[1,0] / moments[0,0], moments[0,1] / moments [0,0]])
+
+        centroid_distances = []
+        for adjacent in (before, after):
+            if adjacent is not None:
+                adj_mask = self.get_mask(position_root.parent / adjacent, derived_root, timepoint, annotations)
+                if adj_mask is None:
+                    centroid_distances.append(numpy.nan)
+                    break
+                adj_moments = ski_measure.moments(adj_mask, order=1)
+                adj_centroid = numpy.array([adj_moments[1,0] / adj_moments[0,0], adj_moments[0,1] / adj_moments [0,0]])
+                adj_dist = ((centroid - adj_centroid)**2).sum()**0.5
+                centroid_distances.append(adj_dist)
+        measures['mask_centroid_dist'] = numpy.sum(centroid_distances) * self.microns_per_pixel
+        return [measures[feature] for feature in self.feature_names]
+
+def make_mask_measurements(experiment_root, update_poses=False, adult_only=True):
+    measures = [MaskPoseMeasurements(microns_per_pixel=1.3)]
+    measurement_name = 'mask_measures'
 
     annotations = load_data.read_annotations(experiment_root)
     to_measure = load_data.filter_annotations(annotations, load_data.filter_excluded)
@@ -131,6 +202,7 @@ def run_canonical_measurements(experiment_dir):
     process_data.update_annotations(experiment_dir)
     make_basic_measurements(experiment_dir)
     make_pose_measurements(experiment_dir)
+    make_mask_measurements(experiment_dir)
 
     image_channels = elegant_hacks.get_image_channels(experiment_dir)
     print(f'Image channels: {image_channels}')
