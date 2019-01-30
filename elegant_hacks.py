@@ -48,6 +48,7 @@ def check_for_alive(expt_dir):
     return set(good_annotations.keys()).difference(set(dead_annotations.keys()))
 
 def check_for_null_poses(experiment_root, annotation_dir='annotations'):
+    assert pathlib.Path(experiment_root).exists()
     experiment_annotations = load_data.read_annotations(experiment_root, annotation_dir=annotation_dir)
     experiment_annotations = load_data.filter_annotations(experiment_annotations, load_data.filter_excluded)
 
@@ -55,12 +56,13 @@ def check_for_null_poses(experiment_root, annotation_dir='annotations'):
     for position, position_annotations in experiment_annotations.items():
         for timepoint, timepoint_annotations in position_annotations[1].items():
             if 'bf_1 pose' in timepoint_annotations and 'bf_1 pose' not in poses:
-                for i in range(6):
+                for i in range(7):
                     poses.append(f'bf_{i+1} pose')
 
             for pose_tag in poses:
-                if timepoint_annotations.get(pose_tag, (None, None))[0] is None:
-                    print(f"Position {position}, timepoint {timepoint} doesn't have a vaild {pose} pose")
+                if timepoint_annotations.get(pose_tag, (None, None))[0] is None and timepoint_annotations['stage'] == 'adult':
+                    print(f"Position {position}, timepoint {timepoint} doesn't have a vaild {pose_tag} pose")
+    print(f'Checked for poses {poses}')
 
 def replace_annotation(experiment_root, annotation_type, old_annotation_values, new_annotation_value, annotation_dir='annotations'):
     if not isinstance(old_annotation_values, collections.Iterable):
