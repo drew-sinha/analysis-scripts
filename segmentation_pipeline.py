@@ -16,7 +16,7 @@ def filter_adult_images(experiment_root):
         return not experiment_annotations[position_name][0]['exclude'] and experiment_annotations[position_name][1][timepoint_name].get('stage') == 'adult'
     return scan_filter
 
-def process_experiment_with_filter(experiment_root, model, image_filter, mask_root=None, overwrite_existing=False, channels='bf', remake_masks=True):
+def process_experiment_with_filter(experiment_root, model, image_filter, mask_root=None, overwrite_existing=False, channels='bf', make_masks=True, do_annotations=True):
     '''
          image_filter - filter for scan_experiment_dir
     '''
@@ -45,16 +45,19 @@ def process_experiment_with_filter(experiment_root, model, image_filter, mask_ro
     else:
         print(f'No segmenting performed')
 
-    annotations = load_data.read_annotations(experiment_root)
-    metadata = load_data.read_metadata(experiment_root)
-    age_factor = metadata.get('age_factor', 1)
-    width_estimator = worm_widths.WidthEstimator.from_experiment_metadata(metadata, age_factor)
-    segment_images.annotate_poses_from_masks(positions, mask_root, annotations,
-        overwrite_existing, width_estimator)
-    load_data.write_annotations(experiment_root, annotations)
+    if do_annotations:
+        annotations = load_data.read_annotations(experiment_root)
+        metadata = load_data.read_metadata(experiment_root)
+        age_factor = metadata.get('age_factor', 1)
+        width_estimator = worm_widths.WidthEstimator.from_experiment_metadata(metadata, age_factor)
+        segment_images.annotate_poses_from_masks(positions, mask_root, annotations,
+            overwrite_existing, width_estimator)
+        load_data.write_annotations(experiment_root, annotations)
 
-    annotation_t = time.time()
-    print(f'annotation done after {(annotation_t - segment_t)} s') # ~3.5 hr
+        annotation_t = time.time()
+        print(f'annotation done after {(annotation_t - segment_t)} s') # ~3.5 hr
+    else:
+        print('No annotations done')
 
 def minimal_segmentation(experiment_root, model='default_CF.mat'):
     process_experiment.segment_experiment(experiment_root, model, overwrite_existing=False)
