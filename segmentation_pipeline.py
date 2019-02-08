@@ -32,7 +32,7 @@ def process_experiment_with_filter(experiment_root, model, image_filter, mask_ro
     scan_t = time.time()
     print(f'scanning done after {(scan_t-start_t)} s') #3 s once, 80s another, taking a while to load up the segmenter....
 
-    if remake_masks:
+    if make_masks:
         process = segment_images.segment_positions(positions, model, mask_root, use_gpu=True,
             overwrite_existing=False)
         if process.stderr:
