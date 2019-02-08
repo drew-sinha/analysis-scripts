@@ -7,7 +7,7 @@ import datetime
 
 from elegant import process_experiment, load_data, segment_images, process_data, worm_widths
 
-import elegant_hacks
+import elegant_hacks, elegant_filters
 
 def filter_adult_images(experiment_root):
     '''Filter for only adult timepoints from non-excluded animals'''
@@ -47,6 +47,7 @@ def process_experiment_with_filter(experiment_root, model, image_filter, mask_ro
 
     if do_annotations:
         annotations = load_data.read_annotations(experiment_root)
+        annotations = load_data.filter_annotations(annotations, elegant_filters.filter_dead_animals) # For the near term.... 
         metadata = load_data.read_metadata(experiment_root)
         age_factor = metadata.get('age_factor', 1)
         width_estimator = worm_widths.WidthEstimator.from_experiment_metadata(metadata, age_factor)
