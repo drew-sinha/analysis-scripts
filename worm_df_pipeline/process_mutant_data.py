@@ -1427,6 +1427,93 @@ def plot_HSvsLS(strain_df,measure,cutoff_value,
     if return_corrs: to_return.extend([[corr_data,corr_data_sl,corr_data_ll]])
     return to_return
 
+def predict_HSvsLS(strain_df,measure, threshold_plotting_mode='absolute'):
+    strain_ls = analyzeHealth.selectData.get_adultspans(strain_df)
+    sl_cohort = strain_ls <= np.percentile(strain_ls,25)
+    ll_cohort = strain_ls >= np.percentile(strain_ls,75)
+
+    if measure == 'cumulative_eggs':
+        raise Warning('span-comparison for cumulative_eggs not done.')
+
+    percentile_cutoffs = []
+    fraction_LSlimited = [] # num individuals whose LS = HS
+    fraction_HSnull = []
+
+    corr_data = []
+    corr_data_sl = []
+    corr_data_ll = []
+
+    measures_to_negate = ['intensity_90','intensity_80']
+    flat_data = strain_df.flat_data([measure])[0]
+    if measure in measures_to_negate:
+        flat_data *= -1 # Reverse direction for the measurements that increase with time
+    flat_data = flat_data[~np.isnan(flat_data)]
+
+    percentile_range = np.arange(0,1.05,0.05)
+    for percentile_val in percentile_range:
+        cutoff_value = np.percentile(flat_data, percentile_val*100)
+        strain_hs = get_healthspans(strain_df,a_variable=measure,cutoff_value=cutoff_value)
+
+        percentile_cutoffs.append(cutoff_value)
+        fraction_LSlimited.append(((strain_ls-strain_hs) <1).sum()/len(strain_ls))
+        fraction_HSnull.append((strain_hs<1).sum()/len(strain_hs))
+
+        corr_data.append(scipy.stats.linregress(strain_ls,strain_hs)[2]**2)
+        corr_data_sl.append(scipy.stats.linregress(strain_ls[sl_cohort],strain_hs[sl_cohort])[2]**2)
+        corr_data_ll.append(scipy.stats.linregress(strain_ls[ll_cohort],strain_hs[ll_cohort])[2]**2)
+    corr_data = np.array(corr_data)
+    corr_data_sl = np.array(corr_data_sl)
+    corr_data_ll = np.array(corr_data_ll)
+    percentile_cutoffs,var_unit = strain_df.display_variables(np.array(percentile_cutoffs),measure)
+    if measure in ['adjusted_size_rate','cumulative_eggs_rate']:
+        percentile_cutoffs *= strain_df.means[strain_df.measure_indices[measure]] # Mess around to get right scaling
+    fraction_LSlimited = np.array(fraction_LSlimited)
+    fraction_HSnull = np.array(fraction_HSnull)
+    valid_percentiles = (fraction_LSlimited < 0.1) & (fraction_HSnull < 0.1)
+
+
+    fig_h, ax_h = plt.subplots()
+    if threshold_plotting_mode == 'absolute':
+        ax_h.plot(percentile_cutoffs[valid_percentiles], corr_data[valid_percentiles])
+        ax_h.plot(percentile_cutoffs[valid_percentiles], corr_data_sl[valid_percentiles])
+        ax_h.plot(percentile_cutoffs[valid_percentiles], corr_data_ll[valid_percentiles])
+        ax_h.plot(percentile_cutoffs[valid_percentiles], 0.1*np.ones(valid_percentiles.sum()),'--k')
+        ax_h.set_xlabel('Threshold for Healthspan (absolute units)')
+        ax_h.set_xlim(
+            percentile_cutoffs[valid_percentiles].min(),
+            percentile_cutoffs[valid_percentiles].max())
+    elif threshold_plotting_mode in ['percentile', 'absolute_by_percentile']:
+        ax_h.plot(percentile_range[valid_percentiles], corr_data[valid_percentiles])
+        ax_h.plot(percentile_range[valid_percentiles], corr_data_sl[valid_percentiles])
+        ax_h.plot(percentile_range[valid_percentiles], corr_data_ll[valid_percentiles])
+        ax_h.plot(percentile_range[valid_percentiles], 0.1*np.ones(valid_percentiles.sum()),'--k')
+        ax_h.set_xlabel('Threshold for Healthspan (percentile of values)')
+        ax_h.set_xlim(
+            percentile_range[valid_percentiles].min(),
+            percentile_range[valid_percentiles].max())
+
+    if threshold_plotting_mode == 'absolute_by_percentile':
+        valid_values = percentile_range[valid_percentiles]
+        ax_h.set_xticks(np.arange(0,1.05,0.2))
+        # ax_h.set_xticks(numpy.linspace(valid_values.min(),valid_values.max(),6))
+        # valid_percentiles_range = valid_percentiles.min(), valid_percentiles.max()
+        # valid_percentiles_range_i = numpy.argmin(abs(valid_percentiles.min() - valid_percentiles)), numpy.argmax(abs(valid_percentiles.min() - valid_percentiles))
+        # ax_h.set_xticks(numpy.linspace(valid_percentiles.min(),valid_percentiles.max(),6))
+
+        ax_h.set_xticklabels(list(map(lambda val: '{:.3f}'.format(val),percentile_cutoffs[::4])))
+        # ax_h.set_xticklabels(list(map(lambda val: '{:.3f}'.format(val),percentile_cutoffs[])))
+        # valid_percentiles_range = [valid_percentiles.min(), valid_percentiles.max()]
+        # ax_h.set_xlim(*valid_percentiles_range)
+
+
+#     raise Exception()
+
+    ax_h.set_ylabel('$R^2$')
+    ax_h.set_ylim([0,1])
+
+    ax_h.legend(['Whole Population', 'Bottom-Lived', 'Top-Lived'],loc='northeast',frameon=False)
+    return (fig_h,ax_h)
+
 
 if __name__ is "__main__":
     make_labels= False
