@@ -49,7 +49,7 @@ def make_experiment_movies(experiment_root, output_dir,
     if positions is None:
         position_roots = sorted(p.parent for p in experiment_root.glob('*/position_metadata.json'))
     else:
-        position_roots = experiment_root / position for position in positions
+        position_roots = [experiment_root / position for position in positions]
         for position_root in position_roots:
             assert position_root.exists()
 
