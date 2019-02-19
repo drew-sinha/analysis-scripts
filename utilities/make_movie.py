@@ -30,7 +30,9 @@ def shrink(image_generator, factor=2, fast=False):
             # TODO handle 3D images/ change color tint to properly handle 3d images
             yield pyramid.pyr_down(image, factor).astype(np.uint8)
 
-
+'''
+    # TODO: Why are these above methods needed again? (I know there was a reason!)
+'''
 
 def double_image_layout(image_generator1, image_generator2):
     for image1, image2 in zip(image_generator1, image_generator2):
@@ -41,6 +43,23 @@ def double_image_layout(image_generator1, image_generator2):
         yield combined_image
 
 
+def make_experiment_movies(experiment_root, output_dir,
+    shrink_factor=4, framerate=5,glob_str='*bf.png',num_frames=-1,positions=None, **scale_params):
+    experiment_root = pathlib.Path(experiment_root)
+    if positions is None:
+        position_roots = sorted(p.parent for p in experiment_root.glob('*/position_metadata.json'))
+    else:
+        position_roots = experiment_root / position for position in positions
+        for position_root in position_roots:
+            assert position_root.exists()
+
+    for position_root in position_roots:
+        image_paths = sorted(position_root.glob(glob_str))
+        if num_frames != -1: image_paths = image_paths[:num_frames]
+
+        image_generator = write_movie.generate_images_from_files(image_paths,**scale_params)
+        image_generator = write_movie.shrink(image_generator, factor=shrink_factor, fast=True)
+        write_movie.write_movie(image_generator, output_file, framerate=framerate)
 
 
 # image_dir = pathlib.Path('/mnt/9karray/Sinha_Drew/20180810_spe-9_Control/012/')
