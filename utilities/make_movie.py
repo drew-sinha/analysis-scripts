@@ -59,6 +59,8 @@ def make_experiment_movies(experiment_root, output_dir,
 
         image_generator = write_movie.generate_images_from_files(image_paths,**scale_params)
         image_generator = write_movie.shrink(image_generator, factor=shrink_factor, fast=True)
+
+        output_file = output_dir / f'{position_root.name}.png'
         write_movie.write_movie(image_generator, output_file, framerate=framerate)
 
 
@@ -67,3 +69,11 @@ def make_experiment_movies(experiment_root, output_dir,
 # image_generator = write_movie.generate_images_from_files(image_filepaths)
 # image_generator = write_movie.shrink(yield_rgb(image_generator), factor=4) #pyramid.pyr_down returning [x,y,1] shaped image leads to an assertion error.... Should the assertion be around?
 # write_movie.write_movie(image_generator, 'test.mp4',framerate=5)
+
+
+experiment_root = pathlib.Path('/mnt/purplearray/Sinha_Drew/20181109_spe-9_faster_acquisition/')
+shrink_factor = 8
+framerate = 10
+glob_str = '*bf_*.png'
+output_dir = experiment_root / 'derived_data' / 'movies' / f'shrink{shrink_factor}_framerate{framerate}_nopin'
+make_movie.make_experiment_movies(experiment_root, output_dir, shrink_factor=shrink_factor,framerate=framerate,glob_str=glob_str,positions=['17','30','35','58'])
