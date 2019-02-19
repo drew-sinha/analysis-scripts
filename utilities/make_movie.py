@@ -60,7 +60,7 @@ def make_experiment_movies(experiment_root, output_dir,
         image_generator = write_movie.generate_images_from_files(image_paths,**scale_params)
         image_generator = write_movie.shrink(image_generator, factor=shrink_factor, fast=True)
 
-        output_file = output_dir / f'{position_root.name}.png'
+        output_file = output_dir / f'{position_root.name}.mp4'
         write_movie.write_movie(image_generator, output_file, framerate=framerate)
 
 
