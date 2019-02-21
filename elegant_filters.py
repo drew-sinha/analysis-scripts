@@ -13,6 +13,9 @@ def filter_by_kw(kw):
 def filter_live_animals(position_name, position_annotations, timepoint_annotations):
     return not any([tp.get('stage') == 'dead' for tp in timepoint_annotations.values()])
 
+def filter_dead_animals(position_name, position_annotations, timepoint_annotations):
+    return any([tp.get('stage') == 'dead' for tp in timepoint_annotations.values()])
+
 def filter_by_age(min_age, max_age,adult_age=False):
     '''
         min_age, max_age - age in hours
