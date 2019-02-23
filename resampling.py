@@ -14,9 +14,7 @@ def permute_data(data,num_samples):
 
 def resample_data(data,num_samples):
     data = np.array(data)
-    #~ return np.array(
-            #~ data[[np.random.randint(len(data),(len(data),))]] for i in num_samples)
-    return data[[np.random.randint(len(data),(num_samples,len(data)))]]
+    return data[[np.random.randint(len(data),size=(num_samples,len(data)))]]
 
 def permutetest_meandiff(samp1,samp2,num_samples=10000): # samp2-samp1, default to two-sided test
     resampled_data = permute_data(np.append(samp1,samp2),num_samples=num_samples)
@@ -50,8 +48,8 @@ def bootstrap_CI(samp, func, num_samples=10000,alpha=0.05):
     elif func == 'mean':
         func = lambda data: np.mean(data, axis=-1)
 
-    resampled_data = resample_data(samp)
+    resampled_data = resample_data(samp, num_samples)
     resampled_stats = func(resampled_data)
     resampled_stats -= resampled_stats.mean()
 
-    return func(samp) - np.percentile(resampled_stats,[(1-alpha)/2, alpha/2])
+    return func(samp) - np.percentile(resampled_stats,[(1-alpha/2)*100, alpha/2*100])
