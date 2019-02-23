@@ -311,3 +311,27 @@ def plot_timecourse(worms, feature, min_age=-numpy.inf, max_age=numpy.inf,
         plotting_tools.build_gradient_palette(base_color,256))  # Assume palette is fine enough to linearly segment
     plot_timecourse(worms, feature, min_age=0, age_feature='adult_age', time_units='days', color_map=cmap)
 '''
+
+
+
+def scatter_features(worms, x_feature, y_feature, color_by='lifespan'):
+    """Plot values of a given feature for each worm, colored by a given
+    worm feature (defaults to lifespan).
+
+    Parameters:
+        x_feature, y_feature: name/callables for two features to compare against each other
+        color_by: worm feature to use for color scale of each timecourse.
+    """
+    def _feature_plot_data(worms, x_feature, y_feature, color_by='lifespan'):
+        x_feature_vals = worms.get_feature(x_feature)
+        y_feature_vals = worms.get_feature(y_feature)
+        color_vals = colorize.scale(worms.get_feature(color_by), output_max=1)
+        colors = colorize.color_map(color_vals, uint8=False)
+        out = []
+        for x, y, color in zip(x_feature_vals, y_feature_vals, colors):
+            out.append((x, y, color))
+        return out
+
+    import matplotlib.pyplot as plt
+    for x, y, c in _feature_plot_data(worms, x_feature, y_feature, color_by=color_by):
+        plt.scatter(x, y, color=c)
