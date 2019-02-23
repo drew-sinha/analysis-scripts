@@ -127,3 +127,89 @@ def plot_expt_hs(worms, feature, cutoff, dwell_time=2*24, ax_h=None,mode='cdf',*
         return (fig_h, ax_h, metadata)
     else:
         return metadata
+
+def get_featurespan_worm(feature, cutoff, dwell_time=2*24, return_crossings=False):
+    '''Get amount of time feature is remains above/below a prescribed cutoff value;
+        assumes that all ages are in *hours*.
+
+        Parameters
+            feature - str denoting feature of interest in the worms object
+            cutoff - float value for cutoff (in units of the feature)
+            dwell_time - (optional) minimum time an individual must stay below the
+                cutoff to continue in "featurespan" (in hours)
+            return_crossings - optional bool denoting whether to return the feature value
+                at the time which an individual passed into poor health (good for
+                debugging and visualization)
+
+        Returns
+            featurespans (in hours)
+            (optional, if return_crossings is True) crossing value
+
+    '''
+
+    # TODO: Eliminate origin get_featurespan in favor of this function.
+    def feature_func(worm):
+        # Ensure that feature decreases with time
+        # TODO: Make the features to negate a little less hardcoded?
+        if any([label in feature for label in ['af', 'intensity', 'autofluorescence']]):
+            negate = True
+        else: negate = False
+
+        try:
+            ages, feature_data = worm.get_time_range(feature, min_age=0, age_feature='adult_age')
+        except AttributeError: # 'adult_age' not in origin Willie-style data
+            ages, feature_data = worm.get_time_range(feature, min_age=0, age_feature='egg_age')
+
+        if negate:
+            feature_data *= -1
+
+        adjusted_data = feature_data - cutoff
+        crossings = np.where((adjusted_data[:-1] > 0) & (adjusted_data[1:] < 0))[0]
+
+        if len(crossings) == 0:
+            if adjusted_data[0] > 0:
+                try:
+                    featurespan = worm.adultspan
+                except AttributeError: # TEmporary hack for older data
+                    featurespan = worm.lifespan
+                crossing_val = feature_data[-1]
+            elif adjusted_data[0] <= 0:
+                featurespan = 0
+                crossing_val = feature_data[0]
+        else:
+            found_crossing = False
+            for crossing_index in crossings:
+                if ages[crossing_index] + dwell_time > ages[-1]: # Case where crossing is near death
+                    dwell_end = len(ages)
+                else:
+                    dwell_end = np.where(ages > (ages[crossing_index] + dwell_time))[0][0]
+
+                if (adjusted_data[crossing_index+1:dwell_end] < 0).all():
+                    featurespan = ages[crossing_index]
+                    crossing_val = feature_data[crossing_index]
+                    found_crossing = True
+                    break
+            if not found_crossing:
+                featurespan = ages[crossing_index] # Default to the last crossing in a bad situation
+                crossing_val = feature_data[crossing_index]
+
+        if return_crossings:
+            return featurespan, crossing_val
+        else:
+            return featurespan
+    return feature_func
+
+
+def peak_size(size_measurement,percentile=99):
+    '''
+    Calc peak size as the nth percentile (default 99th)
+    '''
+    def feature(worm):
+        size = getattr(worm.td, size_measurement)
+        try:
+            adult_age = getattr(worm.td, 'adult_age')
+        except AttributeError:
+            adult_age = getattr(worm.td, 'egg_age') # Hack for older/Willie style data.
+        nan_mask = np.isnan(size) # Need for measurement pipeline including dead timepoints (come back later to fix)
+        return np.percentile(size[(adult_age>0) & (~nan_mask)],percentile)
+    return feature
