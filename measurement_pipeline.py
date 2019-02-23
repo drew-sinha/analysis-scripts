@@ -234,7 +234,7 @@ def run_canonical_measurements(experiment_dir):
 
         make_af_measurements(experiment_dir, fl_measurement_name=fl_measurement_name)
 
-    process_data.collate_data(experiment_dir)
+    process_data.collate_data(experiment_dir, ('stage_x', 'stage_y', 'starting_stage_z', 'notes'))
 
 
 if __name__ == "__main__":
