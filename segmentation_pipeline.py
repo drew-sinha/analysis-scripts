@@ -24,6 +24,8 @@ def process_experiment_with_filter(experiment_root, model, image_filter, mask_ro
     if mask_root is None:
         mask_root = pathlib.Path(experiment_root) / 'derived_data' / 'mask'
 
+    # Temporary hacks until migration to new elegant complete (while zpl-9000 no longer updates annotations automatically)
+    process_data.annotate(experiment_dir, annotators=[process_data.annotate_timestamps, process_data.annotate_z], position_annotators=[process_data.annotate_stage_pos]) 
     elegant_hacks.propagate_stages(experiment_root)
 
     start_t = time.time()
