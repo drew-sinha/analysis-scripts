@@ -36,6 +36,9 @@ def compile_annotations_from_tsv(experiment_root):
     annotations = load_data.read_annotations(experiment_root)
     for position, (position_annotations, timepoint_annotations) in annotations.items():
         if 'DEAD' in annotation_data[position]['notes']:
+            first_timepoint = list(timepoint_annotations.keys())[0]
+            timepoint_annotations[first_timepoint]['stage'] = 'egg'
+
             for field in previous_annotations:
                 transition_timepoint = annotation_data[position][field]
                 timepoint_annotations[transition_timepoint]['stage'] = field
@@ -46,6 +49,18 @@ def compile_annotations_from_tsv(experiment_root):
     load_data.write_annotations(experiment_root, annotations)
 
     elegant_hacks.propagate_stages(experiment_root) # Need this stage propagation since the stages aren't monotonically sequential
+
+def fill_empty_stages(experiment_root):
+    '''
+       Need this since the first pass of compiling annotations didn't do its job correctly.
+    '''
+    annotations = load_data.read_annotations(experiment_root)
+    for position, (position_annotations, timepoint_annotations) in annotations.items():
+        if not position_annotations['exclude']:
+            for timepoint, timepoint_annotation in timepoint_annotations.items():
+                if 'stage' not in timepoint_annotation:
+                    timepoint_annotation['stage'] = 'egg'
+    load_data.write_annotations(experiment_root, annotations)
 
 def move_great_lawn(experiment_root, remove_lawn=False):
     experiment_root = pathlib.Path(experiment_root)
