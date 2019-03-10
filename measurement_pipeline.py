@@ -210,6 +210,18 @@ def make_mask_measurements(experiment_root, update_poses=False):
 
     process_data.measure_worms(experiment_root, to_measure, measures, measurement_name)
 
+def make_lawn_measurements(experiment_root):
+    process_data.annotate(experiment_root, position_annotators=[process_data.annotate_lawn])
+
+    measures = [process_data.LawnMeasurements()]
+    measurement_name = 'lawn_measures'
+    
+    annotations = load_data.read_annotations(experiment_root)
+    to_measure = load_data.filter_annotations(annotations, load_data.filter_excluded)
+    to_measure = load_data.filter_annotations(annotations, load_data.filter_living_timepoints)
+
+    process_data.measure_worms(experiment_root, to_measure, measures, measurement_name)
+
 def run_canonical_measurements(experiment_dir):
     '''Run standard measurements on the specified experiment directory'''
     experiment_dir = pathlib.Path(experiment_dir)
