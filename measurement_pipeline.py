@@ -210,8 +210,9 @@ def make_mask_measurements(experiment_root, update_poses=False):
 
     process_data.measure_worms(experiment_root, to_measure, measures, measurement_name)
 
-def make_lawn_measurements(experiment_root):
-    process_data.annotate(experiment_root, position_annotators=[process_data.annotate_lawn])
+def make_lawn_measurements(experiment_root, remake_lawns=False):
+    if not (pathlib.Path(experiment_root) / 'derived_data' / 'lawn_masks').exists() or remake_lawns:
+        process_data.annotate(experiment_root, position_annotators=[process_data.annotate_lawn])
 
     measures = [process_data.LawnMeasurements()]
     measurement_name = 'lawn_measures'
