@@ -229,6 +229,9 @@ def run_canonical_measurements(experiment_dir):
     process_data.update_annotations(experiment_dir)
     make_basic_measurements(experiment_dir)
     make_pose_measurements(experiment_dir)
+
+    process_data.collate_data(experiment_dir)
+
     make_mask_measurements(experiment_dir)
 
     image_channels = elegant_hacks.get_image_channels(experiment_dir)
