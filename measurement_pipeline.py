@@ -228,10 +228,17 @@ def run_canonical_measurements(experiment_dir):
     experiment_dir = pathlib.Path(experiment_dir)
 
     process_data.update_annotations(experiment_dir)
+
+    position_features = ['stage_x','stage_y','starting_stage_z','notes']
+    annotations = load_data.read_annotations(experiment_dir)
+    annotations = load_data.filter_annotations(annotations, load_data.filter_excluded)
+    if any(['lawn_area' in position_annotations for (position_annotations, timepoint_annotations) in annotations.items()):
+        position_features.append('lawn_area')
+
     make_basic_measurements(experiment_dir)
     make_pose_measurements(experiment_dir)
 
-    process_data.collate_data(experiment_dir)
+    process_data.collate_data(experiment_dir, position_features=position_features)
 
     make_mask_measurements(experiment_dir)
 
@@ -242,7 +249,7 @@ def run_canonical_measurements(experiment_dir):
         print('Found multipass movement channel bf_1; making measurements')
         make_multipass_measurements(experiment_dir, update_poses=False)
 
-    process_data.collate_data(experiment_dir) # For convenience since autofluorescence can take a little while....
+    process_data.collate_data(experiment_dir,position_features=position_features) # For convenience since autofluorescence can take a little while....
 
     if 'green_yellow_excitation_autofluorescence' in image_channels or 'autofluorescence' in image_channels:
         fl_measurement_name = 'autofluorescence' if 'autofluorescence' in image_channels else 'green_yellow_excitation_autofluorescence'
@@ -250,7 +257,7 @@ def run_canonical_measurements(experiment_dir):
 
         make_af_measurements(experiment_dir, fl_measurement_name=fl_measurement_name)
 
-    process_data.collate_data(experiment_dir, ('stage_x', 'stage_y', 'starting_stage_z', 'notes'))
+    process_data.collate_data(experiment_dir, position_features=position_features)
 
 
 if __name__ == "__main__":
