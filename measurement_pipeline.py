@@ -232,7 +232,7 @@ def run_canonical_measurements(experiment_dir):
     position_features = ['stage_x','stage_y','starting_stage_z','notes']
     annotations = load_data.read_annotations(experiment_dir)
     annotations = load_data.filter_annotations(annotations, load_data.filter_excluded)
-    if any(['lawn_area' in position_annotations for (position_annotations, timepoint_annotations) in annotations.items()):
+    if any(['lawn_area' in position_annotations for (position_annotations, timepoint_annotations) in annotations.items()]):
         position_features.append('lawn_area')
 
     make_basic_measurements(experiment_dir)
