@@ -7,8 +7,12 @@ from elegant.gui import stage_field, experiment_annotator, pose_annotation
 
 import elegant_filters
 
-def load_masks(experiment_root):
+def load_masks(experiment_root, mask_root=None):
     experiment_root = pathlib.Path(experiment_root)
+    if mask_root is None:
+        mask_root = experiment_root / 'derived_data' / 'mask'
+    mask_root = pathlib.Path(mask_root)
+
     experiment_annotations = load_data.read_annotations(experiment_root)
     experiment_annotations = load_data.filter_annotations(experiment_annotations, load_data.filter_excluded)
     experiment_annotations = load_data.filter_annotations(experiment_annotations, elegant_filters.filter_subsample_timepoints(experiment_root))
@@ -20,7 +24,7 @@ def load_masks(experiment_root):
 
     for position, position_images in experiment_images.items():
         for timepoint, timepoint_images in position_images.items():
-            timepoint_images.append(experiment_root / 'derived_data' / 'mask' / position / f'{timepoint} bf.png')
+            timepoint_images.append(mask_root / position / f'{timepoint} bf.png')
 
     # experiment_images = experiment_images_bf.copy()
     # for position, position_images in experiment_images.items():

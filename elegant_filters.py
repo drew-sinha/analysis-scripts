@@ -13,6 +13,9 @@ def filter_by_kw(kw):
 def filter_live_animals(position_name, position_annotations, timepoint_annotations):
     return not any([tp.get('stage') == 'dead' for tp in timepoint_annotations.values()])
 
+def filter_dead_animals(position_name, position_annotations, timepoint_annotations):
+    return any([tp.get('stage') == 'dead' for tp in timepoint_annotations.values()])
+
 def filter_by_age(min_age, max_age,adult_age=False):
     '''
         min_age, max_age - age in hours
@@ -119,6 +122,11 @@ def compose_timepoint_filters(*filters):
         return return_val
     return composed_filter
 
+def select_worms(worm_positions):
+    def annotation_filter(position_name, position_annotations, timepoint_annotations):
+        return position_name in worm_positions
+    return annotation_filter
+
 '''
 Examples for custom misc. filtering
 def select_worms(experiment_dir):
@@ -127,6 +135,9 @@ def select_worms(experiment_dir):
             '20180816_age-1_spe-9_Run_4': ['017','037','080','009','087', '057']}
         return position_name in worm_selection[pathlib.Path(experiment_dir).name]
     return annotation_filter
+
+
+
 
 def filter_from_elegant_worms(worms):
     def annotation_filter(position_name, position_annotations, timepoint_annotations):

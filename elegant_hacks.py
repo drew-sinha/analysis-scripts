@@ -47,6 +47,23 @@ def check_for_alive(expt_dir):
 
     return set(good_annotations.keys()).difference(set(dead_annotations.keys()))
 
+def check_for_null_poses(experiment_root, annotation_dir='annotations'):
+    assert pathlib.Path(experiment_root).exists()
+    experiment_annotations = load_data.read_annotations(experiment_root, annotation_dir=annotation_dir)
+    experiment_annotations = load_data.filter_annotations(experiment_annotations, load_data.filter_excluded)
+
+    poses = ['pose']
+    for position, position_annotations in experiment_annotations.items():
+        for timepoint, timepoint_annotations in position_annotations[1].items():
+            if 'bf_1 pose' in timepoint_annotations and 'bf_1 pose' not in poses:
+                for i in range(7):
+                    poses.append(f'bf_{i+1} pose')
+
+            for pose_tag in poses:
+                if timepoint_annotations.get(pose_tag, (None, None))[0] is None and timepoint_annotations['stage'] == 'adult':
+                    print(f"Position {position}, timepoint {timepoint} doesn't have a vaild {pose_tag} pose")
+    print(f'Checked for poses {poses}')
+
 def replace_annotation(experiment_root, annotation_type, old_annotation_values, new_annotation_value, annotation_dir='annotations'):
     if not isinstance(old_annotation_values, collections.Iterable):
         old_annotation_values = list(old_annotation_values)
@@ -294,3 +311,27 @@ def plot_timecourse(worms, feature, min_age=-numpy.inf, max_age=numpy.inf,
         plotting_tools.build_gradient_palette(base_color,256))  # Assume palette is fine enough to linearly segment
     plot_timecourse(worms, feature, min_age=0, age_feature='adult_age', time_units='days', color_map=cmap)
 '''
+
+
+
+def scatter_features(worms, x_feature, y_feature, color_by='lifespan'):
+    """Plot values of a given feature for each worm, colored by a given
+    worm feature (defaults to lifespan).
+
+    Parameters:
+        x_feature, y_feature: name/callables for two features to compare against each other
+        color_by: worm feature to use for color scale of each timecourse.
+    """
+    def _feature_plot_data(worms, x_feature, y_feature, color_by='lifespan'):
+        x_feature_vals = worms.get_feature(x_feature)
+        y_feature_vals = worms.get_feature(y_feature)
+        color_vals = colorize.scale(worms.get_feature(color_by), output_max=1)
+        colors = colorize.color_map(color_vals, uint8=False)
+        out = []
+        for x, y, color in zip(x_feature_vals, y_feature_vals, colors):
+            out.append((x, y, color))
+        return out
+
+    import matplotlib.pyplot as plt
+    for x, y, c in _feature_plot_data(worms, x_feature, y_feature, color_by=color_by):
+        plt.scatter(x, y, color=c)
