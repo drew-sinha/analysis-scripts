@@ -7,7 +7,7 @@ from elegant import process_data, load_data
 
 import elegant_hacks
 
-previous_annotations = ['hatch', 'adult', 'dead']
+previous_annotations = ['larva', 'adult', 'dead']
 
 def compile_annotations_from_tsv(experiment_root):
     experiment_root = pathlib.Path(experiment_root)
@@ -25,7 +25,7 @@ def compile_annotations_from_tsv(experiment_root):
         for line in reader:
             position = line[0][1:] # Starts with '\'
             notes = line[-1]
-            
+
             annotation_data[position] = {}
             if 'DEAD' in notes:
                 for field, frame_num in zip(previous_annotations, line[1:]):
@@ -72,3 +72,6 @@ def move_great_lawn(experiment_root, remove_lawn=False):
         if remove_lawn:
             (position_root / 'great_lawn.png').unlink()
 
+def prep_experiment_for_processing(experiment_root):
+    compile_annotations_from_tsv(experiment_root)
+    move_great_lawn(experiment_root, remove_lawn=False)
