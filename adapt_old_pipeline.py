@@ -18,7 +18,7 @@ def compile_annotations_from_tsv(experiment_root):
         experiment_metadata = json.load(mdata_file)
 
     annotation_data = {}
-    with list(experiment_root.glob('*Annotations.tsv'))[0].open('r') as annotation_file:
+    with list(experiment_root.glob('*.tsv'))[0].open('r') as annotation_file:
         reader = csv.reader(annotation_file, delimiter='\t')
         _ = reader.__next__() # Header
 
