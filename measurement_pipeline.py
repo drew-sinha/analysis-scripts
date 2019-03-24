@@ -37,22 +37,24 @@ def make_pose_measurements(experiment_root, update_poses=False, adult_only=True)
 
     process_data.measure_worms(experiment_root, to_measure, measures, measurement_name)
 
-def make_af_measurements(experiment_root, fl_measurement_name='green_yellow_excitation_autofluorescence'):
+def make_af_measurements(experiment_root, fl_measurement_name='green_yellow_excitation_autofluorescence',adult_only=True):
     measures = [process_data.FluorMeasurements(fl_measurement_name)]
     measurement_name = 'autofluorescence_measures'
 
     annotations = load_data.read_annotations(experiment_root)
     annotations = load_data.filter_annotations(annotations, load_data.filter_excluded)
-    to_measure = load_data.filter_annotations(annotations, elegant_filters.filter_by_stage('adult'))
+    if adult_only:
+        to_measure = load_data.filter_annotations(annotations, elegant_filters.filter_by_stage('adult'))
     process_data.measure_worms(experiment_root, to_measure, measures, measurement_name)
 
-def make_gfp_measurements(experiment_root, fl_measurement_name='gfp'):
+def make_gfp_measurements(experiment_root, fl_measurement_name='gfp', adult_only=True):
     measures = [process_data.FluorMeasurements(fl_measurement_name)]
     measurement_name = 'fluorescence_measures'
 
     annotations = load_data.read_annotations(experiment_root)
     annotations = load_data.filter_annotations(annotations, load_data.filter_excluded)
-    to_measure = load_data.filter_annotations(annotations, elegant_filters.filter_by_stage('adult'))
+    if adult_only:
+        to_measure = load_data.filter_annotations(annotations, elegant_filters.filter_by_stage('adult'))
     process_data.measure_worms(experiment_root, to_measure, measures, measurement_name)
 
 class MultipassPoseMeasurements:
@@ -216,7 +218,7 @@ def make_lawn_measurements(experiment_root, remake_lawns=False):
 
     measures = [process_data.LawnMeasurements()]
     measurement_name = 'lawn_measures'
-    
+
     annotations = load_data.read_annotations(experiment_root)
     to_measure = load_data.filter_annotations(annotations, load_data.filter_excluded)
     to_measure = load_data.filter_annotations(annotations, load_data.filter_living_timepoints)
@@ -259,6 +261,19 @@ def run_canonical_measurements(experiment_dir):
 
     process_data.collate_data(experiment_dir, position_features=position_features)
 
+
+def run_holly_measurements(experiment_dir):
+    position_features = ['stage_x','stage_y','starting_stage_z','notes']
+
+    make_basic_measurements(experiment_dir)
+    make_pose_measurements(experiment_dir,adult_only=False)
+
+    process_data.collate_data(experiment_dir,position_features=position_features) # Make preliminary analysis faster.
+
+    make_gfp_measurements(experiment_dir,adult_only=False)
+    make_af_measurements(experiment_dir,adult_only=False)
+
+    process_data.collate_data(experiment_dir,position_features=position_features)
 
 if __name__ == "__main__":
     # Call make_measurements EXPT_DIR
