@@ -25,7 +25,6 @@ def process_experiment_with_filter(experiment_root, model, image_filter, mask_ro
         mask_root = pathlib.Path(experiment_root) / 'derived_data' / 'mask'
 
     # Temporary hacks until migration to new elegant complete (while zpl-9000 no longer updates annotations automatically)
-    #process_data.annotate(experiment_root, annotators=[process_data.annotate_timestamps, process_data.annotate_z], position_annotators=[process_data.annotate_stage_pos]) 
     process_data.update_annotations(experiment_root)
     elegant_hacks.propagate_stages(experiment_root)
 
@@ -50,7 +49,6 @@ def process_experiment_with_filter(experiment_root, model, image_filter, mask_ro
 
     if do_annotations:
         annotations = load_data.read_annotations(experiment_root)
-        #annotations = load_data.filter_annotations(annotations, elegant_filters.filter_dead_animals) # For the near term.... 
         metadata = load_data.read_metadata(experiment_root)
         age_factor = metadata.get('age_factor', 1)
         width_estimator = worm_widths.WidthEstimator.from_experiment_metadata(metadata, age_factor)
