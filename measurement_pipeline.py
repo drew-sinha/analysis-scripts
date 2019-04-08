@@ -17,7 +17,6 @@ def make_basic_measurements(experiment_root):
     elegant_hacks.propagate_stages(experiment_root,verbose=True)
     annotations = load_data.read_annotations(experiment_root)
     to_measure = load_data.filter_annotations(annotations, load_data.filter_excluded)
-    #to_measure = load_data.filter_annotations(to_measure, load_data.filter_living_timepoints)
     process_data.measure_worms(experiment_root, to_measure, measures, measurement_name)
 
 def make_pose_measurements(experiment_root, update_poses=False, adult_only=True):
@@ -151,7 +150,6 @@ class MaskPoseMeasurements:
     def get_mask(self, position_root, derived_root, timepoint, annotations):
         mask_file = derived_root / 'mask' / position_root.name / f'{timepoint} {self.mask_name}.png'
         if not mask_file.exists():
-            #raise Exception()
             print(f'No mask file found for {position_root.name} at {timepoint}.')
             return None
         else:
@@ -222,7 +220,6 @@ def make_lawn_measurements(experiment_root, remake_lawns=False):
 
     annotations = load_data.read_annotations(experiment_root)
     to_measure = load_data.filter_annotations(annotations, load_data.filter_excluded)
-    to_measure = load_data.filter_annotations(annotations, load_data.filter_living_timepoints)
 
     process_data.measure_worms(experiment_root, to_measure, measures, measurement_name)
 
