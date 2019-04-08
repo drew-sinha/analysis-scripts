@@ -17,7 +17,6 @@ def make_basic_measurements(experiment_root):
     elegant_hacks.propagate_stages(experiment_root,verbose=True)
     annotations = load_data.read_annotations(experiment_root)
     to_measure = load_data.filter_annotations(annotations, load_data.filter_excluded)
-    #to_measure = load_data.filter_annotations(to_measure, load_data.filter_living_timepoints)
     process_data.measure_worms(experiment_root, to_measure, measures, measurement_name)
 
 def make_pose_measurements(experiment_root, update_poses=False, adult_only=True):
@@ -42,7 +41,7 @@ def make_af_measurements(experiment_root, fl_measurement_name='green_yellow_exci
     measurement_name = 'autofluorescence_measures'
 
     annotations = load_data.read_annotations(experiment_root)
-    annotations = load_data.filter_annotations(annotations, load_data.filter_excluded)
+    to_measure = load_data.filter_annotations(annotations, load_data.filter_excluded)
     if adult_only:
         to_measure = load_data.filter_annotations(annotations, elegant_filters.filter_by_stage('adult'))
     process_data.measure_worms(experiment_root, to_measure, measures, measurement_name)
@@ -52,7 +51,7 @@ def make_gfp_measurements(experiment_root, fl_measurement_name='gfp', adult_only
     measurement_name = 'fluorescence_measures'
 
     annotations = load_data.read_annotations(experiment_root)
-    annotations = load_data.filter_annotations(annotations, load_data.filter_excluded)
+    to_measure = load_data.filter_annotations(annotations, load_data.filter_excluded)
     if adult_only:
         to_measure = load_data.filter_annotations(annotations, elegant_filters.filter_by_stage('adult'))
     process_data.measure_worms(experiment_root, to_measure, measures, measurement_name)
@@ -151,7 +150,6 @@ class MaskPoseMeasurements:
     def get_mask(self, position_root, derived_root, timepoint, annotations):
         mask_file = derived_root / 'mask' / position_root.name / f'{timepoint} {self.mask_name}.png'
         if not mask_file.exists():
-            #raise Exception()
             print(f'No mask file found for {position_root.name} at {timepoint}.')
             return None
         else:
@@ -194,16 +192,17 @@ class MaskPoseMeasurements:
 def annotate_timepoints(experiment_root, position, timepoint, metadata, annotations):
     annotations['timepoint'] = metadata['timepoint']
 
-def make_mask_measurements(experiment_root, update_poses=False):
-    process_data.annotate(experiment_root, annotators=[annotate_timepoints])
+def make_mask_measurements(experiment_root, update_poses=False, adult_only=True):
+    process_data.annotate(experiment_root, annotators=[annotate_timepoints]) # Why?
 
     measures = [MaskPoseMeasurements(microns_per_pixel=1.3)]
     measurement_name = 'mask_measures'
 
     annotations = load_data.read_annotations(experiment_root)
     to_measure = load_data.filter_annotations(annotations, load_data.filter_excluded)
-    to_measure = load_data.filter_annotations(annotations, load_data.filter_living_timepoints)
-    to_measure = load_data.filter_annotations(to_measure, elegant_filters.filter_by_stage('adult'))
+    to_measure = load_data.filter_annotations(to_measure, elegant_filters.filter_living_timepoints)
+    if adult_only:
+        to_measure = load_data.filter_annotations(to_measure, elegant_filters.filter_by_stage('adult'))
 
     if update_poses:
         images = load_data.scan_experiment_dir(experiment_root,
@@ -221,7 +220,6 @@ def make_lawn_measurements(experiment_root, remake_lawns=False):
 
     annotations = load_data.read_annotations(experiment_root)
     to_measure = load_data.filter_annotations(annotations, load_data.filter_excluded)
-    to_measure = load_data.filter_annotations(annotations, load_data.filter_living_timepoints)
 
     process_data.measure_worms(experiment_root, to_measure, measures, measurement_name)
 
@@ -242,7 +240,7 @@ def run_canonical_measurements(experiment_dir):
 
     process_data.collate_data(experiment_dir, position_features=position_features)
 
-    make_mask_measurements(experiment_dir)
+    #make_mask_measurements(experiment_dir)
 
     image_channels = elegant_hacks.get_image_channels(experiment_dir)
     print(f'Image channels: {image_channels}')
