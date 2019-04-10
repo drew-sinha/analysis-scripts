@@ -20,7 +20,10 @@ def make_basic_measurements(experiment_root):
     process_data.measure_worms(experiment_root, to_measure, measures, measurement_name)
 
 def make_pose_measurements(experiment_root, update_poses=False, adult_only=True):
-    measures = [process_data.PoseMeasurements(microns_per_pixel=1.3)]
+    experiment_metadata = load_data.read_metadata(experiment_root)
+    microns_per_pixel = 1.3 * int(experiment_metadata['objective'][:-1])/5 # Assuming 1x optocoupler
+
+    measures = [process_data.PoseMeasurements(microns_per_pixel=microns_per_pixel)]
     measurement_name = 'pose_measures'
 
     annotations = load_data.read_annotations(experiment_root)
