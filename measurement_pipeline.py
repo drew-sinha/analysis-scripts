@@ -18,7 +18,7 @@ def make_basic_measurements(experiment_root, annotations):
 
 def make_pose_measurements(experiment_root, annotations, adult_only=True):
     experiment_metadata = load_data.read_metadata(experiment_root)
-    microns_per_pixel = 1.3 * experiment_metadata['objective']/(5*experiment_metadata['optocoupler']) # Assuming 1x optocoupler
+    microns_per_pixel = 1.3 * 5/(experiment_metadata['objective']*experiment_metadata['optocoupler'])
     measures = [process_data.PoseMeasurements(microns_per_pixel=microns_per_pixel)]
     measurement_name = 'pose_measures'
 
@@ -104,7 +104,7 @@ class MultipassPoseMeasurements:
 
 def make_multipass_measurements(experiment_root, annotations, adult_only=True):
     experiment_metadata = load_data.read_metadata(experiment_root)
-    microns_per_pixel = 1.3 * experiment_metadata['objective']/(5*experiment_metadata['optocoupler']) # Assuming 1x optocoupler
+    microns_per_pixel = 1.3 * 5/(experiment_metadata['objective']*experiment_metadata['optocoupler'])
     measures = [MultipassPoseMeasurements(microns_per_pixel=microns_per_pixel)]
     measurement_name = 'multipass_measures'
 
@@ -181,7 +181,7 @@ def make_mask_measurements(experiment_root, annotations=None, adult_only=True):
     #process_data.annotate(experiment_root, annotators=[annotate_timepoints]) # Why?
 
     experiment_metadata = load_data.read_metadata(experiment_root)
-    microns_per_pixel = 1.3 * int(experiment_metadata['objective'][:-1])/5 # Assuming 1x optocoupler
+    microns_per_pixel = 1.3 * 5/(experiment_metadata['objective']*experiment_metadata['optocoupler'])
     measures = [MaskPoseMeasurements(microns_per_pixel=microns_per_pixel)]
     measurement_name = 'mask_measures'
 
@@ -214,6 +214,10 @@ def run_canonical_measurements(experiment_dir):
     position_features = ['stage_x','stage_y','starting_stage_z','notes']
     annotations = load_data.read_annotations(experiment_dir)
     annotations = load_data.filter_annotations(annotations, load_data.filter_excluded)
+
+    #print('warning: Im using a custom filter function')
+    #annotations = load_data.filter_annotations(annotations, lambda name, pa, ta: name < '25') # Remove me later
+
     if any(['lawn_area' in position_annotations for (position_annotations, timepoint_annotations) in annotations.items()]):
         position_features.append('lawn_area')
 
