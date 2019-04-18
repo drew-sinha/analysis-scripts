@@ -6,8 +6,6 @@ import sys
 
 from elegant import process_data, load_data, process_experiment
 
-# import elegant_hacks
-
 previous_annotations = ['larva', 'adult', 'dead']
 
 def compile_annotations_from_tsv(experiment_root):
