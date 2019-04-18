@@ -9,6 +9,8 @@ from elegant import process_data, load_data, process_experiment
 previous_annotations = ['larva', 'adult', 'dead']
 
 def compile_annotations_from_tsv(experiment_root):
+    if type(experiment_root) is str:
+        experiment_root = pathlib.Path(experiment_root.replace('\\ ', ' '))
     process_data.update_annotations(experiment_root)
 
     with (experiment_root / 'experiment_metadata.json').open('r') as mdata_file:
