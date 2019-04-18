@@ -2,8 +2,9 @@ import pathlib
 import csv
 import json
 import shutil
+import sys
 
-from elegant import process_data, load_data
+from elegant import process_data, load_data, process_experiment
 
 import elegant_hacks
 
@@ -11,7 +12,6 @@ previous_annotations = ['larva', 'adult', 'dead']
 
 def compile_annotations_from_tsv(experiment_root):
     experiment_root = pathlib.Path(experiment_root)
-    #raise Exception()
     process_data.update_annotations(experiment_root)
 
     with (experiment_root / 'experiment_metadata.json').open('r') as mdata_file:
@@ -72,6 +72,20 @@ def move_great_lawn(experiment_root, remove_lawn=False):
         if remove_lawn:
             (position_root / 'great_lawn.png').unlink()
 
-def prep_experiment_for_processing(experiment_root):
+def prep_experiment_for_processing(experiment_root, nominal_temperature=None):
+    move_great_lawn(experiment_root, remove_lawn=True)
     compile_annotations_from_tsv(experiment_root)
-    move_great_lawn(experiment_root, remove_lawn=False)
+    if nominal_temperature:
+        process_experiment.auto_update_metadata_file(experiment_root, nominal_temperature)
+
+if __name__ == "__main__":
+    experiment_root = sys.argv[1]
+    if len(sys.argv) > 2:
+        try:
+            assert sys.argv[2] in ['20','25']
+            nominal_temperature = sys.argv[2]
+        except AssertionError:
+            print(f'Invalid nominal temperature; the following arguments were supplied: {sys.argv}')
+    else:
+        nominal_temperature = None
+    prep_experiment_for_processing(experiment_root, nominal_temperature=nominal_temperature)
