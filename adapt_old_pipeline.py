@@ -11,7 +11,7 @@ import elegant_hacks
 previous_annotations = ['larva', 'adult', 'dead']
 
 def compile_annotations_from_tsv(experiment_root):
-    experiment_root = pathlib.Path(experiment_root)
+    experiment_root = pathlib.Path(experiment_root.replace('\\ ', ' '))
     process_data.update_annotations(experiment_root)
 
     with (experiment_root / 'experiment_metadata.json').open('r') as mdata_file:
@@ -63,7 +63,7 @@ def fill_empty_stages(experiment_root):
     load_data.write_annotations(experiment_root, annotations)
 
 def move_great_lawn(experiment_root, remove_lawn=False):
-    experiment_root = pathlib.Path(experiment_root)
+    experiment_root = pathlib.Path(experiment_root.replace('\\ ', ' '))
     (experiment_root / 'derived_data' / 'great_lawns').mkdir(parents=True,exist_ok=True)
     for position_root in [p.parent for p in experiment_root.glob('*/position_metadata.json')]:
         #print(position_root)
@@ -79,6 +79,7 @@ def prep_experiment_for_processing(experiment_root, nominal_temperature=None):
         process_experiment.auto_update_metadata_file(experiment_root, nominal_temperature)
 
 if __name__ == "__main__":
+    experiment_root = pathlib.Path(experiment_root.replace('\\ ', ' '))
     experiment_root = sys.argv[1]
     if len(sys.argv) > 2:
         try:
