@@ -33,22 +33,24 @@ def compile_annotations_from_tsv(experiment_root):
 
 
     annotations = load_data.read_annotations(experiment_root)
+
+    # Note: process_data.propagate_worm_stages assumes that stages are monotonically increasing.
+    # To make use of propagate_worm_stages, prepopulate only the timepoints where there's a transition.
     for position, (position_annotations, timepoint_annotations) in annotations.items():
         if 'DEAD' in annotation_data[position]['notes']:
-            # Sequentially add stage annotations in monotonic order and propagate.
             first_timepoint = list(timepoint_annotations.keys())[0]
             timepoint_annotations[first_timepoint]['stage'] = 'egg'
-            process_data.propagate_worm_stage(experiment_root, position, None, position_annotations, timepoint_annotations) # Pass None for position metadata since it isn't needed.
 
             for field in previous_annotations:
                 transition_timepoint = annotation_data[position][field]
                 timepoint_annotations[transition_timepoint]['stage'] = field
-                process_data.propagate_worm_stage(experiment_root, position, None, position_annotations, timepoint_annotations)
             position_annotations['exclude'] = False
         else:
             position_annotations['exclude'] = True
         position_annotations['notes'] = annotation_data[position]['notes']
     load_data.write_annotations(experiment_root, annotations)
+    process_data.annotate(experiment_root,position_annotators=[process_data.propagate_worm_stage])
+
 
 def fill_empty_stages(experiment_root):
     '''
