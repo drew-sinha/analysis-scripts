@@ -2,7 +2,7 @@ import pathlib
 import sys
 
 from ris_widget import ris_widget
-from elegant import load_data
+from elegant import load_data, process_data
 from elegant.gui import experiment_annotator, stage_field, pose_annotation
 
 import elegant_hacks, elegant_filters
@@ -30,6 +30,8 @@ if __name__ == "__main__":
         rw.annotator.close()
         del(rw.annotator)
 
+    process_data.update_annotations(expt_dir)
+    elegant_hacks.propagate_stages(expt_dir)
     experiment_annotations = load_data.read_annotations(expt_dir, annotation_dir=annotation_dir)
 
     if timepoint_filters:
