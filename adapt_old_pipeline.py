@@ -51,19 +51,6 @@ def compile_annotations_from_tsv(experiment_root):
     load_data.write_annotations(experiment_root, annotations)
     process_data.annotate(experiment_root,position_annotators=[process_data.propagate_worm_stage])
 
-
-def fill_empty_stages(experiment_root):
-    '''
-       Need this since the first pass of compiling annotations didn't do its job correctly.
-    '''
-    annotations = load_data.read_annotations(experiment_root)
-    for position, (position_annotations, timepoint_annotations) in annotations.items():
-        if not position_annotations['exclude']:
-            for timepoint, timepoint_annotation in timepoint_annotations.items():
-                if 'stage' not in timepoint_annotation:
-                    timepoint_annotation['stage'] = 'egg'
-    load_data.write_annotations(experiment_root, annotations)
-
 def move_great_lawn(experiment_root, remove_lawn=False):
     if type(experiment_root) is str:
         experiment_root = pathlib.Path(experiment_root.replace('\\ ', ' '))
@@ -82,14 +69,12 @@ def prep_experiment_for_processing(experiment_root, nominal_temperature=None):
         process_experiment.auto_update_metadata_file(experiment_root, nominal_temperature)
 
 if __name__ == "__main__":
-    experiment_root = pathlib.Path(sys.argv[1].replace('\\ ', ' '))
+    # signature: python adapt_old_pipeline EXPERIMENT_ROOT [NOMINAL TEMPERATURE]
+    experiment_root = pathlib.Path(sys.argv[1].replace('\\ ', ' ')) # Handle spaces in older experiment names
     print(experiment_root)
     if len(sys.argv) > 2:
-        try:
-            assert sys.argv[2] in ['20','25']
-            nominal_temperature = sys.argv[2]
-        except AssertionError:
-            print(f'Invalid nominal temperature; the following arguments were supplied: {sys.argv}')
+        assert sys.argv[2] in ['20','25']
+        nominal_temperature = sys.argv[2]
     else:
         nominal_temperature = None
     prep_experiment_for_processing(experiment_root, nominal_temperature=nominal_temperature)
