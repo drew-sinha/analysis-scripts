@@ -68,6 +68,7 @@ if __name__ == "__main__":
     '''Call signature %run segmentation_pipeline.py EXPERIMENT_ROOT MODEL_PATH'''
 
     experiment_root = pathlib.Path(sys.argv[1].replace('\\ ', ' '))
+    assert experiment_root.exists()
     if len(sys.argv) >= 3:
         model = sys.argv[2]
     else:

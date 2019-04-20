@@ -264,5 +264,6 @@ def run_holly_measurements(experiment_dir):
 
 if __name__ == "__main__":
     # Call make_measurements EXPT_DIR
-    expt_dir = pathlib.Path(sys.argv[1])
+    expt_dir = pathlib.Path(sys.argv[1].replace('\\ ', ' '))
+    assert expt_dir.exists()
     run_canonical_measurements(expt_dir)
