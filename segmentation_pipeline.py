@@ -67,7 +67,7 @@ def minimal_segmentation(experiment_root, model='default_CF.mat'):
 if __name__ == "__main__":
     '''Call signature %run segmentation_pipeline.py EXPERIMENT_ROOT MODEL_PATH'''
 
-    experiment_root = sys.argv[1]
+    experiment_root = pathlib.Path(sys.argv[1].replace('\\ ', ' '))
     if len(sys.argv) >= 3:
         model = sys.argv[2]
     else:
