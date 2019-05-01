@@ -1,4 +1,7 @@
-import pandas as pd
+try:
+    import pandas as pd
+except ImportError:
+    print('Could not find pandas; skipping loading.')
 import plotting_tools
 import matplotlib.pyplot as plt
 import numpy as np

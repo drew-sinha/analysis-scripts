@@ -111,10 +111,10 @@ def unique_items(seq):  # Credit to Peterbe
     seen = set()
     return [x for x in seq if x not in seen and not seen.add(x)]
 
-def test_lifespan_replicates(strain_df,calc_adultspans=True,rep_labels=None):
+def test_lifespan_replicates(strain_df,calc_adultspans=True,rep_labels=None, split_corrals=False):
     if rep_labels is None:
         rep_labels = unique_items([(' '.join(worm_label.split(' ')[:-1])) for worm_label in strain_df.worms])
-        rep_labels = unique_items([rep_label if rep_label[-1].isnumeric() else rep_label[:-1] for rep_label in rep_labels])
+        if not split_corrals: rep_labels = unique_items([rep_label if rep_label[-1].isnumeric() else rep_label[:-1] for rep_label in rep_labels])
     print(rep_labels)
     worm_assignments = np.array(
         [num for worm_label in strain_df.worms for num,rep_label in enumerate(rep_labels) if rep_label in ' '.join(worm_label.split(' ')[:-1])])

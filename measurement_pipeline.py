@@ -10,50 +10,39 @@ from zplib.curve import spline_geometry
 from elegant import load_data, process_data, worm_data, segment_images
 import elegant_filters, elegant_hacks
 
-def make_basic_measurements(experiment_root):
+def make_basic_measurements(experiment_root, annotations):
     measures = [process_data.BasicMeasurements()]
     measurement_name = 'core_measures'
 
-    elegant_hacks.propagate_stages(experiment_root,verbose=True)
-    annotations = load_data.read_annotations(experiment_root)
-    to_measure = load_data.filter_annotations(annotations, load_data.filter_excluded)
-    #to_measure = load_data.filter_annotations(to_measure, load_data.filter_living_timepoints)
-    process_data.measure_worms(experiment_root, to_measure, measures, measurement_name)
+    process_data.measure_worms(experiment_root, annotations, measures, measurement_name)
 
-def make_pose_measurements(experiment_root, update_poses=False, adult_only=True):
-    measures = [process_data.PoseMeasurements(microns_per_pixel=1.3)]
+def make_pose_measurements(experiment_root, annotations, adult_only=True):
+    experiment_metadata = load_data.read_metadata(experiment_root)
+    microns_per_pixel = 1.3 * 5/(experiment_metadata['objective']*experiment_metadata['optocoupler'])
+    measures = [process_data.PoseMeasurements(microns_per_pixel=microns_per_pixel)]
     measurement_name = 'pose_measures'
 
-    annotations = load_data.read_annotations(experiment_root)
-    to_measure = load_data.filter_annotations(annotations, load_data.filter_excluded)
-
     if adult_only:
-        to_measure = load_data.filter_annotations(to_measure, elegant_filters.filter_by_stage('adult'))
+        annotations = load_data.filter_annotations(annotations, elegant_filters.filter_by_stage('adult')).copy()
 
-    if update_poses:
-        images = load_data.scan_experiment_dir(experiment_root,
-            timepoint_filter=lambda position_n, timepoint_n: position_n in to_measure and timepoint_n in to_measure[position_n][1])
-        segment_images.annotate_poses_from_masks(images, pathlib.Path(experiment_root) / 'derived_data' / 'mask', to_measure)
+    process_data.measure_worms(experiment_root, annotations, measures, measurement_name)
 
-    process_data.measure_worms(experiment_root, to_measure, measures, measurement_name)
-
-def make_af_measurements(experiment_root, fl_measurement_name='green_yellow_excitation_autofluorescence'):
+def make_af_measurements(experiment_root, annotations, fl_measurement_name='green_yellow_excitation_autofluorescence',adult_only=True):
     measures = [process_data.FluorMeasurements(fl_measurement_name)]
     measurement_name = 'autofluorescence_measures'
 
-    annotations = load_data.read_annotations(experiment_root)
-    annotations = load_data.filter_annotations(annotations, load_data.filter_excluded)
-    to_measure = load_data.filter_annotations(annotations, elegant_filters.filter_by_stage('adult'))
-    process_data.measure_worms(experiment_root, to_measure, measures, measurement_name)
+    if adult_only:
+        annotations = load_data.filter_annotations(annotations, elegant_filters.filter_by_stage('adult')).copy()
 
-def make_gfp_measurements(experiment_root, fl_measurement_name='gfp'):
+    process_data.measure_worms(experiment_root, annotations, measures, measurement_name)
+
+def make_gfp_measurements(experiment_root, annotations, fl_measurement_name='gfp', adult_only=True):
     measures = [process_data.FluorMeasurements(fl_measurement_name)]
     measurement_name = 'fluorescence_measures'
 
-    annotations = load_data.read_annotations(experiment_root)
-    annotations = load_data.filter_annotations(annotations, load_data.filter_excluded)
-    to_measure = load_data.filter_annotations(annotations, elegant_filters.filter_by_stage('adult'))
-    process_data.measure_worms(experiment_root, to_measure, measures, measurement_name)
+    if adult_only:
+        annotations = load_data.filter_annotations(annotations, elegant_filters.filter_by_stage('adult')).copy()
+    process_data.measure_worms(experiment_root, annotations, measures, measurement_name)
 
 class MultipassPoseMeasurements:
     feature_names = ['summed_multipass_centroid_dist', 'multipass_length', 'multipass_max_width', 'multipass_area', 'multipass_volume']
@@ -113,19 +102,16 @@ class MultipassPoseMeasurements:
 
         return [measures.get(feature, numpy.nan) for feature in self.feature_names]
 
-def make_multipass_measurements(experiment_root, update_poses=False, adult_only=True):
-    measures = [MultipassPoseMeasurements(microns_per_pixel=1.3)]
+def make_multipass_measurements(experiment_root, annotations, adult_only=True):
+    experiment_metadata = load_data.read_metadata(experiment_root)
+    microns_per_pixel = 1.3 * 5/(experiment_metadata['objective']*experiment_metadata['optocoupler'])
+    measures = [MultipassPoseMeasurements(microns_per_pixel=microns_per_pixel)]
     measurement_name = 'multipass_measures'
 
-    annotations = load_data.read_annotations(experiment_root)
-    to_measure = load_data.filter_annotations(annotations, load_data.filter_excluded)
+    if adult_only:
+        annotations = load_data.filter_annotations(annotations, elegant_filters.filter_by_stage('adult')).copy()
 
-    if update_poses:
-        images = load_data.scan_experiment_dir(experiment_root,
-            timepoint_filter=lambda position_n, timepoint_n: position_n in to_measure and timepoint_n in to_measure[position_n][1])
-        segment_images.annotate_poses_from_masks(images, pathlib.Path(experiment_root) / 'derived_data' / 'mask', to_measure)
-
-    process_data.measure_worms(experiment_root, to_measure, measures, measurement_name)
+    process_data.measure_worms(experiment_root, annotations, measures, measurement_name)
 
 class MaskPoseMeasurements:
     """Provide data columns based on annotated worm pose information.
@@ -149,7 +135,6 @@ class MaskPoseMeasurements:
     def get_mask(self, position_root, derived_root, timepoint, annotations):
         mask_file = derived_root / 'mask' / position_root.name / f'{timepoint} {self.mask_name}.png'
         if not mask_file.exists():
-            #raise Exception()
             print(f'No mask file found for {position_root.name} at {timepoint}.')
             return None
         else:
@@ -192,52 +177,93 @@ class MaskPoseMeasurements:
 def annotate_timepoints(experiment_root, position, timepoint, metadata, annotations):
     annotations['timepoint'] = metadata['timepoint']
 
-def make_mask_measurements(experiment_root, update_poses=False):
-    process_data.annotate(experiment_root, annotators=[annotate_timepoints])
+def make_mask_measurements(experiment_root, annotations=None, adult_only=True):
+    #process_data.annotate(experiment_root, annotators=[annotate_timepoints]) # Why?
 
-    measures = [MaskPoseMeasurements(microns_per_pixel=1.3)]
+    experiment_metadata = load_data.read_metadata(experiment_root)
+    microns_per_pixel = 1.3 * 5/(experiment_metadata['objective']*experiment_metadata['optocoupler'])
+    measures = [MaskPoseMeasurements(microns_per_pixel=microns_per_pixel)]
     measurement_name = 'mask_measures'
 
-    annotations = load_data.read_annotations(experiment_root)
-    to_measure = load_data.filter_annotations(annotations, load_data.filter_excluded)
-    to_measure = load_data.filter_annotations(annotations, load_data.filter_living_timepoints)
-    to_measure = load_data.filter_annotations(to_measure, elegant_filters.filter_by_stage('adult'))
+    if annotations is None:
+        annotations = load_data.read_annotations(experiment_root)
+        annotations = load_data.filter_annotations(annotations, filter_excluded)
 
-    if update_poses:
-        images = load_data.scan_experiment_dir(experiment_root,
-            timepoint_filter=lambda position_n, timepoint_n: position_n in to_measure and timepoint_n in to_measure[position_n][1])
-        segment_images.annotate_poses_from_masks(images, pathlib.Path(experiment_root) / 'derived_data' / 'mask', to_measure)
+    annotations = load_data.filter_annotations(annotations, elegant_filters.filter_living_timepoints)
+    if adult_only:
+        annotations = load_data.filter_annotations(annotations, elegant_filters.filter_by_stage('adult'))
 
-    process_data.measure_worms(experiment_root, to_measure, measures, measurement_name)
+    process_data.measure_worms(experiment_root, annotations, measures, measurement_name)
+
+def make_lawn_measurements(experiment_root, annotations, remake_lawns=False):
+    if not (pathlib.Path(experiment_root) / 'derived_data' / 'lawn_masks').exists() or remake_lawns:
+        process_data.annotate(experiment_root, position_annotators=[process_data.annotate_lawn])
+
+    measures = [process_data.LawnMeasurements()]
+    measurement_name = 'lawn_measures'
+
+    process_data.measure_worms(experiment_root, annotations, measures, measurement_name)
 
 def run_canonical_measurements(experiment_dir):
     '''Run standard measurements on the specified experiment directory'''
     experiment_dir = pathlib.Path(experiment_dir)
 
+    elegant_hacks.propagate_stages(experiment_dir,verbose=True)
     process_data.update_annotations(experiment_dir)
-    make_basic_measurements(experiment_dir)
-    make_pose_measurements(experiment_dir)
-    make_mask_measurements(experiment_dir)
+
+    position_features = ['stage_x','stage_y','starting_stage_z','notes']
+    annotations = load_data.read_annotations(experiment_dir)
+    annotations = load_data.filter_annotations(annotations, load_data.filter_excluded)
+
+    #print('warning: Im using a custom filter function')
+    #annotations = load_data.filter_annotations(annotations, lambda name, pa, ta: name < '25') # Remove me later
+
+    if any(['lawn_area' in position_annotations for (position_annotations, timepoint_annotations) in annotations.items()]):
+        position_features.append('lawn_area')
+
+    make_basic_measurements(experiment_dir, annotations)
+    make_pose_measurements(experiment_dir, annotations)
+
+    process_data.collate_data(experiment_dir, position_features=position_features)
+
+    #make_mask_measurements(experiment_dir, annotations)
 
     image_channels = elegant_hacks.get_image_channels(experiment_dir)
     print(f'Image channels: {image_channels}')
 
     if 'bf_1' in image_channels:
         print('Found multipass movement channel bf_1; making measurements')
-        make_multipass_measurements(experiment_dir, update_poses=False)
+        make_multipass_measurements(experiment_dir,annotations)
 
-    process_data.collate_data(experiment_dir) # For convenience since autofluorescence can take a little while....
+    process_data.collate_data(experiment_dir,position_features=position_features) # For convenience since autofluorescence can take a little while....
 
     if 'green_yellow_excitation_autofluorescence' in image_channels or 'autofluorescence' in image_channels:
         fl_measurement_name = 'autofluorescence' if 'autofluorescence' in image_channels else 'green_yellow_excitation_autofluorescence'
         print(f'Found autofluorescence channel {fl_measurement_name}; making measurements')
 
-        make_af_measurements(experiment_dir, fl_measurement_name=fl_measurement_name)
+        make_af_measurements(experiment_dir, annotations, fl_measurement_name=fl_measurement_name)
 
-    process_data.collate_data(experiment_dir)
+    process_data.collate_data(experiment_dir, position_features=position_features)
 
+
+def run_holly_measurements(experiment_dir):
+    position_features = ['stage_x','stage_y','starting_stage_z','notes']
+
+    annotations = load_data.read_annotations(experiment_dir)
+    annotations = load_data.filter_annotations(annotations, load_data.filter_excluded)
+
+    make_basic_measurements(experiment_dir, annotations)
+    make_pose_measurements(experiment_dir, annotations, adult_only=False)
+
+    process_data.collate_data(experiment_dir,position_features=position_features) # Make preliminary analysis faster.
+
+    make_gfp_measurements(experiment_dir, annotations, adult_only=False)
+    make_af_measurements(experiment_dir, annotations, adult_only=False)
+
+    process_data.collate_data(experiment_dir,position_features=position_features)
 
 if __name__ == "__main__":
     # Call make_measurements EXPT_DIR
-    expt_dir = pathlib.Path(sys.argv[1])
+    expt_dir = pathlib.Path(sys.argv[1].replace('\\ ', ' '))
+    assert expt_dir.exists()
     run_canonical_measurements(expt_dir)

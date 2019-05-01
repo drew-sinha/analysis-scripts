@@ -52,10 +52,13 @@ def rw_load_last_images_fromexpt(rw_obj, expt_dir, filter_kw='bf.png'):
             img_fns.append([img_file for img_file in subdir.iterdir() if img_file.is_file() and filter_kw in str(img_file)][-1])
     rw_obj.flipbook.add_image_files(img_fns)
     
-def rw_load_timepoint_fromexpt(rw, expt_dir, timepoint):
+def rw_load_timepoint_fromexpt(rw, expt_dir, timepoint, channel='bf'):
     '''
         Loads the single bf image for a timepoint into the flipbook
         timepoint_str - timepoint in standard str format to use when searching for images
+    '''
+    expt_dir = pathlib.Path(expt_dir)
+
     '''
     def timepoint_filter(position_name, timepoint_name):
         return timepoint_name == timepoint
@@ -66,6 +69,10 @@ def rw_load_timepoint_fromexpt(rw, expt_dir, timepoint):
             image_names.append(position_name + images[timepoint][0])
             image_paths.append(images[timepoint][0])
     rw.add_image_files_to_flipbook(image_paths,page_names=image_names)
+
+    '''
+    image_files = expt_dir.glob(f'*/{timepoint} {channel}.png')
+    rw.add_image_files_to_flipbook(image_files)
 
 def get_labeled_positions(rw_obj, labels):
     '''

@@ -24,6 +24,8 @@ def process_experiment_with_filter(experiment_root, model, image_filter, mask_ro
     if mask_root is None:
         mask_root = pathlib.Path(experiment_root) / 'derived_data' / 'mask'
 
+    # Temporary hacks until migration to new elegant complete (while zpl-9000 no longer updates annotations automatically)
+    process_data.update_annotations(experiment_root)
     elegant_hacks.propagate_stages(experiment_root)
 
     start_t = time.time()
@@ -47,7 +49,6 @@ def process_experiment_with_filter(experiment_root, model, image_filter, mask_ro
 
     if do_annotations:
         annotations = load_data.read_annotations(experiment_root)
-        annotations = load_data.filter_annotations(annotations, elegant_filters.filter_dead_animals) # For the near term.... 
         metadata = load_data.read_metadata(experiment_root)
         age_factor = metadata.get('age_factor', 1)
         width_estimator = worm_widths.WidthEstimator.from_experiment_metadata(metadata, age_factor)
@@ -66,7 +67,8 @@ def minimal_segmentation(experiment_root, model='default_CF.mat'):
 if __name__ == "__main__":
     '''Call signature %run segmentation_pipeline.py EXPERIMENT_ROOT MODEL_PATH'''
 
-    experiment_root = sys.argv[1]
+    experiment_root = pathlib.Path(sys.argv[1].replace('\\ ', ' '))
+    assert experiment_root.exists()
     if len(sys.argv) >= 3:
         model = sys.argv[2]
     else:

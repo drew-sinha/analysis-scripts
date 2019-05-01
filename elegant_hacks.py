@@ -47,6 +47,14 @@ def check_for_alive(expt_dir):
 
     return set(good_annotations.keys()).difference(set(dead_annotations.keys()))
 
+def check_for_kw(expt_dir, kw, filter_good=True):
+    annotations = load_data.read_annotations(expt_dir)
+    if filter_good:
+        annotations = load_data.filter_annotations(annotations, load_data.filter_excluded)
+    kw_annotations = load_data.filter_annotations(annotations, elegant_filters.filter_by_kw(kw))
+    print(f'{len(kw_annotations)}/{len(annotations)} of animals in experiment has kw {kw} {"(minus excluded)" if filter_good else ""}')
+    return set(kw_annotations.keys())
+
 def check_for_null_poses(experiment_root, annotation_dir='annotations'):
     assert pathlib.Path(experiment_root).exists()
     experiment_annotations = load_data.read_annotations(experiment_root, annotation_dir=annotation_dir)
@@ -311,3 +319,27 @@ def plot_timecourse(worms, feature, min_age=-numpy.inf, max_age=numpy.inf,
         plotting_tools.build_gradient_palette(base_color,256))  # Assume palette is fine enough to linearly segment
     plot_timecourse(worms, feature, min_age=0, age_feature='adult_age', time_units='days', color_map=cmap)
 '''
+
+
+
+def scatter_features(worms, x_feature, y_feature, color_by='lifespan'):
+    """Plot values of a given feature for each worm, colored by a given
+    worm feature (defaults to lifespan).
+
+    Parameters:
+        x_feature, y_feature: name/callables for two features to compare against each other
+        color_by: worm feature to use for color scale of each timecourse.
+    """
+    def _feature_plot_data(worms, x_feature, y_feature, color_by='lifespan'):
+        x_feature_vals = worms.get_feature(x_feature)
+        y_feature_vals = worms.get_feature(y_feature)
+        color_vals = colorize.scale(worms.get_feature(color_by), output_max=1)
+        colors = colorize.color_map(color_vals, uint8=False)
+        out = []
+        for x, y, color in zip(x_feature_vals, y_feature_vals, colors):
+            out.append((x, y, color))
+        return out
+
+    import matplotlib.pyplot as plt
+    for x, y, c in _feature_plot_data(worms, x_feature, y_feature, color_by=color_by):
+        plt.scatter(x, y, color=c)
