@@ -11,6 +11,7 @@ previous_annotations = ['larva', 'adult', 'dead']
 def compile_annotations_from_tsv(experiment_root):
     if type(experiment_root) is str:
         experiment_root = pathlib.Path(experiment_root.replace('\\ ', ' '))
+    _check_metadata_for_timepoints(experiment_root)
     process_data.update_annotations(experiment_root)
 
     with (experiment_root / 'experiment_metadata.json').open('r') as mdata_file:
@@ -50,6 +51,26 @@ def compile_annotations_from_tsv(experiment_root):
         position_annotations['notes'] = annotation_data[position]['notes']
     load_data.write_annotations(experiment_root, annotations)
     process_data.annotate(experiment_root,position_annotators=[process_data.propagate_worm_stage])
+
+def _check_metadata_for_timepoints(experiment_root):
+    pm_files = list(experiment_root.glob('*/position_metadata.json'))
+    with pm_files[0].open('r') as pm_fp:
+        position_metadata = json.load(pm_fp)
+    if 'timepoint' not in position_metadata[0]:
+        experiment_metadata = load_data.read_metadata(experiment_root)
+        for pm_file in pm_files:
+            position_root = pm_file.parent
+            if not (position_root / 'position_metadata_original.json').exists():
+                shutil.copyfile(
+                    str(pm_file), 
+                    str(position_root / 'position_metadata_original.json'))
+            with pm_file.open('r') as pm_fp:
+                position_metadata = json.load(pm_fp)
+            for metadata_entry, timepoint in zip(position_metadata, experiment_metadata['timepoint']):
+                # Was there a bug with the purging code that breaks this?
+                metadata_entry['timepoint'] = timepoint
+            with pm_file.open('w') as pm_fp:
+                json.dump(position_metadata, pm_fp)
 
 def move_great_lawn(experiment_root, remove_lawn=False):
     if type(experiment_root) is str:
