@@ -204,6 +204,9 @@ def make_lawn_measurements(experiment_root, annotations, remake_lawns=False):
 
     process_data.measure_worms(experiment_root, annotations, measures, measurement_name)
 
+def filter_worm_positions(position_name, position_annotations, timepoint_annotations):
+    return 'reference' not in position_annotations['notes'].lower()
+
 def run_canonical_measurements(experiment_dir):
     '''Run standard measurements on the specified experiment directory'''
     experiment_dir = pathlib.Path(experiment_dir)
@@ -214,6 +217,7 @@ def run_canonical_measurements(experiment_dir):
     position_features = ['stage_x','stage_y','starting_stage_z','notes']
     annotations = load_data.read_annotations(experiment_dir)
     annotations = load_data.filter_annotations(annotations, load_data.filter_excluded)
+    annotations = load_data.filter_annotations(annotations, filter_worm_positions)
 
     #print('warning: Im using a custom filter function')
     #annotations = load_data.filter_annotations(annotations, lambda name, pa, ta: name < '25') # Remove me later
