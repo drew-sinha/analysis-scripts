@@ -271,7 +271,7 @@ def plot_HSvsLS(worms, measure,cutoff_value,
     if return_corrs: to_return.append([corr_data_wp,corr_data_sl,corr_data_ll])
     return to_return
 
-def peak_size(size_measurement,percentile=99):
+def peak_size(size_measurement,percentile=99,min_age=-np.inf,max_age=np.inf):
     '''
     Calc peak size as the nth percentile (default 99th)
     '''
@@ -285,5 +285,6 @@ def peak_size(size_measurement,percentile=99):
             return np.nan
 
         nan_mask = np.isnan(size) # Need for measurement pipeline including dead timepoints (come back later to fix)
-        return np.percentile(size[(adult_age>0) & (~nan_mask)],percentile)
+        age_mask = (adult_age > min_age) & (adult_age <= max_age)
+        return np.percentile(size[age_mask & (~nan_mask)],percentile)
     return feature
