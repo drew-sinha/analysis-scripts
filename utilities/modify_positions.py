@@ -8,8 +8,8 @@ import time
 def poll_positions(scope, experiment_metadata, positions):
     new_positions = {}
     for position_name in positions:
-        scope.stage.x = experiment_metadata[position_name][0]
-        scope.stage.y = experiment_metadata[position_name][1]
+        scope.stage.x = experiment_metadata['positions'][position_name][0]
+        scope.stage.y = experiment_metadata['positions'][position_name][1]
         
         try:
             input(f'Press enter for position to replace {position_name} ; ctrl-c to finish')
@@ -22,8 +22,6 @@ def reset_positions_manual(scope, experiment_dir, *annotation_filters, positions
     '''
     Call with annotation filters like so:
     reset_position.reset_positions(scope, experiment_dir, elegant_filters.filter_excluded, elegant_filters.filter_live_animals)
-    
-    TODO: Reupdate z positions?
     '''
     
     experiment_dir = pathlib.Path(experiment_dir)
@@ -34,6 +32,8 @@ def reset_positions_manual(scope, experiment_dir, *annotation_filters, positions
         for filter in annotation_filters:
             experiment_annotations = load_data.filter_annotations(experiment_annotations, filter)
         positions = experiment_annotations.keys()
+    else:
+        positions = metadata['positions'].keys()
 
     new_positions = poll_positions(scope, metadata, positions)
 
@@ -64,13 +64,16 @@ def reset_positions_with_offset(experiment_dir, offset):
     print(f'Modifying positions for {experiment_dir.name}')
     metadata = load_data.read_metadata(experiment_dir)
     new_metadata = metadata.copy()
+    
+    if len(offset) == 2 :
+        offset.extend([0])
 
     try:
         time_label = time.strftime('%Y%m%d-%H%M-%S')
         
         for position in metadata['positions']:
             position_coords = metadata['positions'][position]
-            new_metadata['positions'][position] = [position_coords[0] + offset[0], position_coords[1] + offset[1], position_coords[2]]
+            new_metadata['positions'][position] = [position_coords[0] + offset[0], position_coords[1] + offset[1], position_coords[2] + offset[2]]
 
         with (experiment_dir/f'experiment_metadata_beforechangingpositions_{time_label}.json').open('w') as mdata_file:
             datafile.json_encode_legible_to_file(metadata, mdata_file)
