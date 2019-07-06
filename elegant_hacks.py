@@ -2,7 +2,6 @@ import pathlib
 import collections
 
 import numpy
-import matplotlib.pyplot as plt; plt.ion(); plt.show()
 import matplotlib.cm
 
 from elegant import worm_data, load_data
@@ -15,17 +14,16 @@ import plotting_tools, elegant_filters
 #==================================
 
 def check_stage_annotations(annotations, stages):
-    """Check that a set of annotations are complete
+    """Check for incomplete annotations in an experiment
 
         Parameters
-            annotations - An OrderedDict mapping position names to corresponding
-                annotations (returned by load_data.read_annotations)
+            annotations - an OrderedDict of experiment_annotations as returned
+                by load_data.read_annotations
             stages - A iterable containing the stages that should be annotated
-                for this experiment (e.g. could be ('larva','adult','dead')
-                for a complete experiment, but only ('larva', 'adult') for
-                an ongoing experiment)
+                (e.g. could be ('larva','adult','dead') for a complete experiment, 
+                but only ('larva', 'adult') for an ongoing experiment)
         Returns
-            bad_positions - a list of positions with incomplete annotations
+            annotations OrderedDict for animals with incomplete annotations
     """
 
     # Create a suitable function to use with filter_positions using a closure
@@ -34,9 +32,33 @@ def check_stage_annotations(annotations, stages):
             for timepoint_annotation in timepoint_annotations.values()]
         return all([stage in stage_annotations for stage in stages])
 
-    return load_data.filter_annotations(
-        annotations,
+    good_annotations = load_data.filter_annotations(annotations, load_data.filter_excluded)
+    complete_annotations = load_data.filter_annotations(
+        good_annotations,
         select_by_stage_annotation) # Get positions whose stages are not all annotated
+
+    return complete_annotations
+
+def check_experiment_stages(experiment_dir, stages, verbose=False):
+    """Check an experiment for incomplete annotations
+
+        Parameters
+            experiment_dir - str/pathlib.Path to an experiment directory
+            stages - an iterable containing stages that should be annotated
+
+        Returns
+            if verbose is False, return a list of positions with incomplete annotations,
+                otherwise, return the positions and their annotations
+    """
+
+    annotations = load_data.read_annotations(experiment_dir)
+    complete_annotations = check_stage_annotations(annotations, stages)
+    incomplete_annotations = {position: annotations[position] for position in set(annotations) - set(complete_annotations)}
+
+    if verbose:
+        return incomplete_annotations
+    else:
+        return incomplete_annotations.keys()
 
 def check_for_alive(expt_dir):
     annotations = load_data.read_annotations(expt_dir)
@@ -54,6 +76,12 @@ def check_for_kw(expt_dir, kw, filter_good=True):
     kw_annotations = load_data.filter_annotations(annotations, elegant_filters.filter_by_kw(kw))
     print(f'{len(kw_annotations)}/{len(annotations)} of animals in experiment has kw {kw} {"(minus excluded)" if filter_good else ""}')
     return set(kw_annotations.keys())
+
+def show_position_notes(experiment_dir):
+    assert pathlib.Path(experiment_dir).exists()
+    experiment_annotations = load_data.read_annotations(experiment_dir)
+    for position, (position_annotations, timepoint_annotations) in experiment_annotations.items():
+        print(f'{position} (excluded = {position_annotations["exclude"]}): {position_annotations["notes"]}')
 
 def check_for_null_poses(experiment_root, annotation_dir='annotations'):
     assert pathlib.Path(experiment_root).exists()
@@ -303,6 +331,8 @@ def plot_timecourse(worms, feature, min_age=-numpy.inf, max_age=numpy.inf,
     if time_units not in worm_data.TIME_UNITS:
         raise ValueError(f"'time_units' must be one of: {list(TIME_UNITS)}")
 
+    import matplotlib.pyplot as plt; plt.ion(); plt.show()
+
     time_scale = worm_data.TIME_UNITS[time_units]
     fig_h, ax_h = plt.subplots()
     ax_h.set_xlabel(f'{age_feature} ({time_units})')
@@ -340,6 +370,6 @@ def scatter_features(worms, x_feature, y_feature, color_by='lifespan'):
             out.append((x, y, color))
         return out
 
-    import matplotlib.pyplot as plt
+    import matplotlib.pyplot as plt; plt.ion(); plt.show()
     for x, y, c in _feature_plot_data(worms, x_feature, y_feature, color_by=color_by):
         plt.scatter(x, y, color=c)
