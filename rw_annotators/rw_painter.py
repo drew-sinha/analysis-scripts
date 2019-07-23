@@ -7,10 +7,8 @@ from PyQt5 import Qt
 import freeimage
 from ris_widget import ris_widget
 from ris_widget import image as rw_image
-from ris_widget.qwidgets import annotator, flipbook
-from elegant import worm_spline
+from ris_widget.qwidgets import flipbook
 from zplib.image import mask as zplib_image_mask
-from zplib.curve import spline_geometry
 
 class GenericRWPainter:
     """A painter that loads images from a directory into a RisWidget object and draw overlays that can be saved"""
@@ -98,39 +96,6 @@ class GenericRWPainter:
         self.rw.painter.painter_item.hide()
         self.editing = False
         self.edit.setText('Edit Outlines')
-
-def parse_outline(outline_mask):
-    masks = []
-    for layer in numpy.moveaxis(outline_mask,-1,0):
-        while layer.any():
-            outline = zplib_image_mask.get_largest_object(layer>0)
-            new_mask = zplib_image_mask.fill_small_area_holes(outline,300000).astype('uint8')
-            new_mask[new_mask>0] = -1
-            masks.append(new_mask)
-    return masks
-
-def process_outline_dir(source_dir, microns_per_pixel, out_dir=None):
-    if out_dir is None:
-        out_dir = source_dir
-
-    mask_data = {}
-    mask_data_entries = ['mask_names', 'mask_areas', 'mask_lengths']
-    for outline_image_path in pathlib.Path(source_dir).iterdir():
-        if outline_image_path.suffix[1:] != 'png': continue
-        outline_image = freeimage.load(outline_image_path)
-        masks = parse_outline(outline_image)
-        for mask_num, mask in enumerate(masks):
-            freeimage.write(mask, out_dir / (outline_image_path.stem + f'_{mask_num}.png'))
-            center_tck, width_tck = worm_spline.pose_from_mask(mask)
-            length = spline_geometry.arc_length(center_tck) * self.microns_per_pixel
-
-            mask_data.setdefault('mask_names',[]).append(outline_image_path.stem + f'_{mask_num}')
-            mask_data.setdefault('mask_areas',[]).append(mask.sum()*(microns_per_pixel/1000)**2)
-            mask_data.setdefault('mask_lengths',[]).append(length*microns_per_pixel/1000)
-
-        with (self.out_dir / 'measurements.txt').open('w+') as mf_pointer:
-            mf_pointer.write('\t'.join(mask_data_entries))
-            # for
 
 if __name__ == "__main__":
     image_dir = '/home/drew/20190705/concentrated_OP50'
