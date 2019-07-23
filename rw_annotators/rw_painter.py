@@ -10,7 +10,7 @@ from ris_widget import image as rw_image
 from ris_widget.qwidgets import flipbook
 from zplib.image import mask as zplib_image_mask
 
-class GenericRWPainter:
+class RWPainter:
     """A painter that loads images from a directory into a RisWidget object and draw overlays that can be saved"""
 
     def __init__(self, rw, image_dir, out_dir):
@@ -35,10 +35,6 @@ class GenericRWPainter:
         self.rw.flipbook.layout().addWidget(widget)
 
         self.rw.add_painter()
-        self.rw.painter.hide()
-        self.rw.painter.setVisible(False)
-        self.rw.painter.painter_item.hide()
-
         self.rw.flipbook_pages.clear()
 
         self.image_list = sorted(list(self.image_dir.glob('*.png')))
@@ -52,7 +48,11 @@ class GenericRWPainter:
                 image_list.append(numpy.zeros_like(image))
             rw.flipbook_pages.append(image_list)
 
-        self.edit = self._add_button(layout, 'Edit Outlines', self._on_edit_clicked)
+        self.rw.painter.brush_size.value = 13
+
+        self.clear = self._add_button(layout, 'Clear All', self._on_clear_clicked)
+        self.reload = self._add_button(layout, 'Reload Overlay', self._on_reload_clicked)
+        self.save = self._add_button(layout, 'Save Overlay', self._on_save_clicked)
 
     def _add_button(self, layout, title, callback):
         button = Qt.QPushButton(title)
@@ -60,42 +60,23 @@ class GenericRWPainter:
         layout.addWidget(button)
         return button
 
-    def _on_edit_clicked(self):
-        if self.editing:
-            self.stop_editing()
+    def _on_clear_clicked(self):
+        image_data = rw.layers[1].image.data
+        image_data *= 0
+        rw.layers[1].image.refresh()
+
+    def _on_reload_clicked(self):
+        if (self.out_dir / rw.layers[0].image.name).exists():
+            original_overlay = freeimage.read(self.out_dir / image_path.name)
+            rw.layers[1].image.data = original_overlay
         else:
-            self.start_editing()
+            print('No original overlay exists')
 
-    def start_editing(self):
-        self.editing = True
-        self.edit.setText('Save Edits')
-        self.rw.painter.show()
-        self.rw.painter.painter_item.show()
-
-        # Bring focus to mask layer
-        # TODO: Outstanding bug to bring focus to the mask layer
-        # In the meantime, need to manually select second layer after clicking on edit button before drawing.
-        # sm = self.rw.qt_object.layer_stack._selection_model
-        # m = sm.model()
-        # sm.setCurrentIndex(m.index(0,0),
-        #     Qt.QItemSelectionModel.SelectCurrent|Qt.QItemSelectionModel.Rows)
-
-        self.rw.painter.brush_size.value = 10
-        self.rw.painter.brush_val.value = (255,0,0)
-        self.rw.layers[1].opacity = 1
-
-    def stop_editing(self):
-        outline = self.rw.layers[1].image.data
-        if outline.any():
+    def _on_save_clicked(self):
+        overlay = self.rw.layers[1].image.data
+        if overlay.any():
             working_file = self.out_dir / pathlib.Path(self.rw.layers[0].image.name).name
-            freeimage.write(outline, working_file)
-
-        self.rw.layers[1].opacity = 0.75
-
-        self.rw.painter.hide()
-        self.rw.painter.painter_item.hide()
-        self.editing = False
-        self.edit.setText('Edit Outlines')
+            freeimage.write(overlay, working_file)
 
 if __name__ == "__main__":
     image_dir = '/home/drew/20190705/concentrated_OP50'
@@ -108,4 +89,4 @@ if __name__ == "__main__":
     except NameError:
         rw = ris_widget.RisWidget()
 
-    gp = GenericRWPainter(rw, image_dir,out_dir)
+    rwp = RWPainter(rw, image_dir,out_dir)
