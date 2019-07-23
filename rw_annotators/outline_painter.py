@@ -12,8 +12,17 @@ from elegant import worm_spline
 from zplib.image import mask as zplib_image_mask
 from zplib.curve import spline_geometry
 
-class OutlinePainter:
+class GenericRWPainter:
+    """A painter that loads images from a directory into a RisWidget object and draw overlays that can be saved"""
+
     def __init__(self, rw, image_dir, out_dir):
+        """
+        Parameters
+            rw - RisWidget object to load images into
+            image_dir - str/pathlib.Path to directory images for loading
+            out_dir - str/pathlib.Path to directory for saving overlays
+        """
+
         self.rw = rw
         self.image_dir = pathlib.Path(image_dir)
         self.out_dir = pathlib.Path(out_dir)
@@ -66,10 +75,12 @@ class OutlinePainter:
         self.rw.painter.painter_item.show()
 
         # Bring focus to mask layer
-        sm = self.rw.qt_object.layer_stack._selection_model
-        m = sm.model()
-        sm.setCurrentIndex(m.index(0,0),
-            Qt.QItemSelectionModel.SelectCurrent|Qt.QItemSelectionModel.Rows)
+        # TODO: Outstanding bug to bring focus to the mask layer
+        # In the meantime, need to manually select second layer after clicking on edit button before drawing.
+        # sm = self.rw.qt_object.layer_stack._selection_model
+        # m = sm.model()
+        # sm.setCurrentIndex(m.index(0,0),
+        #     Qt.QItemSelectionModel.SelectCurrent|Qt.QItemSelectionModel.Rows)
 
         self.rw.painter.brush_size.value = 10
         self.rw.painter.brush_val.value = (255,0,0)
@@ -132,4 +143,4 @@ if __name__ == "__main__":
     except NameError:
         rw = ris_widget.RisWidget()
 
-    op = OutlinePainter(rw, image_dir,out_dir)
+    gp = GenericRWPainter(rw, image_dir,out_dir)
