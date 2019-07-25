@@ -79,8 +79,8 @@ class RWPainter:
             freeimage.write(overlay, working_file)
 
 if __name__ == "__main__":
-    image_dir = '/home/drew/20190705/concentrated_OP50'
-    out_dir = pathlib.Path('/home/drew/20190705/concentrated_OP50_outlines')
+    image_dir = pathlib.Path('/mnt/fluoro-scope/acquired_data/20190702_concentratedOP50_replicate2/20190707/lawn_control')
+    out_dir = image_dir.parent / (image_dir.name + '_centerlines')
 
     out_dir.mkdir(exist_ok=True)
 
