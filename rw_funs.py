@@ -38,7 +38,7 @@ def rw_load_image_stack_fromfilenames(rw_obj, *dir_args, filter_kw='', start_idx
         img_fns.append([img_file for img_file in sorted(file_dir.iterdir()) if img_file.is_file() and kw in str(img_file)])
     rw_obj.flipbook.add_image_files([collected_fns for collected_fns in zip(*img_fns)][start_idx:(stop_idx if stop_idx is not None and stop_idx < len(img_fns[0]) else len(img_fns[0]))])
     
-def rw_load_last_images_fromexpt(rw_obj, expt_dir, filter_kw='bf.png'):
+def rw_load_last_images_fromexpt(rw_obj, expt_dir, channels=['bf']):
     '''
         expt_dir - directory containing multiple animals/fields of interest
         filter_kw - Used to filter through images based on name
@@ -47,9 +47,12 @@ def rw_load_last_images_fromexpt(rw_obj, expt_dir, filter_kw='bf.png'):
     if type(expt_dir) is not pathlib.Path: expt_dir = pathlib.Path(expt_dir)
     
     img_fns = []
-    for subdir in sorted(expt_dir.iterdir()):
-        if subdir.is_dir() and subdir.parts[-1].isnumeric():
-            img_fns.append([img_file for img_file in subdir.iterdir() if img_file.is_file() and filter_kw in str(img_file)][-1])
+    for subdir in sorted([position_dir.parent for position_dir in expt_dir.glob('*/position_metadata.json')]):
+        last_timepoint = [img_file.stem.split()[0] for img_file in subdir.glob('*.png')][-1]
+        img_fns.append([img_file 
+            for channel in channels 
+            for img_file in subdir.glob('*.png') 
+            if (channel in img_file.name and last_timepoint in img_file.name)])
     rw_obj.flipbook.add_image_files(img_fns)
     
 def rw_load_timepoint_fromexpt(rw, expt_dir, timepoint, channel='bf'):
