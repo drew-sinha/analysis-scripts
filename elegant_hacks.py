@@ -125,6 +125,10 @@ def propagate_stages(experiment_root,verbose=False):
     '''
         Modifies experiment annotations by propagating stage information forward
             in time across annotated timepoints.
+        Somewhat deprecated by process_data.propagate_worm_stages/update_annotations;
+            however, useful for the case in which one wants to propagate stages
+            and can't assume that stages are monotonically increasing with time.
+
     '''
     annotations = load_data.read_annotations(experiment_root)
     for position_name, (position_annotations, timepoint_annotations) in annotations.items():
