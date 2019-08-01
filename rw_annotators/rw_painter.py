@@ -79,7 +79,9 @@ class RWPainter:
             freeimage.write(overlay, working_file)
 
 if __name__ == "__main__":
-    image_dir = pathlib.Path('/mnt/fluoro-scope/acquired_data/20190702_concentratedOP50_replicate2/20190707/lawn_control')
+    image_dir = pathlib.Path('/mnt/fluoro-scope/acquired_data/20190701_corral-like_cholesterol_plates/20190706/EtOH/')
+    if not image_dir.exists():
+        raise Exception('image_dir doesn\'t exist!')
     out_dir = image_dir.parent / (image_dir.name + '_centerlines')
 
     out_dir.mkdir(exist_ok=True)
