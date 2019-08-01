@@ -18,13 +18,13 @@ if __name__ == "__main__":
     annotation_dir = 'annotations'
 
     # optional filters to eliminate relevant position/timepoints
-    timepoint_filters = [elegant_filters.filter_after_timepoint('2019-05-22t1159'), load_data.filter_excluded] #, elegant_filters.filter_live_animals] #, elegant_filters.filter_after_timepoint('2019-05-20t0000')] #, elegant_filters.select_worms(['15']), elegant_filters.filter_live_animals, elegant_filters.filter_by_stage('adult')] #, elegant_filters.filter_after_timepoint('2019-02-02t1200')]
+    timepoint_filters = [load_data.filter_excluded] #, elegant_filters.filter_live_animals] #, elegant_filters.filter_after_timepoint('2019-05-20t0000')] #, elegant_filters.select_worms(['15']), elegant_filters.filter_live_animals, elegant_filters.filter_by_stage('adult')] #, elegant_filters.filter_after_timepoint('2019-02-02t1200')]
     channels = ['bf'] #, 'gfp'] #, 'autofluorescence'] #, 'green_yellow_excitation_autofluorescence'] # First one is the one used to load poses when specified.
 
-    try:
-        rw
-    except NameError:
-        rw = ris_widget.RisWidget()
+    # Only use one RisWidget for annotations
+    rw_defined = 'rw' in globals()
+    global rw
+    if not rw_defined: rw = ris_widget.RisWidget()
 
     # Allows one to restart annotating in the same ris_widget window
     if hasattr(rw, 'annotator'):
@@ -32,7 +32,6 @@ if __name__ == "__main__":
         del(rw.annotator)
 
     process_data.update_annotations(expt_dir)
-    elegant_hacks.propagate_stages(expt_dir)
     experiment_annotations = load_data.read_annotations(expt_dir, annotation_dir=annotation_dir)
 
     if timepoint_filters:
