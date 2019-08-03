@@ -77,6 +77,10 @@ def rw_load_timepoint_fromexpt(rw, expt_dir, timepoint, channel='bf'):
     image_files = expt_dir.glob(f'*/{timepoint} {channel}.png')
     rw.add_image_files_to_flipbook(image_files)
 
+def rw_load_position_images(rw, expt_dir, position):
+    image_files = (pathlib.Path(expt_dir) / f'{position}').glob('*bf.png')
+    rw.add_image_files_to_flipbook(image_files)
+
 def get_labeled_positions(rw_obj, labels):
     '''
         labels - list of labels to look for in risWidget flipbook pages (e.g. ['c'])
