@@ -1,7 +1,14 @@
 import ris_widget
 import pathlib
 
-from elegant import load_data
+from elegant import load_data, process_data
+
+def make_global_riswidget():
+    rw_defined = rw in globals()
+    global rw
+    if not rw_defined:
+        rw = ris_widget.RisWidget()
+    return rw
 
 def overlay_masks(rw, position_directory):
     position_directory = pathlib.Path(position_directory)
@@ -38,14 +45,18 @@ def rw_load_image_stack_fromfilenames(rw_obj, *dir_args, filter_kw='', start_idx
         img_fns.append([img_file for img_file in sorted(file_dir.iterdir()) if img_file.is_file() and kw in str(img_file)])
     rw_obj.flipbook.add_image_files([collected_fns for collected_fns in zip(*img_fns)][start_idx:(stop_idx if stop_idx is not None and stop_idx < len(img_fns[0]) else len(img_fns[0]))])
     
-def rw_load_last_images_fromexpt(rw_obj, expt_dir, channels=['bf']):
+def rw_load_last_images_fromexpt(expt_dir, channels=['bf'], rw=None):
     '''
         expt_dir - directory containing multiple animals/fields of interest
         filter_kw - Used to filter through images based on name
     '''
     
     if type(expt_dir) is not pathlib.Path: expt_dir = pathlib.Path(expt_dir)
-    
+
+    rw_supplied = rw is not None
+    if not rw_supplied:
+        rw = make_global_riswidget()
+
     img_fns = []
     for subdir in sorted([position_dir.parent for position_dir in expt_dir.glob('*/position_metadata.json')]):
         last_timepoint = [img_file.stem.split()[0] for img_file in subdir.glob('*.png')][-1]
@@ -53,8 +64,11 @@ def rw_load_last_images_fromexpt(rw_obj, expt_dir, channels=['bf']):
             for channel in channels 
             for img_file in subdir.glob('*.png') 
             if (channel in img_file.name and last_timepoint in img_file.name)])
-    rw_obj.flipbook.add_image_files(img_fns)
+    rw.flipbook.add_image_files(img_fns)
     
+    if not rw_supplied:
+        return rw
+
 def rw_load_timepoint_fromexpt(rw, expt_dir, timepoint, channel='bf'):
     '''
         Loads the single bf image for a timepoint into the flipbook
@@ -77,8 +91,13 @@ def rw_load_timepoint_fromexpt(rw, expt_dir, timepoint, channel='bf'):
     image_files = expt_dir.glob(f'*/{timepoint} {channel}.png')
     rw.add_image_files_to_flipbook(image_files)
 
-def rw_load_position_images(rw, expt_dir, position):
-    image_files = (pathlib.Path(expt_dir) / f'{position}').glob('*bf.png')
+def rw_load_position_images(rw, expt_dir, position, channels='bf'):
+    def position_filter(position_name, position_annotations, timepoint_annotations):
+        return position_name == position
+
+    process_data.update_annotations(expt_dir)
+    position_images = load_data.scan_positions(expt_dir, position_filter, channels=channels)
+    image_files = position_images[position].values()
     rw.add_image_files_to_flipbook(image_files)
 
 def get_labeled_positions(rw_obj, labels):
