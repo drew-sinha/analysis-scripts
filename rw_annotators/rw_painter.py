@@ -45,7 +45,12 @@ class RWPainter:
             if (self.out_dir / image_path.name).exists():
                 image_list.append(freeimage.read((self.out_dir / image_path.name)))
             else:
-                image_list.append(numpy.zeros_like(image))
+                image_shape = image.shape
+                if len(image_shape) == 3: 
+                    image_list.append(numpy.zeros_like(image))
+                else:
+                    new_shape = list(image_shape) + [3]
+                    image_list.append(numpy.zeros(shape=new_shape).astype('uint8'))
             rw.flipbook_pages.append(image_list)
 
         self.rw.painter.brush_size.value = 13
@@ -79,9 +84,9 @@ class RWPainter:
             freeimage.write(overlay, working_file)
 
 if __name__ == "__main__":
-    image_dir = pathlib.Path('/mnt/fluoro-scope/acquired_data/20190701_corral-like_cholesterol_plates/20190706/EtOH/')
+    image_dir = pathlib.Path('/mnt/purplearray/Pittman_Will/20190806_cyclo_ctrl/derived_data/2019-08-12t0432/')
     if not image_dir.exists():
-        raise Exception('image_dir doesn\'t exist!')
+        raise Exception('image directory doesn\'t exist!')
     out_dir = image_dir.parent / (image_dir.name + '_centerlines')
 
     out_dir.mkdir(exist_ok=True)
