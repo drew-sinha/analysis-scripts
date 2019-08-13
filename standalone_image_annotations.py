@@ -1,5 +1,6 @@
 import pathlib
 import csv
+import shutil
 
 import numpy
 
@@ -65,3 +66,17 @@ def process_centerline_dir(source_dir, microns_per_pixel):
         measurement_file.write('\t'.join(centerline_data_entries)+'\n')
         for data in zip(*[mask_data[entry] for entry in centerline_data_entries]):
             measurement_file.write('\t'.join([str(item) for item in data])+'\n')
+
+def copy_experiment_images(experiment_dir, timepoint):
+    '''Move brightfield images for a particular experiment + timepoint; 
+        useful for collecting images for separate annotating (e.g. centerlines)
+    '''
+    experiment_dir = pathlib.Path(experiment_dir)
+    (experiment_dir / 'derived_data' / timepoint).mkdir(exist_ok=True,parents=True)
+
+    for position_dir in [pmd_file.parent for pmd_file in sorted(experiment_dir.glob('*/position_metadata.json'))]:
+        try:
+            shutil.copyfile(position_dir / f'{timepoint} bf.png', experiment_dir / 'derived_data' / timepoint / f'{position_dir.name} {timepoint} bf.png')
+        except FileNotFoundError:
+            print(f'No timepoint image found for {position_dir.name} at {timepoint}')
+
