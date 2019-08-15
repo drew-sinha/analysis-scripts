@@ -18,8 +18,14 @@ def poll_positions(scope, experiment_metadata, positions):
             break
     return new_positions
 
-def reset_positions_manual(scope, experiment_dir, *annotation_filters, positions=None):
-    '''
+def reset_positions_manual(scope, experiment_dir, *annotation_filters):
+    '''Reset positions manually for an experiment (i.e. with a separate ris_widget window open)
+    
+    Parameters:
+        scope - ScopeClient object as defined by scope.scope_client
+        experiment_dir - str/pathlib.Path to experiment
+        annotation_filters - Optional variable filters to use to isolate specific positions of interest
+
     Call with annotation filters like so:
     reset_position.reset_positions(scope, experiment_dir, elegant_filters.filter_excluded, elegant_filters.filter_live_animals)
     '''
