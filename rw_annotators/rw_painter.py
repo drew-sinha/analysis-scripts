@@ -84,10 +84,13 @@ class RWPainter:
             freeimage.write(overlay, working_file)
 
 if __name__ == "__main__":
-    image_dir = pathlib.Path('/mnt/purplearray/Pittman_Will/20190806_cyclo_ctrl/derived_data/2019-08-12t0432/')
+    image_dir = pathlib.Path('/Volumes/zplab/acquired_data/20190901_cholesterol_supp_expt/20190907_alternatelighting/DS/Fridge_food+chol')
+    image_dir = pathlib.Path('/Volumes/zplab/acquired_data/20190904_freshfood_expt/20190910_alternatelighting/DS/Fresh_food_DS_annotations')
     if not image_dir.exists():
         raise Exception('image directory doesn\'t exist!')
-    out_dir = image_dir.parent / (image_dir.name + '_centerlines')
+    # out_dir = image_dir.parent / (image_dir.name + '_centerlines')
+    suffix = 'WP'
+    out_dir = image_dir / ('_centerlines' + suffix)
 
     out_dir.mkdir(exist_ok=True)
 
