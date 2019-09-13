@@ -1,10 +1,10 @@
-import ris_widget
+from ris_widget import ris_widget
 import pathlib
 
 from elegant import load_data, process_data
 
 def make_global_riswidget():
-    rw_defined = rw in globals()
+    rw_defined = 'rw' in globals()
     global rw
     if not rw_defined:
         rw = ris_widget.RisWidget()
