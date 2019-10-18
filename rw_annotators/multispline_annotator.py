@@ -11,7 +11,6 @@ import spline_set
 '''
     TODO:
         Need tool to update legacy annotations to this new format.
-        Adapt standalone_image_annotations to this new format.
         Functionality for hiding centerlines.
 '''
 
