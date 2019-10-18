@@ -61,6 +61,6 @@ class SplineSet(base.RWGeometryItemMixin, Qt.QGraphicsPathItem):
 
     def sceneEventFilter(self, watched, event):
         if event.type() == Qt.QEvent.KeyPress and event.key() == Qt.Qt.Key_D:
-            # Since no mouse down event in Qt, this is a filler for later.
+            # Kept around mostly for debugging.
             self.setup_next_spline()
         return False

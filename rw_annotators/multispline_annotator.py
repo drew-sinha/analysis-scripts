@@ -54,11 +54,10 @@ class MultisplineAnnotationField(annotator.AnnotationField):
     def update_widget(self, spline_tcks):
         self.spline_set.geometry = spline_tcks
 
-class MultisplineAnnotator(annotator.Annotator):
+class MultisplineAnnotator:
     """A spline annotator that loads images from a directory and draw splines that can be saved"""
 
     def __init__(self, rw, fields, image_dir, annotation_file='annotations.pickle'):
-        super().__init__(rw, fields)
         self.rw = rw
         self.rw.add_annotator(fields)
         self.image_dir = pathlib.Path(image_dir)
@@ -79,20 +78,19 @@ class MultisplineAnnotator(annotator.Annotator):
         reload = _add_button(annotation_layout, 'Reload Annotations', self.load_annotations)
         self.rw.annotator.layout().insertRow(0,widget)
 
-
     def load_annotations(self):
         try:
             with (self.image_dir / self.annotation_file).open('rb') as annotation_fp:
-                self.all_annotations = pickle.load(annotation_fp)
+                self.rw.annotator.all_annotations = pickle.load(annotation_fp)
         except FileNotFoundError:
             self.all_annotations = {}
 
     def save_annotations(self):
         with (self.image_dir / self.annotation_file).open('wb') as annotation_fp:
-            pickle.dump(self.all_annotations, annotation_fp)
+            pickle.dump(self.rw.annotator.all_annotations, annotation_fp)
 
 if __name__ == "__main__":
-    image_dir = pathlib.Path('/home/drew/Desktop/temp')
+    image_dir = pathlib.Path('/mnt/fluoro-scope/acquired_data/20191010_25ul_FridgeDropExperiment/20191010/Lawn_Ctrl_3')
 
     if not image_dir.exists():
         raise Exception('image directory doesn\'t exist!')
@@ -100,6 +98,9 @@ if __name__ == "__main__":
 
     rw = rw_funs.make_global_riswidget()
     if hasattr(rw, 'annotator'):
-        del rw.annotator
-    fields = [MultisplineAnnotationField(rw)]
+        rw.annotator.close()
+        del(rw.annotator)
+    rw.show()
+    rw.flipbook_pages.clear()
+    fields = [MultisplineAnnotationField(rw,annotations_file=annotations_file)]
     msa = MultisplineAnnotator(rw, fields, image_dir)
