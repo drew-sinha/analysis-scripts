@@ -1,6 +1,7 @@
 import pathlib
 import csv
 import shutil
+import pickle
 
 import numpy
 
@@ -79,4 +80,21 @@ def copy_experiment_images(experiment_dir, timepoint):
             shutil.copyfile(position_dir / f'{timepoint} bf.png', experiment_dir / 'derived_data' / timepoint / f'{position_dir.name} {timepoint} bf.png')
         except FileNotFoundError:
             print(f'No timepoint image found for {position_dir.name} at {timepoint}')
+
+def process_spline_file(spline_file, microns_per_pixel):
+    spline_file = pathlib.Path(spline_file)
+    with spline_file.open('rb') as spline_fp:
+        annotations = pickle.load(spline_fp)
+    images = sorted(spline_file.parent.glob('*.png'))
+    names, lengths = [], []
+    for page_annotations, image in zip(annotations, images):
+        spline_count = 0
+        for spline_tck in page_annotations['MultisplineAnnotation']:
+            lengths.append(spline_geometry.arc_length(spline_tck) * microns_per_pixel)
+            names.append(image.stem + f'_{spline_count}')
+            spline_count += 1
+    with (spline_file.parent / (spline_file.stem + '_measurements.txt')).open('w+') as measurement_file:
+        measurement_file.write('\t'.join(['Name', 'Length (um)'])+'\n')
+        for data in zip(names, lengths):
+            measurement_file.write('\t'.join([str(item) for item in data])+'\n')
 
