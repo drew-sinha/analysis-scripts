@@ -89,7 +89,7 @@ class MultisplineAnnotator:
             pickle.dump(self.rw.annotator.all_annotations, annotation_fp)
 
 if __name__ == "__main__":
-    image_dir = pathlib.Path('/mnt/fluoro-scope/acquired_data/20191010_25ul_FridgeDropExperiment/20191010/Lawn_Ctrl_3')
+    image_dir = pathlib.Path('/mnt/fluoro-scope/acquired_data/20191010_25ul_FridgeDropExperiment/20191010/Lawn_Ctrl_4')
 
     if not image_dir.exists():
         raise Exception('image directory doesn\'t exist!')
@@ -101,5 +101,5 @@ if __name__ == "__main__":
         del(rw.annotator)
     rw.show()
     rw.flipbook_pages.clear()
-    fields = [MultisplineAnnotationField(rw,annotations_file=annotations_file)]
-    msa = MultisplineAnnotator(rw, fields, image_dir)
+    fields = [MultisplineAnnotationField(rw)]
+    msa = MultisplineAnnotator(rw, fields, image_dir,annotation_file=annotation_file)
