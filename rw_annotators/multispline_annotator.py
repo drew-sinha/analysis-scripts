@@ -8,9 +8,21 @@ from ris_widget.qwidgets import annotator
 import rw_funs
 import spline_set
 
+"""
+This module defines an annotator for drawing one or more splines on multiple sets of images for a given directory
+and saving that spline data in an associated pickle file.
+
+Instructions:
+    Replace the __main__ clause at the bottom with the path of interest for the image directory.
+    Run this module as a script using python/ipython.
+    Press "D" or the button in the annotator to start drawing a spline. Mouse up finishes drawing the spline.
+    Clicking the "Save Annotations" button saves splines drawn **on all images** to a pickle file in the image directory.
+    Clicking the "Reload Annotations" button restores the splines from the original pickle file used to load them.
+"""
+
+
 '''
     TODO:
-        Need tool to update legacy annotations to this new format.
         Functionality for hiding centerlines.
 '''
 
