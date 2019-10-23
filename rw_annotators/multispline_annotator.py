@@ -50,20 +50,31 @@ class MultisplineAnnotationField(annotator.AnnotationField):
         self.draw.setEnabled(True)
         Qt.QShortcut(Qt.Qt.Key_D, self.widget, self._handle_spline_drawing, context=Qt.Qt.ApplicationShortcut)
 
+        self.show_spline = Qt.QCheckBox('Show Splines')
+        self.show_spline.setChecked(True)
+        self.show_spline.toggled.connect(self.toggle_show_spline)
+        layout.addWidget(self.show_spline)
+
+    def toggle_show_spline(self, show):
+        [spline.setVisible(show) for spline in self.spline_set.splines]
+        self.draw.setEnabled(show) # Assume we're not trying to draw a spline if we're hiding all of them..
 
     def _handle_spline_drawing(self):
         self.spline_set.setup_next_spline()
         self.draw.setText('Drawing...')
         self.draw.setEnabled(False)
+        self.show_spline.setEnabled(False) # Don't allow disappearing splines while drawing.
 
     def on_geometry_change(self, spline_tcks):
         self.update_annotation(spline_tcks)
         if not self.spline_set.splines or not (self.spline_set.splines[-1].warping):
             self.draw.setText('Draw Spline')
             self.draw.setEnabled(True)
+            self.show_spline.setEnabled(True)
 
     def update_widget(self, spline_tcks):
         self.spline_set.geometry = spline_tcks
+        [spline.setVisible(self.show_spline.isChecked()) for spline in self.spline_set.splines]
 
 class MultisplineAnnotator:
     """A spline annotator that loads images from a directory and draw splines that can be saved"""
@@ -101,7 +112,7 @@ class MultisplineAnnotator:
             pickle.dump(self.rw.annotator.all_annotations, annotation_fp)
 
 if __name__ == "__main__":
-    image_dir = pathlib.Path('/mnt/fluoro-scope/acquired_data/20191010_25ul_FridgeDropExperiment/20191010/Lawn_Ctrl_4')
+    image_dir = pathlib.Path('/mnt/fluoro-scope/acquired_data/20191014_KilledBacteriaExperiment/20191020/Dead_Corral_Food_2_aftertransfer')
 
     if not image_dir.exists():
         raise Exception('image directory doesn\'t exist!')
