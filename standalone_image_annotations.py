@@ -89,10 +89,11 @@ def process_spline_file(spline_file, microns_per_pixel):
     names, lengths = [], []
     for page_annotations, image in zip(annotations, images):
         spline_count = 0
-        for spline_tck in page_annotations['MultisplineAnnotation']:
-            lengths.append(spline_geometry.arc_length(spline_tck) * microns_per_pixel)
-            names.append(image.stem + f'_{spline_count}')
-            spline_count += 1
+        if page_annotations['MultisplineAnnotation']:
+            for spline_tck in page_annotations['MultisplineAnnotation']:
+                lengths.append(spline_geometry.arc_length(spline_tck) * microns_per_pixel)
+                names.append(image.stem + f'_{spline_count}')
+                spline_count += 1
     with (spline_file.parent / (spline_file.stem + '_measurements.txt')).open('w+') as measurement_file:
         measurement_file.write('\t'.join(['Name', 'Length (um)'])+'\n')
         for data in zip(names, lengths):
