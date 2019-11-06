@@ -23,7 +23,8 @@ Instructions:
 
 '''
     TODO:
-        Functionality for hiding centerlines.
+        Accumulation of annotator fields in background (propensity for segfaults?)
+        Getting rid of images (duplicates/bad images) after the fact
 '''
 
 def _add_button(layout, title, callback):
@@ -108,11 +109,21 @@ class MultisplineAnnotator:
             self.all_annotations = {}
 
     def save_annotations(self):
+        # Sometimes, accidentally swiping and creates a bad invisible tck (with a None value).
+        # Quickly check the annotations to remove any.
+        all_annotations = self.rw.annotator.all_annotations
+        replacement_annotations = []
+        for page_annotations in all_annotations:
+            replacement_annotations.append(page_annotations)
+            good_annotations = [tck for tck in page_annotations['MultisplineAnnotation'] if tck is not None]
+            replacement_annotations[-1]['MultisplineAnnotation'] = good_annotations
+        all_annotations = replacement_annotations
+
         with (self.image_dir / self.annotation_file).open('wb') as annotation_fp:
-            pickle.dump(self.rw.annotator.all_annotations, annotation_fp)
+            pickle.dump(all_annotations, annotation_fp)
 
 if __name__ == "__main__":
-    image_dir = pathlib.Path('/mnt/fluoro-scope/acquired_data/20191014_KilledBacteriaExperiment/20191020/Dead_Corral_Food_2_aftertransfer')
+    image_dir = pathlib.Path('/mnt/fluoro-scope/acquired_data/20191025_KilledBacteriaExperiment/20191031/Dead_Lawn_Ctrl_1')
 
     if not image_dir.exists():
         raise Exception('image directory doesn\'t exist!')
