@@ -211,7 +211,6 @@ def run_canonical_measurements(experiment_dir):
     '''Run standard measurements on the specified experiment directory'''
     experiment_dir = pathlib.Path(experiment_dir)
 
-    elegant_hacks.propagate_stages(experiment_dir,verbose=True)
     process_data.update_annotations(experiment_dir)
 
     position_features = ['stage_x','stage_y','starting_stage_z','notes']
@@ -226,6 +225,10 @@ def run_canonical_measurements(experiment_dir):
         position_features.append('lawn_area')
 
     make_basic_measurements(experiment_dir, annotations)
+
+    process_data.collate_data(experiment_dir, position_features=position_features)
+
+    return
     make_pose_measurements(experiment_dir, annotations)
 
     process_data.collate_data(experiment_dir, position_features=position_features)

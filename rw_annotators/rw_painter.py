@@ -45,10 +45,15 @@ class RWPainter:
             if (self.out_dir / image_path.name).exists():
                 image_list.append(freeimage.read((self.out_dir / image_path.name)))
             else:
-                image_list.append(numpy.zeros_like(image))
+                image_shape = image.shape
+                if len(image_shape) == 3: 
+                    image_list.append(numpy.zeros_like(image))
+                else:
+                    new_shape = list(image_shape) + [3]
+                    image_list.append(numpy.zeros(shape=new_shape).astype('uint8'))
             rw.flipbook_pages.append(image_list)
 
-        self.rw.painter.brush_size.value = 13
+        self.rw.painter.brush_size.value = 9
 
         self.clear = self._add_button(layout, 'Clear All', self._on_clear_clicked)
         self.reload = self._add_button(layout, 'Reload Overlay', self._on_reload_clicked)
@@ -79,10 +84,13 @@ class RWPainter:
             freeimage.write(overlay, working_file)
 
 if __name__ == "__main__":
-    image_dir = pathlib.Path('/mnt/fluoro-scope/acquired_data/20190701_corral-like_cholesterol_plates/20190706/EtOH/')
+    #image_dir = pathlib.Path('/mnt/fluoro-scope/acquired_data/20190912_S-media_supplementation_experiment/20190918/WP/Lawn_ctrl')
+    image_dir = pathlib.Path('/mnt/fluoro-scope/acquired_data/20190927-9_Fresh_Food/20191003/Fresh_Corral/DS')
+
     if not image_dir.exists():
-        raise Exception('image_dir doesn\'t exist!')
-    out_dir = image_dir.parent / (image_dir.name + '_centerlines')
+        raise Exception('image directory doesn\'t exist!')
+    suffix = '_DS_autohistogram'
+    out_dir = image_dir / ('centerlines' + suffix)
 
     out_dir.mkdir(exist_ok=True)
 

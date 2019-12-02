@@ -14,7 +14,7 @@ if __name__ == "__main__":
 
     show_poses = True
     show_masks = False
-    readonly = False
+    readonly = True
     annotation_dir = 'annotations'
 
     # optional filters to eliminate relevant position/timepoints
