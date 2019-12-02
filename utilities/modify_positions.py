@@ -5,11 +5,13 @@ from zplib import datafile
 import json
 import time
 
-def poll_positions(scope, experiment_metadata, positions):
+def poll_positions(scope, experiment_metadata, positions, revert_z=False):
     new_positions = {}
     for position_name in positions:
         scope.stage.x = experiment_metadata['positions'][position_name][0]
         scope.stage.y = experiment_metadata['positions'][position_name][1]
+        if revert_z:
+            scope.stage.z = experiment_metadata['positions'][position_name][2]
         
         try:
             input(f'Press enter for position to replace {position_name} ; ctrl-c to finish')
@@ -18,7 +20,7 @@ def poll_positions(scope, experiment_metadata, positions):
             break
     return new_positions
 
-def reset_positions_manual(scope, experiment_dir, *annotation_filters):
+def reset_positions_manual(scope, experiment_dir, *annotation_filters, revert_z=False):
     '''Reset positions manually for an experiment (i.e. with a separate ris_widget window open)
     
     Parameters:
@@ -41,7 +43,7 @@ def reset_positions_manual(scope, experiment_dir, *annotation_filters):
     else:
         positions = metadata['positions'].keys()
 
-    new_positions = poll_positions(scope, metadata, positions)
+    new_positions = poll_positions(scope, metadata, positions,revert_z=revert_z)
 
     if new_positions:
         try:
