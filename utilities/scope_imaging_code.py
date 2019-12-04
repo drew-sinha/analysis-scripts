@@ -2,6 +2,8 @@ import os
 import freeimage
 import pathlib
 
+import numpy as np
+
 from zplib import datafile
 
 lamp_dict = {'cyan':'gfp','green_yellow':'RedmChr', 'teal':'yfp'}
@@ -100,7 +102,7 @@ def take_sequential_images(scope, out_dir, tl_intensity):
     out_dir = pathlib.Path(out_dir)
     scope.camera.acquisition_sequencer.new_sequence()
     scope.camera.acquisition_sequencer.add_step(2, 'TL', tl_intensity=tl_intensity)
-    out_dir.mkdir()
+    out_dir.mkdir(exist_ok=True)
     pos_num = 0
     print('Press enter after each position has been found; press control-c to end')
 
@@ -140,7 +142,7 @@ def well_plate_acquisition(scope, out_dir, tl_intensity, grid_size = [4,6], well
             for column_num in range(grid_size[1]):
                 scope.stage.position = [
                     topleft_position[0]+column_num*well_spacing_cc,
-                    topleft_position[1]+row_num0*well_spacing_cc,
+                    topleft_position[1]+row_num*well_spacing_cc,
                     topleft_position[2],
                 ]
                 print('Adjust to desired z-position; press ctrl-c to abort.')
@@ -152,5 +154,45 @@ def well_plate_acquisition(scope, out_dir, tl_intensity, grid_size = [4,6], well
         imaging_parameters = {'lamp':'TL', 'exposure':2, 'intensity':tl_intensity}
         with (out_dir / 'imaging_parameters.json').open('w') as param_file:
             datafile.json_encode_legible_to_file(imaging_parameters, param_file)
+    except KeyboardInterrupt:
+        return
+
+def take_automated_plate_images(scope, out_dir):
+    out_dir = pathlib.Path(out_dir)
+    scope.camera.acquisition_sequencer.new_sequence()
+    scope.camera.acquisition_sequencer.add_step(2, 'TL', tl_intensity=255)
+    out_dir.mkdir(exist_ok=True)
+    field_spacing = 2160 * 0.0065 * 1 / 2.5 # FILL ME IN WITH APPROPRIATE FIELD SIZE BASED ON 2.5X OBJECTIVE
+        
+    try:
+        input('Specify center of plate')
+        center_position = scope.stage.position
+        input('Specify outer extent of plate')
+        outer_position = scope.stage.position
+        
+        roi_radius = ((center_position[0] - outer_position[0])**2 + (center_position[1] - outer_position[1])**2)**0.5
+        
+        # Define function to interpolate z - assume the plate surface is a parabola with radial symmetry about its center w.r.t. both x & y
+        scale_param = (outer_position[2] - center_position[2]) / (roi_radius**2)
+        interpolate_z = lambda x, y: scale_param * ((x - center_position[0])**2 + (y - center_position[1])**2) + center_position[2]
+        
+        grid_x = np.arange(center_position[0] - roi_radius/np.sqrt(2), center_position[0] + roi_radius/np.sqrt(2), field_spacing)
+        grid_y = np.arange(center_position[1] - roi_radius/np.sqrt(2), center_position[1] + roi_radius/np.sqrt(2), field_spacing)
+        xcoor, ycoor = np.meshgrid(grid_x, grid_y)
+        xcoor = np.array([pts if num % 2 else pts[::-1] for num, pts in enumerate(xcoor)]) # invert the x-coordinates appropriately so that we make take min time to traverse the slide
+        #raise Exception()
+        
+        pos_num = 0
+        for x, y in zip(xcoor.flatten(), ycoor.flatten()):
+            scope.stage.position = [x, y, interpolate_z(x,y)]
+            
+            bf_image = scope.camera.acquisition_sequencer.run()[0]
+            freeimage.write(bf_image, out_dir / f'_{pos_num:03d}.png')
+            pos_num += 1
+            
+        imaging_parameters = {'lamp':'TL', 'exposure':2, 'intensity':255}
+        with (out_dir / 'imaging_parameters.json').open('w') as param_file:
+            datafile.json_encode_legible_to_file(imaging_parameters, param_file)
+        scope.stage.position = center_position
     except KeyboardInterrupt:
         return
