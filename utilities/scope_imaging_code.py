@@ -94,14 +94,14 @@ def take_a_picture(scope,position_data,out_dir, lamp=None):
             if lamp_name is 'TL': freeimage.write(this_image, out_dir+os.path.sep+'_{:03d}_bf_{}_ms'.format(pos_num,lamp_exposure)+'.png')
             else: freeimage.write(this_image, out_dir+os.path.sep+'_{:03d}_'.format(pos_num)+lamp_dict[lamp_name]+'_{}_ms'.format(lamp_exposure)+'.png')
 
-def take_sequential_images(scope, out_dir, tl_intensity):
+def take_sequential_images(scope, out_dir, tl_intensity=255, exposure_time=2):
     '''
         Take sequential images as one specifies positions on a stage
     '''
 
     out_dir = pathlib.Path(out_dir)
     scope.camera.acquisition_sequencer.new_sequence()
-    scope.camera.acquisition_sequencer.add_step(2, 'TL', tl_intensity=tl_intensity)
+    scope.camera.acquisition_sequencer.add_step(exposure_time, 'TL', tl_intensity=tl_intensity)
     out_dir.mkdir(exist_ok=True)
     pos_num = 0
     print('Press enter after each position has been found; press control-c to end')
@@ -116,7 +116,7 @@ def take_sequential_images(scope, out_dir, tl_intensity):
         pos_num += 1
 
     if pos_num > 0:
-        imaging_parameters = {'lamp':'TL', 'exposure':2, 'intensity':tl_intensity}
+        imaging_parameters = {'lamp':'TL', 'exposure':exposure_time, 'intensity':tl_intensity}
         with (out_dir / 'imaging_parameters.json').open('w') as param_file:
             datafile.json_encode_legible_to_file(imaging_parameters, param_file)
 
