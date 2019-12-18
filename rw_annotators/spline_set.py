@@ -30,6 +30,7 @@ class SplineSet(base.RWGeometryItemMixin, Qt.QGraphicsPathItem):
                 self.splines.append(
                     center_spline.CenterSpline(self.ris_widget, geometry=tck)
                 )
+                self.splines[-1].geometry_change_callbacks.append(self._update_spline_in_set)
 
     def remove(self):
         if self.splines:
