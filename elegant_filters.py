@@ -178,3 +178,11 @@ def filter_from_elegant_dict(annotation_dict):
     def scan_filter(position_name, timepoint_name):
         return position_name in annotation_dict and timepoint_name in annotation_dict[position_name][1]
     return scan_filter
+
+def compose_scan_filters(*filters):
+    def composed_filter(position_name, timepoint_name):
+        return_val = True
+        for filter in filters:
+            return_val &= numpy.array(filter(position_name, timepoint_name)) # Takes care of single boolean and boolean array return values
+        return return_val
+    return composed_filter
