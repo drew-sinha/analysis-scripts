@@ -18,6 +18,7 @@ Instructions:
     Press "D" or the button in the annotator to start drawing a spline. Mouse up finishes drawing the spline.
     Clicking the "Save Annotations" button saves splines drawn **on all images** to a pickle file in the image directory.
     Clicking the "Reload Annotations" button restores the splines from the original pickle file used to load them.
+    Press "T"  to initiate a zoom-to-fiT and reset the image zoom
 """
 
 
