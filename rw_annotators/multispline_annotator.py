@@ -95,11 +95,18 @@ class MultisplineAnnotator:
 
         self.load_annotations()
 
-        widget = Qt.QGroupBox()
-        annotation_layout = Qt.QVBoxLayout(widget)
-        save = _add_button(annotation_layout, 'Save Annotations', self.save_annotations)
-        reload = _add_button(annotation_layout, 'Reload Annotations', self.load_annotations)
-        self.rw.annotator.layout().insertRow(0,widget)
+        nb_widget = Qt.QGroupBox()
+        button_layout = Qt.QHBoxLayout(nb_widget)
+        button_layout.setSpacing(11)
+        up_button = _add_button(button_layout, '\N{UPWARDS ARROW}', lambda: self.rw.flipbook.focus_prev_page())
+        down_button = _add_button(button_layout, '\N{DOWNWARDS ARROW}', lambda: self.rw.flipbook.focus_next_page())
+        self.rw.annotator.layout().insertRow(0, nb_widget)
+
+        db_widget = Qt.QGroupBox()
+        data_buttons = Qt.QVBoxLayout(db_widget)
+        save = _add_button(data_buttons, 'Save Annotations', self.save_annotations)
+        reload = _add_button(data_buttons, 'Reload Annotations', self.load_annotations)
+        self.rw.annotator.layout().insertRow(1, db_widget)
 
         self.zoom_shortcut = Qt.QAction('Zoom to Fit Shortcut', self.rw.qt_object)
         self.zoom_shortcut.setShortcut(Qt.Qt.Key_T)
