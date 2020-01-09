@@ -206,9 +206,12 @@ def clean_plot(my_plot, cleaning_mode=None,**kws):
         my_plot.set_title('')
 
     if square_aspect:
-        x0,x1 = my_plot.get_xlim()
-        y0,y1 = my_plot.get_ylim()
-        my_plot.set_aspect(abs(x1-x0)/abs(y1-y0))
+        square_plot_aspect(my_plot)
+
+def square_plot_aspect(my_plot):
+    x0,x1 = my_plot.get_xlim()
+    y0,y1 = my_plot.get_ylim()
+    my_plot.set_aspect(abs(x1-x0)/abs(y1-y0))
 
 def save_cleaned_fig(fig_h,ax_h,out_fn,**kws):
     if 'cleaning_mode' not in kws:
