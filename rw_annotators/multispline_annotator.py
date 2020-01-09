@@ -109,13 +109,16 @@ class MultisplineAnnotator:
         reload = _add_button(data_buttons, 'Reload Annotations', self.load_annotations)
         self.rw.annotator.layout().insertRow(1, db_widget)
 
-        self.zoom_shortcut = Qt.QAction('Zoom to Fit Shortcut', self.rw.qt_object)
-        self.zoom_shortcut.setShortcut(Qt.Qt.Key_T)
-        self.zoom_shortcut.triggered.connect(self.toggle_zoom_to_fit)
-        self.rw.qt_object.addAction(self.zoom_shortcut)
+        Qt.QShortcut(Qt.Qt.Key_T, self.rw.annotator, self.toggle_zoom_to_fit, context=Qt.Qt.ApplicationShortcut)
+        Qt.QShortcut(Qt.Qt.Key_Q, self.rw.annotator, lambda: self.incremental_zoom(False), context=Qt.Qt.ApplicationShortcut)
+        Qt.QShortcut(Qt.Qt.Key_W, self.rw.annotator, lambda: self.incremental_zoom(True), context=Qt.Qt.ApplicationShortcut)
 
     def toggle_zoom_to_fit(self):
         self.rw.qt_object.image_view.zoom_to_fit = True
+
+    def incremental_zoom(self, zoom_in):
+        self.rw.image_view.change_zoom(zoom_in)
+        self.rw.image_view.zoom_to_fit = False
 
     def load_annotations(self):
         try:
@@ -139,7 +142,7 @@ class MultisplineAnnotator:
             pickle.dump(all_annotations, annotation_fp)
 
 if __name__ == "__main__":
-    image_dir = pathlib.Path('/mnt/fluoro-scope/acquired_data/20200102_2dayRNAseqRun/20200106/Std_Lawn_1')
+    image_dir = pathlib.Path('/mnt/fluoro-scope/acquired_data/20200102_2dayRNAseqRun/20200106/Corral_Food_1')
 
     if not image_dir.exists():
         raise Exception('image directory doesn\'t exist!')
