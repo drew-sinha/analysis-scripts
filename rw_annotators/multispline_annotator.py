@@ -123,7 +123,7 @@ class MultisplineAnnotator:
             pickle.dump(all_annotations, annotation_fp)
 
 if __name__ == "__main__":
-    image_dir = pathlib.Path('/mnt/fluoro-scope/acquired_data/20191025_KilledBacteriaExperiment/20191031/Dead_Lawn_Ctrl_1')
+    image_dir = pathlib.Path('/mnt/fluoro-scope/acquired_data/20191203-5_C22Drop+LB-Resuspended+PreseededFridgeFood/20191209/WPC22_Corral_Drop_50_2')
 
     if not image_dir.exists():
         raise Exception('image directory doesn\'t exist!')
