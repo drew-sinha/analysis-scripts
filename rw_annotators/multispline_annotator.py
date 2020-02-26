@@ -18,6 +18,7 @@ Instructions:
     Press "D" or the button in the annotator to start drawing a spline. Mouse up finishes drawing the spline.
     Clicking the "Save Annotations" button saves splines drawn **on all images** to a pickle file in the image directory.
     Clicking the "Reload Annotations" button restores the splines from the original pickle file used to load them.
+    Press "T"  to initiate a zoom-to-fiT and reset the image zoom
 """
 
 
@@ -95,11 +96,29 @@ class MultisplineAnnotator:
 
         self.load_annotations()
 
-        widget = Qt.QGroupBox()
-        annotation_layout = Qt.QVBoxLayout(widget)
-        save = _add_button(annotation_layout, 'Save Annotations', self.save_annotations)
-        reload = _add_button(annotation_layout, 'Reload Annotations', self.load_annotations)
-        self.rw.annotator.layout().insertRow(0,widget)
+        nb_widget = Qt.QGroupBox()
+        button_layout = Qt.QHBoxLayout(nb_widget)
+        button_layout.setSpacing(11)
+        up_button = _add_button(button_layout, '\N{UPWARDS ARROW}', lambda: self.rw.flipbook.focus_prev_page())
+        down_button = _add_button(button_layout, '\N{DOWNWARDS ARROW}', lambda: self.rw.flipbook.focus_next_page())
+        self.rw.annotator.layout().insertRow(0, nb_widget)
+
+        db_widget = Qt.QGroupBox()
+        data_buttons = Qt.QVBoxLayout(db_widget)
+        save = _add_button(data_buttons, 'Save Annotations', self.save_annotations)
+        reload = _add_button(data_buttons, 'Reload Annotations', self.load_annotations)
+        self.rw.annotator.layout().insertRow(1, db_widget)
+
+        Qt.QShortcut(Qt.Qt.Key_T, self.rw.annotator, self.toggle_zoom_to_fit, context=Qt.Qt.ApplicationShortcut)
+        Qt.QShortcut(Qt.Qt.Key_Q, self.rw.annotator, lambda: self.incremental_zoom(False), context=Qt.Qt.ApplicationShortcut)
+        Qt.QShortcut(Qt.Qt.Key_W, self.rw.annotator, lambda: self.incremental_zoom(True), context=Qt.Qt.ApplicationShortcut)
+
+    def toggle_zoom_to_fit(self):
+        self.rw.qt_object.image_view.zoom_to_fit = True
+
+    def incremental_zoom(self, zoom_in):
+        self.rw.image_view.change_zoom(zoom_in)
+        self.rw.image_view.zoom_to_fit = False
 
     def load_annotations(self):
         try:
@@ -123,7 +142,7 @@ class MultisplineAnnotator:
             pickle.dump(all_annotations, annotation_fp)
 
 if __name__ == "__main__":
-    image_dir = pathlib.Path('/mnt/fluoro-scope/acquired_data/20191025_KilledBacteriaExperiment/20191031/Dead_Lawn_Ctrl_1')
+    image_dir = pathlib.Path('/mnt/fluoro-scope/acquired_data/20200102_2dayRNAseqRun/20200106/Corral_Drop_2')
 
     if not image_dir.exists():
         raise Exception('image directory doesn\'t exist!')

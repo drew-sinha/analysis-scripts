@@ -36,12 +36,13 @@ qual_colors = np.array([[0,0,0],    # Switched the 2nd and 9th colors
     [86,165,116],
     [203,81,54]])/255
 
-def build_gradient_palette(base_color, num_colors):
+def build_gradient_palette(base_color, num_colors, decreasing_lum=True):
     '''
         Build a gradient color palette using a provided color as the base and modifying the intensity in LAB space
 
         base_color - 3-item list or np.array containing the base color (no alpha channel)
         num_colors - (int) Number of desired colors
+        decreasing_lum - bool flag to determine whether successive colors should be darker than the base
     '''
 
     # Handle black (really want white here...)
@@ -50,12 +51,20 @@ def build_gradient_palette(base_color, num_colors):
 
     base_color_lab = skimage.color.rgb2lab(np.array([[base_color]]))
 
-    return ([skimage.color.lab2rgb(
-        np.array([[[
-            100-(base_color_lab[0,0,0]*i/num_colors),
-            base_color_lab[0,0,1],
-            base_color_lab[0,0,2]]]]))[0,0,:]
-        for i in range(num_colors+1)][1:])
+    if decreasing_lum:
+        return ([skimage.color.lab2rgb(
+            np.array([[[
+                100-(base_color_lab[0,0,0]*i/num_colors),
+                base_color_lab[0,0,1],
+                base_color_lab[0,0,2]]]]))[0,0,:]
+            for i in range(num_colors+1)][1:])
+    else:
+        return ([skimage.color.lab2rgb(
+            np.array([[[
+                (base_color_lab[0,0,0]*i/num_colors),
+                base_color_lab[0,0,1],
+                base_color_lab[0,0,2]]]]))[0,0,:]
+            for i in range(num_colors+1)][1:])
 
 #~ def quick_plot_dev(ann_fps, expt_mds,bad_worm_kws=[]):
     #~ my_ann_files = [annotation_file.AnnotationFile(ann_fp) for ann_fp in ann_fps]
@@ -206,9 +215,12 @@ def clean_plot(my_plot, cleaning_mode=None,**kws):
         my_plot.set_title('')
 
     if square_aspect:
-        x0,x1 = my_plot.get_xlim()
-        y0,y1 = my_plot.get_ylim()
-        my_plot.set_aspect(abs(x1-x0)/abs(y1-y0))
+        square_plot_aspect(my_plot)
+
+def square_plot_aspect(my_plot):
+    x0,x1 = my_plot.get_xlim()
+    y0,y1 = my_plot.get_ylim()
+    my_plot.set_aspect(abs(x1-x0)/abs(y1-y0))
 
 def save_cleaned_fig(fig_h,ax_h,out_fn,**kws):
     if 'cleaning_mode' not in kws:
