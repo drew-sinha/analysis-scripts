@@ -9,8 +9,8 @@ def acquire_grid_positions(scope, spacing_cc, grid_dims, cycle_through_positions
         cycle_through_positions: bool flag to specify whether to cycle through positions and set z manually;
             if False, defaults to z of the top-left position specified by user
             
-        Good spacings (4 sig figs needed!)
-            7x divots: 2.685
+        Good spacings 
+            7x divots: 2.713 (should redo this on a fresh corral)
     '''
     # TODO: Debug issues with wrong direction when using Zach's code.
     # TODO: Figure out how to invert positions so that one can generate the shortest path across the grid
@@ -33,24 +33,27 @@ def acquire_grid_positions(scope, spacing_cc, grid_dims, cycle_through_positions
         trans = np.array(tl_position)
         disp = np.array(br_position) - np.array(tl_position)
         theta = np.math.atan2(br_grid_position[1], br_grid_position[0]) - np.math.atan2(disp[1], disp[0])
-        rot = np.array([[np.cos(theta), np.sin(theta)],[-np.sin(theta), np.cos(theta)]]) # *think* the signage is right
-        new_grid_points = np.dot(grid_points, rot)  + trans
+        rot = np.array([[np.cos(theta), -np.sin(theta)],[np.sin(theta), np.cos(theta)]]) # *think* the signage is right
+        grid_points = np.dot(grid_points, rot)  + trans
         
         # Rotations with Zach's code; for now leave it out.
         #rot, _, trans, _ = fit_affine.fit_affine([tl_grid_position, br_grid_position], [tl_position, br_position], find_translation=True, find_scale=False, allow_reflection=True) # Need to map grid points to user-provided positions
         #new_grid_points = np.dot(grid_points, rot) + trans
-        #raise Exception()
-        grid_points = new_grid_points
 
 
         if cycle_through_positions:
             positions = []
-            print('Cycling through calculated positions.')
+            print('Cycling through calculated positions. Press enter when position aligned. Press "s"+enter to skip a position.')
+            num_acquired_pos = 0
             for num, (x, y) in enumerate(grid_points):
                 scope.stage.position = [x, y, scope.stage.z]
-                input('')
-                positions.append(scope.stage.position)
-                print(f'Position {num + 1}: {positions[-1]}', end='')
+                resp = input('')
+                if resp == 's':
+                    print('Skipping position', end='')
+                else:
+                    positions.append(scope.stage.position)
+                    num_acquired_pos += 1
+                    print(f'Position {num_acquired_pos}: {positions[-1]}', end='')
         else:
             positions = [[x, y, scope.stage.position] for (x,y) in grid_points]
 
