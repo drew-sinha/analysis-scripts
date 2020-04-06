@@ -42,6 +42,14 @@ from utilities import utilities
 #     ax_h.set_aspect('equal')
 #     ax_h.set_title(f'{worms[0].name.split()[0]}')
 
+def get_worms_without_feature(worms, feature):
+    missing_feature = [worm for worm in worms if feature not in dir(worm.td)]
+    null_feature = [worm for worm in worms
+        if (worm not in missing_feature and ~numpy.isnan(worm.get_feature(feature)))
+    ]
+
+    return missing_feature, null_feature
+
 def enumerate_common_annotations(experiment_dir,bad_kws=None,verbose=True, filter_good=True):
     if not bad_kws:
         bad_kws = [
@@ -87,7 +95,6 @@ def enumerate_common_annotations(experiment_dir,bad_kws=None,verbose=True, filte
         column_names = [f'{"/".join(kw_group)}' for kw_group in bad_kws] + ['Total'],
         row_names = [experiment_dir.name]
     )
-
 
 def spatial_distribution(worms, feature, ax_h=None, fig_h=None, source='gradient'):
     import matplotlib.pyplot as plt
