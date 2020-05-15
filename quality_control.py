@@ -43,9 +43,9 @@ from utilities import utilities
 #     ax_h.set_title(f'{worms[0].name.split()[0]}')
 
 def get_worms_without_feature(worms, feature):
-    missing_feature = [worm for worm in worms if feature not in dir(worm.td)]
+    missing_feature = [worm for worm in worms if feature not in dir(worm)]
     null_feature = [worm for worm in worms
-        if (worm not in missing_feature and ~numpy.isnan(worm.get_feature(feature)))
+        if (worm not in missing_feature and numpy.isnan(getattr(worm, feature)))
     ]
 
     return missing_feature, null_feature
