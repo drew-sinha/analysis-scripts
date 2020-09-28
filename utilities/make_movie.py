@@ -47,11 +47,33 @@ def pin_image(image_generator):
     for image in image_generator:
         yield process_images.pin_image_mode(image,optocoupler=1,new_mode=192)
 
-def make_experiment_movies(experiment_root, output_dir,
-    shrink_factor=4, framerate=5,glob_str='*bf.png',num_frames=-1,positions=None, pin_images_to_mode=False,
+def make_movie(image_dir, output_filepath,
+    zplib_preprocess=True,
+    shrink_factor=1, framerate=5,glob_str='*bf.png',num_frames=-1, pin_images_to_mode=False,
      **scale_params):
+
+    image_dir = pathlib.Path(image_dir)
+    output_filepath = pathlib.Path(output_filepath)
+
+    image_paths = sorted(image_dir.glob(glob_str))
+    print(image_paths)
+    if num_frames != -1: image_paths = image_paths[:num_frames]
+
+    if zplib_preprocess:
+        image_generator = write_movie.generate_images_from_files(image_paths,**scale_params)
+    else:
+        image_generator = (freeimage.read(image_path) for image_path in image_paths)
+    if shrink != 1:
+        image_generator = write_movie.shrink(image_generator, factor=shrink_factor, fast=True)
+    if pin_images_to_mode:
+        image_generator = pin_image(image_generator)
+
+    write_movie.write_movie(image_generator, output_filepath, framerate=framerate)
+
+def make_experiment_movies(experiment_root, output_dir, positions=None, zplib_preprocess=True, **movie_params):
     experiment_root = pathlib.Path(experiment_root)
     output_dir = pathlib.Path(output_dir)
+
 
     if positions is None:
         position_roots = sorted(p.parent for p in experiment_root.glob('*/position_metadata.json'))
@@ -61,17 +83,8 @@ def make_experiment_movies(experiment_root, output_dir,
             assert position_root.exists()
 
     for position_root in position_roots:
-        image_paths = sorted(position_root.glob(glob_str))
-        print(image_paths)
-        if num_frames != -1: image_paths = image_paths[:num_frames]
-
-        image_generator = write_movie.generate_images_from_files(image_paths,**scale_params)
-        image_generator = write_movie.shrink(image_generator, factor=shrink_factor, fast=True)
-        if pin_images_to_mode:
-            image_generator = pin_image(image_generator)
-
         output_file = output_dir / f'{position_root.name}.mp4'
-        write_movie.write_movie(image_generator, output_file, framerate=framerate)
+        make_movie(position_root, output_file, zplib_preprocess=zplib_preprocess, **movie_params)
 
 
 # image_dir = pathlib.Path('/mnt/9karray/Sinha_Drew/20180810_spe-9_Control/012/')
